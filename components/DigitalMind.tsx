@@ -1517,7 +1517,10 @@ Style: Dreamlike, cinematic, soft lighting. Slightly ethereal atmosphere with ge
       {/* --- BOTTOM UI LAYOUT --- */}
 
       {/* Mobile-first bottom input bar with integrated voice button */}
-      <div className="absolute bottom-0 left-0 right-0 z-30 pointer-events-auto p-4 pb-16 sm:pb-4 md:bottom-6 md:left-1/2 md:-translate-x-1/2 md:w-full md:max-w-xl md:px-4">
+      <div
+        className="absolute bottom-0 left-0 right-0 z-30 pointer-events-auto p-4 md:bottom-6 md:left-1/2 md:-translate-x-1/2 md:w-full md:max-w-xl md:px-4"
+        style={{ paddingBottom: 'max(1rem, calc(env(safe-area-inset-bottom, 0px) + 1rem))' }}
+      >
             <form onSubmit={handleChatSubmit} className="relative group w-full">
                 {/* Ambient glow behind input */}
                 <div
@@ -1615,7 +1618,7 @@ Style: Dreamlike, cinematic, soft lighting. Slightly ethereal atmosphere with ge
 
       {/* Zone Label - subtle, positioned above input on mobile */}
       {currentZone !== 'ambient' && (
-        <div className="absolute bottom-36 sm:bottom-20 left-4 sm:left-6 pointer-events-none z-0">
+        <div className="absolute sm:bottom-20 left-4 sm:left-6 pointer-events-none z-0" style={{ bottom: 'calc(6.5rem + env(safe-area-inset-bottom, 0px))' }}>
           <p className="text-[9px] tracking-[0.4em] uppercase opacity-20 transition-colors duration-1000"
              style={{
                color: currentZone === 'technology' ? '#00ffff' :
@@ -1628,9 +1631,10 @@ Style: Dreamlike, cinematic, soft lighting. Slightly ethereal atmosphere with ge
       )}
 
       {/* Floating Navigation Thought Seeds - horizontal on mobile, vertical on desktop */}
-      <div className="absolute z-20 pointer-events-auto
-        bottom-32 left-1/2 -translate-x-1/2 flex flex-row gap-6
-        sm:bottom-auto sm:top-1/2 sm:left-auto sm:right-8 sm:-translate-y-1/2 sm:translate-x-0 sm:flex-col sm:gap-8">
+      <div
+        className="absolute z-20 pointer-events-auto left-1/2 -translate-x-1/2 flex flex-row gap-6 sm:bottom-auto sm:top-1/2 sm:left-auto sm:right-8 sm:-translate-y-1/2 sm:translate-x-0 sm:flex-col sm:gap-8"
+        style={{ bottom: 'calc(5rem + env(safe-area-inset-bottom, 0px))' }}
+      >
         {/* The Horizon - Speaking/Ideas */}
         <button
           onClick={() => setActivePanel(activePanel === 'horizon' ? null : 'horizon')}
