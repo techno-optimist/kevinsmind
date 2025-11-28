@@ -648,7 +648,7 @@ Style: Dreamlike, cinematic, soft lighting. Slightly ethereal atmosphere with ge
       const config = {
         responseModalities: [Modality.AUDIO],
         speechConfig: {
-            voiceConfig: { prebuiltVoiceConfig: { voiceName: 'Zephyr' } }
+            voiceConfig: { prebuiltVoiceConfig: { voiceName: 'Orus' } }
         },
         systemInstruction: SYSTEM_INSTRUCTION,
         outputAudioTranscription: {}
@@ -1517,7 +1517,7 @@ Style: Dreamlike, cinematic, soft lighting. Slightly ethereal atmosphere with ge
       {/* --- BOTTOM UI LAYOUT --- */}
 
       {/* Mobile-first bottom input bar with integrated voice button */}
-      <div className="absolute bottom-0 left-0 right-0 z-30 pointer-events-auto p-4 pb-6 sm:pb-4 md:bottom-6 md:left-1/2 md:-translate-x-1/2 md:w-full md:max-w-xl md:px-4">
+      <div className="absolute bottom-0 left-0 right-0 z-30 pointer-events-auto p-4 pb-16 sm:pb-4 md:bottom-6 md:left-1/2 md:-translate-x-1/2 md:w-full md:max-w-xl md:px-4">
             <form onSubmit={handleChatSubmit} className="relative group w-full">
                 {/* Ambient glow behind input */}
                 <div
@@ -1615,7 +1615,7 @@ Style: Dreamlike, cinematic, soft lighting. Slightly ethereal atmosphere with ge
 
       {/* Zone Label - subtle, positioned above input on mobile */}
       {currentZone !== 'ambient' && (
-        <div className="absolute bottom-24 sm:bottom-20 left-4 sm:left-6 pointer-events-none z-0">
+        <div className="absolute bottom-36 sm:bottom-20 left-4 sm:left-6 pointer-events-none z-0">
           <p className="text-[9px] tracking-[0.4em] uppercase opacity-20 transition-colors duration-1000"
              style={{
                color: currentZone === 'technology' ? '#00ffff' :
@@ -1629,7 +1629,7 @@ Style: Dreamlike, cinematic, soft lighting. Slightly ethereal atmosphere with ge
 
       {/* Floating Navigation Thought Seeds - horizontal on mobile, vertical on desktop */}
       <div className="absolute z-20 pointer-events-auto
-        bottom-24 left-1/2 -translate-x-1/2 flex flex-row gap-6
+        bottom-32 left-1/2 -translate-x-1/2 flex flex-row gap-6
         sm:bottom-auto sm:top-1/2 sm:left-auto sm:right-8 sm:-translate-y-1/2 sm:translate-x-0 sm:flex-col sm:gap-8">
         {/* The Horizon - Speaking/Ideas */}
         <button
