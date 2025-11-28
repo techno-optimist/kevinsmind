@@ -1494,15 +1494,15 @@ Style: Dreamlike, cinematic, soft lighting. Slightly ethereal atmosphere with ge
 
       {/* Welcome message when empty */}
       {messages.length === 0 && !isConnected && !streamingResponse && (
-        <div className="absolute top-1/3 left-1/2 -translate-x-1/2 -translate-y-1/2 text-center pointer-events-none z-10 px-4 w-full max-w-lg">
+        <div className="absolute top-1/2 sm:top-1/3 left-1/2 -translate-x-1/2 -translate-y-1/2 text-center pointer-events-none z-10 px-4 w-full max-w-lg">
           <p className="text-white/20 text-xl sm:text-2xl tracking-[0.2em] sm:tracking-[0.3em] uppercase font-light">Mind of Kevin</p>
           <p className="text-white/10 text-xs sm:text-sm mt-2 sm:mt-3 tracking-widest">Speak or type to begin</p>
         </div>
       )}
 
-      {/* Manual Control Reset - subtle floating pill */}
+      {/* Manual Control Reset - subtle floating pill, repositioned on mobile */}
       {manualControl && (
-          <div className="absolute top-6 left-6 z-30 pointer-events-auto animate-fade-in">
+          <div className="absolute top-24 left-4 sm:top-6 sm:left-6 z-30 pointer-events-auto animate-fade-in">
               <button
                   onClick={handleResetView}
                   className="px-3 py-1.5 bg-black/30 hover:bg-black/50 border border-white/10 rounded-full text-[10px] uppercase tracking-widest text-white/40 hover:text-white/70 backdrop-blur-sm transition-all flex items-center gap-2"
@@ -1514,12 +1514,12 @@ Style: Dreamlike, cinematic, soft lighting. Slightly ethereal atmosphere with ge
           </div>
       )}
 
-      {/* --- BOTTOM UI LAYOUT --- */}
+      {/* --- INPUT UI LAYOUT --- */}
 
-      {/* Mobile-first bottom input bar with integrated voice button */}
+      {/* Input bar - TOP on mobile, BOTTOM on desktop */}
       <div
-        className="absolute bottom-0 left-0 right-0 z-30 pointer-events-auto p-4 md:bottom-6 md:left-1/2 md:-translate-x-1/2 md:w-full md:max-w-xl md:px-4"
-        style={{ paddingBottom: 'max(1rem, calc(env(safe-area-inset-bottom, 0px) + 1rem))' }}
+        className="absolute left-0 right-0 z-30 pointer-events-auto p-3 top-0 pt-4 sm:top-auto sm:bottom-6 sm:left-1/2 sm:-translate-x-1/2 sm:w-full sm:max-w-xl sm:px-4"
+        style={{ paddingTop: 'max(1rem, calc(env(safe-area-inset-top, 0px) + 0.5rem))' }}
       >
             <form onSubmit={handleChatSubmit} className="relative group w-full">
                 {/* Ambient glow behind input */}
@@ -1616,9 +1616,9 @@ Style: Dreamlike, cinematic, soft lighting. Slightly ethereal atmosphere with ge
           </button>
       </div>
 
-      {/* Zone Label - subtle, positioned above input on mobile */}
+      {/* Zone Label - hidden on mobile, shown on desktop */}
       {currentZone !== 'ambient' && (
-        <div className="absolute sm:bottom-20 left-4 sm:left-6 pointer-events-none z-0" style={{ bottom: 'calc(6.5rem + env(safe-area-inset-bottom, 0px))' }}>
+        <div className="hidden sm:block absolute bottom-20 left-6 pointer-events-none z-0">
           <p className="text-[9px] tracking-[0.4em] uppercase opacity-20 transition-colors duration-1000"
              style={{
                color: currentZone === 'technology' ? '#00ffff' :
@@ -1630,10 +1630,9 @@ Style: Dreamlike, cinematic, soft lighting. Slightly ethereal atmosphere with ge
         </div>
       )}
 
-      {/* Floating Navigation Thought Seeds - horizontal on mobile, vertical on desktop */}
+      {/* Floating Navigation Thought Seeds - horizontal below input on mobile, vertical right side on desktop */}
       <div
-        className="absolute z-20 pointer-events-auto left-1/2 -translate-x-1/2 flex flex-row gap-6 sm:bottom-auto sm:top-1/2 sm:left-auto sm:right-8 sm:-translate-y-1/2 sm:translate-x-0 sm:flex-col sm:gap-8"
-        style={{ bottom: 'calc(5rem + env(safe-area-inset-bottom, 0px))' }}
+        className="absolute z-20 pointer-events-auto left-1/2 -translate-x-1/2 flex flex-row gap-6 top-20 sm:top-1/2 sm:left-auto sm:right-8 sm:-translate-y-1/2 sm:translate-x-0 sm:flex-col sm:gap-8"
       >
         {/* The Horizon - Speaking/Ideas */}
         <button
