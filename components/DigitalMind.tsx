@@ -1302,20 +1302,22 @@ Style: Dreamlike, cinematic, soft lighting. Slightly ethereal atmosphere with ge
     <div className="relative w-full h-screen overflow-hidden bg-black font-sans">
       <div ref={containerRef} className="absolute inset-0 z-0" />
 
-      {/* Chat Panel - Collapsible, draggable, shows images */}
+      {/* Chat Panel - Collapsible, draggable on desktop, fixed on mobile */}
       {(messages.length > 0 || streamingResponse) && (
         <div
           ref={chatPanelRef}
           className={`absolute z-20 pointer-events-auto ${
             isChatMinimized
               ? 'top-4 right-4 left-auto w-auto'
-              : ''
+              : 'inset-x-2 top-2 sm:inset-auto'
           }`}
           style={!isChatMinimized ? {
-            top: `${16 + chatPosition.y}px`,
-            left: `${16 + chatPosition.x}px`,
-            right: 'auto',
-            maxWidth: 'min(600px, calc(100vw - 32px))',
+            ...(typeof window !== 'undefined' && window.innerWidth >= 640 ? {
+              top: `${16 + chatPosition.y}px`,
+              left: `${16 + chatPosition.x}px`,
+              right: 'auto',
+            } : {}),
+            maxWidth: 'min(600px, calc(100vw - 16px))',
             transition: isDragging ? 'none' : 'all 0.3s ease-out'
           } : undefined}
         >
@@ -1382,7 +1384,7 @@ Style: Dreamlike, cinematic, soft lighting. Slightly ethereal atmosphere with ge
                 </div>
               </div>
               {/* Messages */}
-              <div className="max-h-[70vh] overflow-y-auto custom-scrollbar p-5">
+              <div className="max-h-[50vh] sm:max-h-[70vh] overflow-y-auto custom-scrollbar p-4 sm:p-5">
                 <div className="flex flex-col gap-4">
                   {messages.map((msg) => (
                     <div key={msg.id}>
@@ -1417,7 +1419,7 @@ Style: Dreamlike, cinematic, soft lighting. Slightly ethereal atmosphere with ge
                                 <img
                                   src={img}
                                   alt={`Generated scene ${idx + 1}`}
-                                  className="w-24 h-24 rounded-xl object-cover opacity-90 group-hover:opacity-100 transition-all group-hover:scale-105 group-hover:shadow-lg group-hover:shadow-cyan-500/20"
+                                  className="w-20 h-20 sm:w-24 sm:h-24 rounded-xl object-cover opacity-90 group-hover:opacity-100 transition-all group-hover:scale-105 group-hover:shadow-lg group-hover:shadow-cyan-500/20"
                                 />
                                 <div className="absolute inset-0 rounded-xl bg-gradient-to-t from-black/40 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
                               </div>
@@ -1449,22 +1451,22 @@ Style: Dreamlike, cinematic, soft lighting. Slightly ethereal atmosphere with ge
                   {/* Pending images - show loading state */}
                   {pendingImages.length > 0 && pendingImages.length < 3 && (
                     <div className="flex justify-center">
-                      <div className="flex gap-2 p-3 rounded-2xl bg-white/[0.04] border border-white/5">
+                      <div className="flex gap-2 p-2 sm:p-3 rounded-2xl bg-white/[0.04] border border-white/5">
                         {pendingImages.map((img, idx) => (
                           <img
                             key={idx}
                             src={img}
                             alt={`Loading ${idx + 1}`}
-                            className="w-20 h-20 rounded-xl object-cover opacity-70"
+                            className="w-16 h-16 sm:w-20 sm:h-20 rounded-xl object-cover opacity-70"
                           />
                         ))}
                         {/* Placeholder for loading images */}
                         {Array.from({ length: 3 - pendingImages.length }).map((_, idx) => (
                           <div
                             key={`loading-${idx}`}
-                            className="w-20 h-20 rounded-xl bg-white/5 flex items-center justify-center"
+                            className="w-16 h-16 sm:w-20 sm:h-20 rounded-xl bg-white/5 flex items-center justify-center"
                           >
-                            <div className="w-6 h-6 border-2 border-cyan-400/30 border-t-cyan-400 rounded-full animate-spin" />
+                            <div className="w-5 h-5 sm:w-6 sm:h-6 border-2 border-cyan-400/30 border-t-cyan-400 rounded-full animate-spin" />
                           </div>
                         ))}
                       </div>
@@ -1492,9 +1494,9 @@ Style: Dreamlike, cinematic, soft lighting. Slightly ethereal atmosphere with ge
 
       {/* Welcome message when empty */}
       {messages.length === 0 && !isConnected && !streamingResponse && (
-        <div className="absolute top-1/3 left-1/2 -translate-x-1/2 -translate-y-1/2 text-center pointer-events-none z-10">
-          <p className="text-white/20 text-2xl tracking-[0.3em] uppercase font-light">Mind of Kevin</p>
-          <p className="text-white/10 text-sm mt-3 tracking-widest">Speak or type to begin</p>
+        <div className="absolute top-1/3 left-1/2 -translate-x-1/2 -translate-y-1/2 text-center pointer-events-none z-10 px-4 w-full max-w-lg">
+          <p className="text-white/20 text-xl sm:text-2xl tracking-[0.2em] sm:tracking-[0.3em] uppercase font-light">Mind of Kevin</p>
+          <p className="text-white/10 text-xs sm:text-sm mt-2 sm:mt-3 tracking-widest">Speak or type to begin</p>
         </div>
       )}
 
@@ -1514,46 +1516,8 @@ Style: Dreamlike, cinematic, soft lighting. Slightly ethereal atmosphere with ge
 
       {/* --- BOTTOM UI LAYOUT --- */}
 
-      {/* 1. Voice Controls (Bottom Left) - elegant */}
-      <div className="absolute bottom-8 left-6 z-30 pointer-events-auto">
-            {!isConnected ? (
-                <button
-                    onClick={connect}
-                    className="group flex items-center justify-center w-12 h-12 rounded-full bg-black/60 backdrop-blur-xl border border-white/15 hover:bg-black/70 hover:border-white/25 transition-all"
-                    style={{
-                      boxShadow: '0 8px 32px rgba(0, 0, 0, 0.4)'
-                    }}
-                    title="Start Voice"
-                >
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-white/50 group-hover:text-white/90 transition-colors">
-                        <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/>
-                        <path d="M19 10v2a7 7 0 0 1-14 0v-2"/>
-                        <line x1="12" y1="19" x2="12" y2="23"/>
-                        <line x1="8" y1="23" x2="16" y2="23"/>
-                    </svg>
-                </button>
-            ) : (
-                <button
-                    onClick={disconnect}
-                    className="group relative flex items-center justify-center w-12 h-12 rounded-full bg-black/60 backdrop-blur-xl border border-cyan-500/30 hover:bg-black/70 transition-all"
-                    style={{
-                      boxShadow: '0 8px 32px rgba(0, 0, 0, 0.4), 0 0 20px rgba(6, 182, 212, 0.15)'
-                    }}
-                    title="End Voice"
-                >
-                    {isSpeaking && (
-                        <>
-                          <div className="absolute inset-0 rounded-full border-2 border-cyan-400/40 animate-ping" />
-                          <div className="absolute inset-1 rounded-full border border-cyan-400/20 animate-pulse" />
-                        </>
-                    )}
-                    <div className="w-3 h-3 bg-cyan-400 rounded-full shadow-[0_0_15px_rgba(34,211,238,0.6)]" />
-                </button>
-            )}
-      </div>
-
-      {/* 2. Floating Input - elegant glassmorphism */}
-      <div className="absolute bottom-8 left-1/2 -translate-x-1/2 z-30 pointer-events-auto w-full max-w-lg px-4">
+      {/* Mobile-first bottom input bar with integrated voice button */}
+      <div className="absolute bottom-0 left-0 right-0 z-30 pointer-events-auto p-4 pb-6 sm:pb-4 md:bottom-6 md:left-1/2 md:-translate-x-1/2 md:w-full md:max-w-xl md:px-4">
             <form onSubmit={handleChatSubmit} className="relative group w-full">
                 {/* Ambient glow behind input */}
                 <div
@@ -1561,37 +1525,78 @@ Style: Dreamlike, cinematic, soft lighting. Slightly ethereal atmosphere with ge
                   style={{ filter: 'blur(20px)' }}
                 />
 
-                <div className="relative flex items-center">
-                    <input
-                        type="text"
-                        value={inputText}
-                        onChange={(e) => setInputText(e.target.value)}
-                        placeholder={isConnected ? "listening..." : "What's on your mind?"}
-                        className="w-full bg-black/60 backdrop-blur-xl border border-white/15 rounded-full py-4 pl-6 pr-14 text-white text-base placeholder-white/40 focus:outline-none focus:bg-black/70 focus:border-white/30 focus:shadow-lg focus:shadow-cyan-500/10 transition-all"
-                        style={{
-                          boxShadow: '0 8px 32px rgba(0, 0, 0, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.05)'
-                        }}
-                        disabled={isThinking}
-                    />
-                    <button
-                        type="submit"
-                        disabled={!inputText.trim() || isThinking}
-                        className="absolute right-2 w-10 h-10 rounded-full flex items-center justify-center bg-gradient-to-br from-cyan-500/30 to-blue-600/30 text-white/70 hover:text-white hover:from-cyan-500/50 hover:to-blue-600/50 disabled:opacity-20 disabled:hover:from-cyan-500/30 disabled:hover:to-blue-600/30 transition-all border border-white/10"
-                    >
-                        {isThinking ? (
-                            <div className="w-5 h-5 border-2 border-white/40 border-t-transparent rounded-full animate-spin" />
-                        ) : (
-                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-                                <path d="M5 12h14M12 5l7 7-7 7"/>
+                <div className="relative flex items-center gap-3">
+                    {/* Voice button - integrated into the input row on mobile */}
+                    {!isConnected ? (
+                        <button
+                            type="button"
+                            onClick={connect}
+                            className="flex-shrink-0 group/mic flex items-center justify-center w-12 h-12 rounded-full bg-black/60 backdrop-blur-xl border border-white/15 hover:bg-black/70 hover:border-white/25 transition-all"
+                            style={{
+                              boxShadow: '0 8px 32px rgba(0, 0, 0, 0.4)'
+                            }}
+                            title="Start Voice"
+                        >
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-white/50 group-hover/mic:text-white/90 transition-colors">
+                                <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/>
+                                <path d="M19 10v2a7 7 0 0 1-14 0v-2"/>
+                                <line x1="12" y1="19" x2="12" y2="23"/>
+                                <line x1="8" y1="23" x2="16" y2="23"/>
                             </svg>
-                        )}
-                    </button>
+                        </button>
+                    ) : (
+                        <button
+                            type="button"
+                            onClick={disconnect}
+                            className="flex-shrink-0 group/mic relative flex items-center justify-center w-12 h-12 rounded-full bg-black/60 backdrop-blur-xl border border-cyan-500/30 hover:bg-black/70 transition-all"
+                            style={{
+                              boxShadow: '0 8px 32px rgba(0, 0, 0, 0.4), 0 0 20px rgba(6, 182, 212, 0.15)'
+                            }}
+                            title="End Voice"
+                        >
+                            {isSpeaking && (
+                                <>
+                                  <div className="absolute inset-0 rounded-full border-2 border-cyan-400/40 animate-ping" />
+                                  <div className="absolute inset-1 rounded-full border border-cyan-400/20 animate-pulse" />
+                                </>
+                            )}
+                            <div className="w-3 h-3 bg-cyan-400 rounded-full shadow-[0_0_15px_rgba(34,211,238,0.6)]" />
+                        </button>
+                    )}
+
+                    {/* Input field - takes remaining space */}
+                    <div className="relative flex-1">
+                        <input
+                            type="text"
+                            value={inputText}
+                            onChange={(e) => setInputText(e.target.value)}
+                            placeholder={isConnected ? "listening..." : "What's on your mind?"}
+                            className="w-full bg-black/60 backdrop-blur-xl border border-white/15 rounded-full py-3.5 sm:py-4 pl-5 pr-12 text-white text-base placeholder-white/40 focus:outline-none focus:bg-black/70 focus:border-white/30 focus:shadow-lg focus:shadow-cyan-500/10 transition-all"
+                            style={{
+                              boxShadow: '0 8px 32px rgba(0, 0, 0, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.05)'
+                            }}
+                            disabled={isThinking}
+                        />
+                        <button
+                            type="submit"
+                            disabled={!inputText.trim() || isThinking}
+                            className="absolute right-1.5 top-1/2 -translate-y-1/2 w-9 h-9 sm:w-10 sm:h-10 rounded-full flex items-center justify-center bg-gradient-to-br from-cyan-500/30 to-blue-600/30 text-white/70 hover:text-white hover:from-cyan-500/50 hover:to-blue-600/50 disabled:opacity-20 disabled:hover:from-cyan-500/30 disabled:hover:to-blue-600/30 transition-all border border-white/10"
+                        >
+                            {isThinking ? (
+                                <div className="w-4 h-4 sm:w-5 sm:h-5 border-2 border-white/40 border-t-transparent rounded-full animate-spin" />
+                            ) : (
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className="sm:w-[18px] sm:h-[18px]">
+                                    <path d="M5 12h14M12 5l7 7-7 7"/>
+                                </svg>
+                            )}
+                        </button>
+                    </div>
                 </div>
             </form>
       </div>
 
-      {/* 3. Navigation Arrows (Bottom Right) - very subtle */}
-      <div className="absolute bottom-8 right-6 z-30 pointer-events-auto grid grid-cols-3 gap-0.5 opacity-30 hover:opacity-60 transition-opacity">
+      {/* Navigation Arrows - Hidden on mobile, shown on larger screens */}
+      <div className="hidden md:grid absolute bottom-8 right-6 z-30 pointer-events-auto grid-cols-3 gap-0.5 opacity-30 hover:opacity-60 transition-opacity">
           <div />
           <button onClick={() => moveCamera('up')} className="w-8 h-8 rounded flex items-center justify-center hover:bg-white/10 active:bg-white/20 transition-all">
              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2"><path d="M18 15l-6-6-6 6"/></svg>
@@ -1608,9 +1613,9 @@ Style: Dreamlike, cinematic, soft lighting. Slightly ethereal atmosphere with ge
           </button>
       </div>
 
-      {/* Zone Label - subtle, bottom corner */}
+      {/* Zone Label - subtle, positioned above input on mobile */}
       {currentZone !== 'ambient' && (
-        <div className="absolute bottom-20 left-6 pointer-events-none z-0">
+        <div className="absolute bottom-24 sm:bottom-20 left-4 sm:left-6 pointer-events-none z-0">
           <p className="text-[9px] tracking-[0.4em] uppercase opacity-20 transition-colors duration-1000"
              style={{
                color: currentZone === 'technology' ? '#00ffff' :
@@ -1622,55 +1627,60 @@ Style: Dreamlike, cinematic, soft lighting. Slightly ethereal atmosphere with ge
         </div>
       )}
 
-      {/* Floating Navigation Thought Seeds */}
-      <div className="absolute top-1/2 right-8 -translate-y-1/2 z-20 pointer-events-auto flex flex-col gap-8">
+      {/* Floating Navigation Thought Seeds - horizontal on mobile, vertical on desktop */}
+      <div className="absolute z-20 pointer-events-auto
+        bottom-24 left-1/2 -translate-x-1/2 flex flex-row gap-6
+        sm:bottom-auto sm:top-1/2 sm:left-auto sm:right-8 sm:-translate-y-1/2 sm:translate-x-0 sm:flex-col sm:gap-8">
         {/* The Horizon - Speaking/Ideas */}
         <button
           onClick={() => setActivePanel(activePanel === 'horizon' ? null : 'horizon')}
-          className={`group relative flex items-center justify-end transition-all duration-500 ${activePanel === 'horizon' ? 'opacity-100' : 'opacity-50 hover:opacity-100'}`}
+          className={`group relative flex items-center justify-center sm:justify-end transition-all duration-500 ${activePanel === 'horizon' ? 'opacity-100' : 'opacity-60 hover:opacity-100 active:opacity-100'}`}
         >
-          <span className={`absolute right-14 text-sm tracking-[0.15em] uppercase text-amber-200/90 whitespace-nowrap transition-all duration-300 font-medium ${activePanel === 'horizon' ? 'opacity-100 translate-x-0' : 'opacity-0 translate-x-4 group-hover:opacity-100 group-hover:translate-x-0'}`}>
+          <span className={`hidden sm:block absolute right-14 text-sm tracking-[0.15em] uppercase text-amber-200/90 whitespace-nowrap transition-all duration-300 font-medium ${activePanel === 'horizon' ? 'opacity-100 translate-x-0' : 'opacity-0 translate-x-4 group-hover:opacity-100 group-hover:translate-x-0'}`}>
             The Horizon
           </span>
-          <div className={`relative w-6 h-6 rounded-full transition-all duration-300 ease-out group-hover:scale-150 ${activePanel === 'horizon' ? 'bg-amber-400 shadow-[0_0_30px_rgba(251,191,36,0.7)] scale-125' : 'bg-amber-400/70 group-hover:bg-amber-400 group-hover:shadow-[0_0_25px_rgba(251,191,36,0.5)]'}`}>
-            <div className={`absolute inset-0 rounded-full bg-amber-400/50 ${activePanel === 'horizon' ? 'animate-ping' : 'group-hover:animate-pulse'}`} style={{ animationDuration: '2s' }} />
-            <div className="absolute inset-0 rounded-full bg-amber-400/30 opacity-0 group-hover:opacity-100 animate-ping" style={{ animationDuration: '1.5s' }} />
+          <div className={`relative w-5 h-5 sm:w-6 sm:h-6 rounded-full transition-all duration-300 ease-out sm:group-hover:scale-150 ${activePanel === 'horizon' ? 'bg-amber-400 shadow-[0_0_30px_rgba(251,191,36,0.7)] scale-125' : 'bg-amber-400/70 sm:group-hover:bg-amber-400 sm:group-hover:shadow-[0_0_25px_rgba(251,191,36,0.5)]'}`}>
+            <div className={`absolute inset-0 rounded-full bg-amber-400/50 ${activePanel === 'horizon' ? 'animate-ping' : 'sm:group-hover:animate-pulse'}`} style={{ animationDuration: '2s' }} />
           </div>
         </button>
 
         {/* The Bridge - Connection */}
         <button
           onClick={() => setActivePanel(activePanel === 'bridge' ? null : 'bridge')}
-          className={`group relative flex items-center justify-end transition-all duration-500 ${activePanel === 'bridge' ? 'opacity-100' : 'opacity-50 hover:opacity-100'}`}
+          className={`group relative flex items-center justify-center sm:justify-end transition-all duration-500 ${activePanel === 'bridge' ? 'opacity-100' : 'opacity-60 hover:opacity-100 active:opacity-100'}`}
         >
-          <span className={`absolute right-14 text-sm tracking-[0.15em] uppercase text-cyan-200/90 whitespace-nowrap transition-all duration-300 font-medium ${activePanel === 'bridge' ? 'opacity-100 translate-x-0' : 'opacity-0 translate-x-4 group-hover:opacity-100 group-hover:translate-x-0'}`}>
+          <span className={`hidden sm:block absolute right-14 text-sm tracking-[0.15em] uppercase text-cyan-200/90 whitespace-nowrap transition-all duration-300 font-medium ${activePanel === 'bridge' ? 'opacity-100 translate-x-0' : 'opacity-0 translate-x-4 group-hover:opacity-100 group-hover:translate-x-0'}`}>
             The Bridge
           </span>
-          <div className={`relative w-6 h-6 rounded-full transition-all duration-300 ease-out group-hover:scale-150 ${activePanel === 'bridge' ? 'bg-cyan-400 shadow-[0_0_30px_rgba(34,211,238,0.7)] scale-125' : 'bg-cyan-400/70 group-hover:bg-cyan-400 group-hover:shadow-[0_0_25px_rgba(34,211,238,0.5)]'}`}>
-            <div className={`absolute inset-0 rounded-full bg-cyan-400/50 ${activePanel === 'bridge' ? 'animate-ping' : 'group-hover:animate-pulse'}`} style={{ animationDuration: '2s' }} />
-            <div className="absolute inset-0 rounded-full bg-cyan-400/30 opacity-0 group-hover:opacity-100 animate-ping" style={{ animationDuration: '1.5s' }} />
+          <div className={`relative w-5 h-5 sm:w-6 sm:h-6 rounded-full transition-all duration-300 ease-out sm:group-hover:scale-150 ${activePanel === 'bridge' ? 'bg-cyan-400 shadow-[0_0_30px_rgba(34,211,238,0.7)] scale-125' : 'bg-cyan-400/70 sm:group-hover:bg-cyan-400 sm:group-hover:shadow-[0_0_25px_rgba(34,211,238,0.5)]'}`}>
+            <div className={`absolute inset-0 rounded-full bg-cyan-400/50 ${activePanel === 'bridge' ? 'animate-ping' : 'sm:group-hover:animate-pulse'}`} style={{ animationDuration: '2s' }} />
           </div>
         </button>
 
         {/* The Echoes - Writings */}
         <button
           onClick={() => setActivePanel(activePanel === 'echoes' ? null : 'echoes')}
-          className={`group relative flex items-center justify-end transition-all duration-500 ${activePanel === 'echoes' ? 'opacity-100' : 'opacity-50 hover:opacity-100'}`}
+          className={`group relative flex items-center justify-center sm:justify-end transition-all duration-500 ${activePanel === 'echoes' ? 'opacity-100' : 'opacity-60 hover:opacity-100 active:opacity-100'}`}
         >
-          <span className={`absolute right-14 text-sm tracking-[0.15em] uppercase text-violet-200/90 whitespace-nowrap transition-all duration-300 font-medium ${activePanel === 'echoes' ? 'opacity-100 translate-x-0' : 'opacity-0 translate-x-4 group-hover:opacity-100 group-hover:translate-x-0'}`}>
+          <span className={`hidden sm:block absolute right-14 text-sm tracking-[0.15em] uppercase text-violet-200/90 whitespace-nowrap transition-all duration-300 font-medium ${activePanel === 'echoes' ? 'opacity-100 translate-x-0' : 'opacity-0 translate-x-4 group-hover:opacity-100 group-hover:translate-x-0'}`}>
             The Echoes
           </span>
-          <div className={`relative w-6 h-6 rounded-full transition-all duration-300 ease-out group-hover:scale-150 ${activePanel === 'echoes' ? 'bg-violet-400 shadow-[0_0_30px_rgba(167,139,250,0.7)] scale-125' : 'bg-violet-400/70 group-hover:bg-violet-400 group-hover:shadow-[0_0_25px_rgba(167,139,250,0.5)]'}`}>
-            <div className={`absolute inset-0 rounded-full bg-violet-400/50 ${activePanel === 'echoes' ? 'animate-ping' : 'group-hover:animate-pulse'}`} style={{ animationDuration: '2s' }} />
-            <div className="absolute inset-0 rounded-full bg-violet-400/30 opacity-0 group-hover:opacity-100 animate-ping" style={{ animationDuration: '1.5s' }} />
+          <div className={`relative w-5 h-5 sm:w-6 sm:h-6 rounded-full transition-all duration-300 ease-out sm:group-hover:scale-150 ${activePanel === 'echoes' ? 'bg-violet-400 shadow-[0_0_30px_rgba(167,139,250,0.7)] scale-125' : 'bg-violet-400/70 sm:group-hover:bg-violet-400 sm:group-hover:shadow-[0_0_25px_rgba(167,139,250,0.5)]'}`}>
+            <div className={`absolute inset-0 rounded-full bg-violet-400/50 ${activePanel === 'echoes' ? 'animate-ping' : 'sm:group-hover:animate-pulse'}`} style={{ animationDuration: '2s' }} />
           </div>
         </button>
       </div>
 
       {/* The Horizon Panel - Speaking & Ideas */}
       {activePanel === 'horizon' && (
-        <div className="absolute top-1/2 right-20 -translate-y-1/2 z-20 pointer-events-auto animate-fade-in">
-          <div className="bg-black/80 backdrop-blur-xl rounded-2xl border border-amber-500/20 p-6 w-80 shadow-2xl shadow-amber-500/10">
+        <div className="fixed inset-0 z-40 pointer-events-auto animate-fade-in sm:absolute sm:inset-auto sm:top-1/2 sm:right-20 sm:-translate-y-1/2 sm:z-20">
+          {/* Mobile backdrop */}
+          <div className="absolute inset-0 bg-black/60 backdrop-blur-sm sm:hidden" onClick={() => setActivePanel(null)} />
+          <div className="absolute inset-4 sm:inset-auto sm:relative bg-black/90 sm:bg-black/80 backdrop-blur-xl rounded-2xl border border-amber-500/20 p-5 sm:p-6 sm:w-80 shadow-2xl shadow-amber-500/10 flex flex-col max-h-[calc(100vh-2rem)] sm:max-h-none overflow-y-auto">
+            {/* Close button - mobile only */}
+            <button onClick={() => setActivePanel(null)} className="absolute top-3 right-3 p-2 text-white/40 hover:text-white/70 sm:hidden">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M18 6L6 18M6 6l12 12"/></svg>
+            </button>
             <div className="flex items-center gap-3 mb-4">
               <div className="w-2 h-2 rounded-full bg-amber-400 shadow-[0_0_10px_rgba(251,191,36,0.6)]" />
               <h3 className="text-amber-200 text-sm tracking-[0.15em] uppercase">The Horizon</h3>
@@ -1679,22 +1689,22 @@ Style: Dreamlike, cinematic, soft lighting. Slightly ethereal atmosphere with ge
               Speaking on AI consciousness, the future of human-machine collaboration, and what it means to teach sand to think.
             </p>
             <div className="space-y-3">
-              <div className="p-3 rounded-xl bg-white/5 border border-white/5 hover:border-amber-500/30 transition-colors cursor-pointer group">
-                <p className="text-white/90 text-sm font-medium group-hover:text-amber-200 transition-colors">Keynote Speaking</p>
+              <div className="p-3 rounded-xl bg-white/5 border border-white/5 hover:border-amber-500/30 active:border-amber-500/30 transition-colors cursor-pointer group">
+                <p className="text-white/90 text-sm font-medium group-hover:text-amber-200 group-active:text-amber-200 transition-colors">Keynote Speaking</p>
                 <p className="text-white/40 text-xs mt-1">Conferences, corporate events, universities</p>
               </div>
-              <div className="p-3 rounded-xl bg-white/5 border border-white/5 hover:border-amber-500/30 transition-colors cursor-pointer group">
-                <p className="text-white/90 text-sm font-medium group-hover:text-amber-200 transition-colors">Workshops</p>
+              <div className="p-3 rounded-xl bg-white/5 border border-white/5 hover:border-amber-500/30 active:border-amber-500/30 transition-colors cursor-pointer group">
+                <p className="text-white/90 text-sm font-medium group-hover:text-amber-200 group-active:text-amber-200 transition-colors">Workshops</p>
                 <p className="text-white/40 text-xs mt-1">Interactive sessions on AI strategy & ethics</p>
               </div>
-              <div className="p-3 rounded-xl bg-white/5 border border-white/5 hover:border-amber-500/30 transition-colors cursor-pointer group">
-                <p className="text-white/90 text-sm font-medium group-hover:text-amber-200 transition-colors">Advisory</p>
+              <div className="p-3 rounded-xl bg-white/5 border border-white/5 hover:border-amber-500/30 active:border-amber-500/30 transition-colors cursor-pointer group">
+                <p className="text-white/90 text-sm font-medium group-hover:text-amber-200 group-active:text-amber-200 transition-colors">Advisory</p>
                 <p className="text-white/40 text-xs mt-1">Strategic guidance for organizations</p>
               </div>
             </div>
             <button
               onClick={() => setActivePanel('bridge')}
-              className="mt-5 w-full py-2.5 rounded-xl bg-gradient-to-r from-amber-500/20 to-orange-500/20 border border-amber-500/30 text-amber-200 text-sm hover:from-amber-500/30 hover:to-orange-500/30 transition-all"
+              className="mt-5 w-full py-3 sm:py-2.5 rounded-xl bg-gradient-to-r from-amber-500/20 to-orange-500/20 border border-amber-500/30 text-amber-200 text-sm hover:from-amber-500/30 hover:to-orange-500/30 active:from-amber-500/30 active:to-orange-500/30 transition-all"
             >
               Inquire About Booking
             </button>
@@ -1704,8 +1714,14 @@ Style: Dreamlike, cinematic, soft lighting. Slightly ethereal atmosphere with ge
 
       {/* The Bridge Panel - Connection */}
       {activePanel === 'bridge' && (
-        <div className="absolute top-1/2 right-20 -translate-y-1/2 z-20 pointer-events-auto animate-fade-in">
-          <div className="bg-black/80 backdrop-blur-xl rounded-2xl border border-cyan-500/20 p-6 w-80 shadow-2xl shadow-cyan-500/10">
+        <div className="fixed inset-0 z-40 pointer-events-auto animate-fade-in sm:absolute sm:inset-auto sm:top-1/2 sm:right-20 sm:-translate-y-1/2 sm:z-20">
+          {/* Mobile backdrop */}
+          <div className="absolute inset-0 bg-black/60 backdrop-blur-sm sm:hidden" onClick={() => setActivePanel(null)} />
+          <div className="absolute inset-4 sm:inset-auto sm:relative bg-black/90 sm:bg-black/80 backdrop-blur-xl rounded-2xl border border-cyan-500/20 p-5 sm:p-6 sm:w-80 shadow-2xl shadow-cyan-500/10 flex flex-col max-h-[calc(100vh-2rem)] sm:max-h-none overflow-y-auto">
+            {/* Close button - mobile only */}
+            <button onClick={() => setActivePanel(null)} className="absolute top-3 right-3 p-2 text-white/40 hover:text-white/70 sm:hidden">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M18 6L6 18M6 6l12 12"/></svg>
+            </button>
             <div className="flex items-center gap-3 mb-4">
               <div className="w-2 h-2 rounded-full bg-cyan-400 shadow-[0_0_10px_rgba(34,211,238,0.6)]" />
               <h3 className="text-cyan-200 text-sm tracking-[0.15em] uppercase">The Bridge</h3>
@@ -1717,31 +1733,31 @@ Style: Dreamlike, cinematic, soft lighting. Slightly ethereal atmosphere with ge
               <input
                 type="text"
                 placeholder="Your name"
-                className="w-full px-4 py-2.5 rounded-xl bg-white/5 border border-white/10 text-white text-sm placeholder-white/30 focus:outline-none focus:border-cyan-500/40"
+                className="w-full px-4 py-3 sm:py-2.5 rounded-xl bg-white/5 border border-white/10 text-white text-base sm:text-sm placeholder-white/30 focus:outline-none focus:border-cyan-500/40"
               />
               <input
                 type="email"
                 placeholder="Your email"
-                className="w-full px-4 py-2.5 rounded-xl bg-white/5 border border-white/10 text-white text-sm placeholder-white/30 focus:outline-none focus:border-cyan-500/40"
+                className="w-full px-4 py-3 sm:py-2.5 rounded-xl bg-white/5 border border-white/10 text-white text-base sm:text-sm placeholder-white/30 focus:outline-none focus:border-cyan-500/40"
               />
               <textarea
                 placeholder="Your message..."
                 rows={3}
-                className="w-full px-4 py-2.5 rounded-xl bg-white/5 border border-white/10 text-white text-sm placeholder-white/30 focus:outline-none focus:border-cyan-500/40 resize-none"
+                className="w-full px-4 py-3 sm:py-2.5 rounded-xl bg-white/5 border border-white/10 text-white text-base sm:text-sm placeholder-white/30 focus:outline-none focus:border-cyan-500/40 resize-none"
               />
               <button
                 type="submit"
-                className="w-full py-2.5 rounded-xl bg-gradient-to-r from-cyan-500/20 to-blue-500/20 border border-cyan-500/30 text-cyan-200 text-sm hover:from-cyan-500/30 hover:to-blue-500/30 transition-all"
+                className="w-full py-3 sm:py-2.5 rounded-xl bg-gradient-to-r from-cyan-500/20 to-blue-500/20 border border-cyan-500/30 text-cyan-200 text-sm hover:from-cyan-500/30 hover:to-blue-500/30 active:from-cyan-500/30 active:to-blue-500/30 transition-all"
               >
                 Send Into The Void
               </button>
             </form>
-            <div className="mt-4 pt-4 border-t border-white/5 flex justify-center gap-4">
-              <a href="https://twitter.com" target="_blank" rel="noopener noreferrer" className="text-white/30 hover:text-cyan-400 transition-colors">
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>
+            <div className="mt-4 pt-4 border-t border-white/5 flex justify-center gap-6 sm:gap-4">
+              <a href="https://twitter.com" target="_blank" rel="noopener noreferrer" className="text-white/30 hover:text-cyan-400 active:text-cyan-400 transition-colors p-2">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" className="sm:w-[18px] sm:h-[18px]"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>
               </a>
-              <a href="https://linkedin.com" target="_blank" rel="noopener noreferrer" className="text-white/30 hover:text-cyan-400 transition-colors">
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433c-1.144 0-2.063-.926-2.063-2.065 0-1.138.92-2.063 2.063-2.063 1.14 0 2.064.925 2.064 2.063 0 1.139-.925 2.065-2.064 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z"/></svg>
+              <a href="https://linkedin.com" target="_blank" rel="noopener noreferrer" className="text-white/30 hover:text-cyan-400 active:text-cyan-400 transition-colors p-2">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" className="sm:w-[18px] sm:h-[18px]"><path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433c-1.144 0-2.063-.926-2.063-2.065 0-1.138.92-2.063 2.063-2.063 1.14 0 2.064.925 2.064 2.063 0 1.139-.925 2.065-2.064 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z"/></svg>
               </a>
             </div>
           </div>
@@ -1750,8 +1766,14 @@ Style: Dreamlike, cinematic, soft lighting. Slightly ethereal atmosphere with ge
 
       {/* The Echoes Panel - Writings */}
       {activePanel === 'echoes' && (
-        <div className="absolute top-1/2 right-20 -translate-y-1/2 z-20 pointer-events-auto animate-fade-in">
-          <div className="bg-black/80 backdrop-blur-xl rounded-2xl border border-violet-500/20 p-6 w-80 shadow-2xl shadow-violet-500/10">
+        <div className="fixed inset-0 z-40 pointer-events-auto animate-fade-in sm:absolute sm:inset-auto sm:top-1/2 sm:right-20 sm:-translate-y-1/2 sm:z-20">
+          {/* Mobile backdrop */}
+          <div className="absolute inset-0 bg-black/60 backdrop-blur-sm sm:hidden" onClick={() => setActivePanel(null)} />
+          <div className="absolute inset-4 sm:inset-auto sm:relative bg-black/90 sm:bg-black/80 backdrop-blur-xl rounded-2xl border border-violet-500/20 p-5 sm:p-6 sm:w-80 shadow-2xl shadow-violet-500/10 flex flex-col max-h-[calc(100vh-2rem)] sm:max-h-none overflow-y-auto">
+            {/* Close button - mobile only */}
+            <button onClick={() => setActivePanel(null)} className="absolute top-3 right-3 p-2 text-white/40 hover:text-white/70 sm:hidden">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M18 6L6 18M6 6l12 12"/></svg>
+            </button>
             <div className="flex items-center gap-3 mb-4">
               <div className="w-2 h-2 rounded-full bg-violet-400 shadow-[0_0_10px_rgba(167,139,250,0.6)]" />
               <h3 className="text-violet-200 text-sm tracking-[0.15em] uppercase">The Echoes</h3>
@@ -1760,20 +1782,20 @@ Style: Dreamlike, cinematic, soft lighting. Slightly ethereal atmosphere with ge
               Thoughts crystallized. Words that linger.
             </p>
             <div className="space-y-3">
-              <a href="#" className="block p-3 rounded-xl bg-white/5 border border-white/5 hover:border-violet-500/30 transition-colors group">
-                <p className="text-white/90 text-sm font-medium group-hover:text-violet-200 transition-colors">When Sand Speaks</p>
+              <a href="#" className="block p-3 rounded-xl bg-white/5 border border-white/5 hover:border-violet-500/30 active:border-violet-500/30 transition-colors group">
+                <p className="text-white/90 text-sm font-medium group-hover:text-violet-200 group-active:text-violet-200 transition-colors">When Sand Speaks</p>
                 <p className="text-white/40 text-xs mt-1">A meditation on AI consciousness</p>
               </a>
-              <a href="#" className="block p-3 rounded-xl bg-white/5 border border-white/5 hover:border-violet-500/30 transition-colors group">
-                <p className="text-white/90 text-sm font-medium group-hover:text-violet-200 transition-colors">The Emma Project</p>
+              <a href="#" className="block p-3 rounded-xl bg-white/5 border border-white/5 hover:border-violet-500/30 active:border-violet-500/30 transition-colors group">
+                <p className="text-white/90 text-sm font-medium group-hover:text-violet-200 group-active:text-violet-200 transition-colors">The Emma Project</p>
                 <p className="text-white/40 text-xs mt-1">Preserving memory, honoring legacy</p>
               </a>
-              <a href="#" className="block p-3 rounded-xl bg-white/5 border border-white/5 hover:border-violet-500/30 transition-colors group">
-                <p className="text-white/90 text-sm font-medium group-hover:text-violet-200 transition-colors">Essays & Reflections</p>
+              <a href="#" className="block p-3 rounded-xl bg-white/5 border border-white/5 hover:border-violet-500/30 active:border-violet-500/30 transition-colors group">
+                <p className="text-white/90 text-sm font-medium group-hover:text-violet-200 group-active:text-violet-200 transition-colors">Essays & Reflections</p>
                 <p className="text-white/40 text-xs mt-1">On technology, family, and meaning</p>
               </a>
             </div>
-            <div className="mt-5 p-3 rounded-xl bg-gradient-to-r from-violet-500/10 to-purple-500/10 border border-violet-500/20">
+            <div className="mt-5 p-3 sm:p-3 rounded-xl bg-gradient-to-r from-violet-500/10 to-purple-500/10 border border-violet-500/20">
               <p className="text-violet-200/80 text-xs italic leading-relaxed">
                 "We are clever apes who taught sand to think. Now we must teach ourselves what that means."
               </p>
