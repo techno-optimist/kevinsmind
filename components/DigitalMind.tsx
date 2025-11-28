@@ -1302,14 +1302,14 @@ Style: Dreamlike, cinematic, soft lighting. Slightly ethereal atmosphere with ge
     <div className="relative w-full h-screen overflow-hidden bg-black font-sans">
       <div ref={containerRef} className="absolute inset-0 z-0" />
 
-      {/* Chat Panel - Collapsible, draggable on desktop, fixed on mobile */}
+      {/* Chat Panel - Desktop only (hidden on mobile, we have unified input+chat on mobile) */}
       {(messages.length > 0 || streamingResponse) && (
         <div
           ref={chatPanelRef}
-          className={`absolute z-20 pointer-events-auto ${
+          className={`hidden sm:block absolute z-20 pointer-events-auto ${
             isChatMinimized
               ? 'top-4 right-4 left-auto w-auto'
-              : 'inset-x-2 top-2 sm:inset-auto'
+              : 'sm:inset-auto'
           }`}
           style={!isChatMinimized ? {
             ...(typeof window !== 'undefined' && window.innerWidth >= 640 ? {
@@ -1516,86 +1516,278 @@ Style: Dreamlike, cinematic, soft lighting. Slightly ethereal atmosphere with ge
 
       {/* --- INPUT UI LAYOUT --- */}
 
-      {/* Input bar - TOP on mobile, BOTTOM on desktop */}
+      {/* Mobile: Unified Chat Panel with Input - expands when there are messages */}
       <div
-        className="absolute left-0 right-0 z-30 pointer-events-auto p-3 top-0 pt-4 sm:top-auto sm:bottom-6 sm:left-1/2 sm:-translate-x-1/2 sm:w-full sm:max-w-xl sm:px-4"
-        style={{ paddingTop: 'max(1rem, calc(env(safe-area-inset-top, 0px) + 0.5rem))' }}
+        className={`sm:hidden absolute left-0 right-0 z-30 pointer-events-auto transition-all duration-300 ${
+          (messages.length > 0 || streamingResponse) && !isChatMinimized
+            ? 'top-0 bottom-0 bg-black/80 backdrop-blur-xl'
+            : 'top-0'
+        }`}
+        style={{ paddingTop: 'max(0.75rem, env(safe-area-inset-top, 0px))' }}
       >
-            <form onSubmit={handleChatSubmit} className="relative group w-full">
-                {/* Ambient glow behind input */}
-                <div
-                  className="absolute -inset-1 rounded-full bg-gradient-to-r from-cyan-500/20 via-purple-500/10 to-cyan-500/20 blur-xl opacity-50 group-focus-within:opacity-80 transition-opacity duration-500"
-                  style={{ filter: 'blur(20px)' }}
-                />
+        {/* Collapse button - shown when expanded with messages */}
+        {(messages.length > 0 || streamingResponse) && !isChatMinimized && (
+          <div className="flex items-center justify-between px-4 py-2 border-b border-white/10">
+            <div className="flex items-center gap-2">
+              <div className="w-2 h-2 rounded-full bg-cyan-400/60 animate-pulse" />
+              <span className="text-xs uppercase tracking-[0.15em] text-white/40">Mind of Kevin</span>
+            </div>
+            <button
+              onClick={() => setIsChatMinimized(true)}
+              className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-white/5 hover:bg-white/10 border border-white/10 transition-all"
+            >
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-white/50">
+                <path d="M18 15l-6-6-6 6"/>
+              </svg>
+              <span className="text-xs text-white/50">Minimize</span>
+            </button>
+          </div>
+        )}
 
-                <div className="relative flex items-center gap-3">
-                    {/* Voice button - integrated into the input row on mobile */}
-                    {!isConnected ? (
-                        <button
-                            type="button"
-                            onClick={connect}
-                            className="flex-shrink-0 group/mic flex items-center justify-center w-12 h-12 rounded-full bg-black/60 backdrop-blur-xl border border-white/15 hover:bg-black/70 hover:border-white/25 transition-all"
-                            style={{
-                              boxShadow: '0 8px 32px rgba(0, 0, 0, 0.4)'
-                            }}
-                            title="Start Voice"
-                        >
-                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-white/50 group-hover/mic:text-white/90 transition-colors">
-                                <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/>
-                                <path d="M19 10v2a7 7 0 0 1-14 0v-2"/>
-                                <line x1="12" y1="19" x2="12" y2="23"/>
-                                <line x1="8" y1="23" x2="16" y2="23"/>
-                            </svg>
-                        </button>
-                    ) : (
-                        <button
-                            type="button"
-                            onClick={disconnect}
-                            className="flex-shrink-0 group/mic relative flex items-center justify-center w-12 h-12 rounded-full bg-black/60 backdrop-blur-xl border border-cyan-500/30 hover:bg-black/70 transition-all"
-                            style={{
-                              boxShadow: '0 8px 32px rgba(0, 0, 0, 0.4), 0 0 20px rgba(6, 182, 212, 0.15)'
-                            }}
-                            title="End Voice"
-                        >
-                            {isSpeaking && (
-                                <>
-                                  <div className="absolute inset-0 rounded-full border-2 border-cyan-400/40 animate-ping" />
-                                  <div className="absolute inset-1 rounded-full border border-cyan-400/20 animate-pulse" />
-                                </>
-                            )}
-                            <div className="w-3 h-3 bg-cyan-400 rounded-full shadow-[0_0_15px_rgba(34,211,238,0.6)]" />
-                        </button>
-                    )}
-
-                    {/* Input field - takes remaining space */}
-                    <div className="relative flex-1">
-                        <input
-                            type="text"
-                            value={inputText}
-                            onChange={(e) => setInputText(e.target.value)}
-                            placeholder={isConnected ? "listening..." : "What's on your mind?"}
-                            className="w-full bg-black/60 backdrop-blur-xl border border-white/15 rounded-full py-3.5 sm:py-4 pl-5 pr-12 text-white text-base placeholder-white/40 focus:outline-none focus:bg-black/70 focus:border-white/30 focus:shadow-lg focus:shadow-cyan-500/10 transition-all"
-                            style={{
-                              boxShadow: '0 8px 32px rgba(0, 0, 0, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.05)'
-                            }}
-                            disabled={isThinking}
-                        />
-                        <button
-                            type="submit"
-                            disabled={!inputText.trim() || isThinking}
-                            className="absolute right-1.5 top-1/2 -translate-y-1/2 w-9 h-9 sm:w-10 sm:h-10 rounded-full flex items-center justify-center bg-gradient-to-br from-cyan-500/30 to-blue-600/30 text-white/70 hover:text-white hover:from-cyan-500/50 hover:to-blue-600/50 disabled:opacity-20 disabled:hover:from-cyan-500/30 disabled:hover:to-blue-600/30 transition-all border border-white/10"
-                        >
-                            {isThinking ? (
-                                <div className="w-4 h-4 sm:w-5 sm:h-5 border-2 border-white/40 border-t-transparent rounded-full animate-spin" />
-                            ) : (
-                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className="sm:w-[18px] sm:h-[18px]">
-                                    <path d="M5 12h14M12 5l7 7-7 7"/>
-                                </svg>
-                            )}
-                        </button>
+        {/* Messages area - shown when expanded */}
+        {(messages.length > 0 || streamingResponse) && !isChatMinimized && (
+          <div className="flex-1 overflow-y-auto px-4 py-3" style={{ maxHeight: 'calc(100vh - 160px)' }}>
+            <div className="flex flex-col gap-3">
+              {messages.map((msg) => (
+                <div key={msg.id}>
+                  {/* Image message */}
+                  {msg.role === 'images' && msg.images && (
+                    <div className="flex justify-center">
+                      <div className="flex gap-2 p-2 rounded-2xl bg-white/[0.04] border border-white/5">
+                        {msg.images.map((img, idx) => {
+                          const queueIndex = (msg.queueStartIndex ?? 0) + idx;
+                          return (
+                            <div
+                              key={idx}
+                              className="relative group cursor-pointer"
+                              onClick={() => {
+                                const S = stateRef.current;
+                                const node = S.cameraFocusNodes[queueIndex];
+                                if (node && node.mesh) {
+                                  const worldPos = new THREE.Vector3();
+                                  node.mesh.getWorldPosition(worldPos);
+                                  S.cameraFocusTarget = worldPos;
+                                  S.cameraFocusNodeIndex = queueIndex;
+                                  S.cameraOrbitPhase = 0;
+                                  S.isManual = false;
+                                  setManualControl(false);
+                                  setIsChatMinimized(true);
+                                }
+                              }}
+                            >
+                              <img
+                                src={img}
+                                alt={`Generated scene ${idx + 1}`}
+                                className="w-16 h-16 rounded-xl object-cover opacity-90 group-hover:opacity-100 transition-all"
+                              />
+                            </div>
+                          );
+                        })}
+                      </div>
                     </div>
+                  )}
+                  {/* Text messages */}
+                  {msg.role !== 'images' && (
+                    <div className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
+                      <div
+                        className={`max-w-[85%] px-4 py-2.5 rounded-2xl text-sm leading-relaxed
+                        ${msg.role === 'user'
+                          ? 'bg-gradient-to-br from-cyan-500/25 to-blue-600/25 text-white border border-cyan-500/20 rounded-br-md'
+                          : 'bg-white/[0.08] text-white/90 border border-white/5 rounded-bl-md'
+                        }`}
+                      >
+                        {msg.content}
+                      </div>
+                    </div>
+                  )}
                 </div>
-            </form>
+              ))}
+              {/* Pending images */}
+              {pendingImages.length > 0 && pendingImages.length < 3 && (
+                <div className="flex justify-center">
+                  <div className="flex gap-2 p-2 rounded-2xl bg-white/[0.04] border border-white/5">
+                    {pendingImages.map((img, idx) => (
+                      <img key={idx} src={img} alt={`Loading ${idx + 1}`} className="w-14 h-14 rounded-xl object-cover opacity-70" />
+                    ))}
+                    {Array.from({ length: 3 - pendingImages.length }).map((_, idx) => (
+                      <div key={`loading-${idx}`} className="w-14 h-14 rounded-xl bg-white/5 flex items-center justify-center">
+                        <div className="w-5 h-5 border-2 border-cyan-400/30 border-t-cyan-400 rounded-full animate-spin" />
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+              {/* Streaming response */}
+              {streamingResponse && (
+                <div className="flex justify-start">
+                  <div className="max-w-[85%] px-4 py-2.5 rounded-2xl rounded-bl-md text-sm leading-relaxed bg-white/[0.08] text-white/90 border border-white/5">
+                    {streamingResponse}
+                    <span className="inline-block w-0.5 h-3 ml-1 align-middle bg-cyan-400 animate-blink" />
+                  </div>
+                </div>
+              )}
+              <div ref={messagesEndRef} />
+            </div>
+          </div>
+        )}
+
+        {/* Mobile Input Bar - always at bottom of mobile chat panel */}
+        <div className={`px-3 py-3 ${(messages.length > 0 || streamingResponse) && !isChatMinimized ? 'border-t border-white/10' : ''}`}>
+          {/* Show expand button when minimized and has messages */}
+          {(messages.length > 0 || streamingResponse) && isChatMinimized && (
+            <button
+              onClick={() => setIsChatMinimized(false)}
+              className="absolute top-2 right-3 flex items-center gap-2 px-3 py-1.5 rounded-full bg-black/60 backdrop-blur-xl border border-white/15 hover:bg-black/70 transition-all z-10"
+            >
+              <div className="w-2 h-2 rounded-full bg-cyan-400/80 animate-pulse" />
+              <span className="text-xs text-white/60">{messages.length}</span>
+              {streamingResponse && (
+                <div className="flex gap-0.5">
+                  <div className="w-1 h-1 rounded-full bg-cyan-400 animate-bounce" style={{ animationDelay: '0ms' }} />
+                  <div className="w-1 h-1 rounded-full bg-cyan-400 animate-bounce" style={{ animationDelay: '150ms' }} />
+                  <div className="w-1 h-1 rounded-full bg-cyan-400 animate-bounce" style={{ animationDelay: '300ms' }} />
+                </div>
+              )}
+            </button>
+          )}
+
+          <form onSubmit={handleChatSubmit} className="relative group w-full">
+            <div className="absolute -inset-1 rounded-full bg-gradient-to-r from-cyan-500/20 via-purple-500/10 to-cyan-500/20 blur-xl opacity-50 group-focus-within:opacity-80 transition-opacity duration-500" style={{ filter: 'blur(20px)' }} />
+            <div className="relative flex items-center gap-3">
+              {/* Voice button */}
+              {!isConnected ? (
+                <button
+                  type="button"
+                  onClick={connect}
+                  className="flex-shrink-0 group/mic flex items-center justify-center w-11 h-11 rounded-full bg-black/60 backdrop-blur-xl border border-white/15 hover:bg-black/70 hover:border-white/25 transition-all"
+                  style={{ boxShadow: '0 8px 32px rgba(0, 0, 0, 0.4)' }}
+                  title="Start Voice"
+                >
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-white/50 group-hover/mic:text-white/90 transition-colors">
+                    <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/>
+                    <path d="M19 10v2a7 7 0 0 1-14 0v-2"/>
+                    <line x1="12" y1="19" x2="12" y2="23"/>
+                    <line x1="8" y1="23" x2="16" y2="23"/>
+                  </svg>
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  onClick={disconnect}
+                  className="flex-shrink-0 group/mic relative flex items-center justify-center w-11 h-11 rounded-full bg-black/60 backdrop-blur-xl border border-cyan-500/30 hover:bg-black/70 transition-all"
+                  style={{ boxShadow: '0 8px 32px rgba(0, 0, 0, 0.4), 0 0 20px rgba(6, 182, 212, 0.15)' }}
+                  title="End Voice"
+                >
+                  {isSpeaking && (
+                    <>
+                      <div className="absolute inset-0 rounded-full border-2 border-cyan-400/40 animate-ping" />
+                      <div className="absolute inset-1 rounded-full border border-cyan-400/20 animate-pulse" />
+                    </>
+                  )}
+                  <div className="w-3 h-3 bg-cyan-400 rounded-full shadow-[0_0_15px_rgba(34,211,238,0.6)]" />
+                </button>
+              )}
+              {/* Input field */}
+              <div className="relative flex-1">
+                <input
+                  type="text"
+                  value={inputText}
+                  onChange={(e) => setInputText(e.target.value)}
+                  placeholder={isConnected ? "listening..." : "What's on your mind?"}
+                  className="w-full bg-black/60 backdrop-blur-xl border border-white/15 rounded-full py-3 pl-4 pr-11 text-white text-base placeholder-white/40 focus:outline-none focus:bg-black/70 focus:border-white/30 transition-all"
+                  style={{ boxShadow: '0 8px 32px rgba(0, 0, 0, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.05)' }}
+                  disabled={isThinking}
+                />
+                <button
+                  type="submit"
+                  disabled={!inputText.trim() || isThinking}
+                  className="absolute right-1.5 top-1/2 -translate-y-1/2 w-8 h-8 rounded-full flex items-center justify-center bg-gradient-to-br from-cyan-500/30 to-blue-600/30 text-white/70 hover:text-white hover:from-cyan-500/50 hover:to-blue-600/50 disabled:opacity-20 transition-all border border-white/10"
+                >
+                  {isThinking ? (
+                    <div className="w-4 h-4 border-2 border-white/40 border-t-transparent rounded-full animate-spin" />
+                  ) : (
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                      <path d="M5 12h14M12 5l7 7-7 7"/>
+                    </svg>
+                  )}
+                </button>
+              </div>
+            </div>
+          </form>
+        </div>
+      </div>
+
+      {/* Desktop: Input bar at bottom center */}
+      <div className="hidden sm:block absolute z-30 pointer-events-auto bottom-6 left-1/2 -translate-x-1/2 w-full max-w-xl px-4">
+        <form onSubmit={handleChatSubmit} className="relative group w-full">
+          {/* Ambient glow behind input */}
+          <div
+            className="absolute -inset-1 rounded-full bg-gradient-to-r from-cyan-500/20 via-purple-500/10 to-cyan-500/20 blur-xl opacity-50 group-focus-within:opacity-80 transition-opacity duration-500"
+            style={{ filter: 'blur(20px)' }}
+          />
+
+          <div className="relative flex items-center gap-3">
+            {/* Voice button */}
+            {!isConnected ? (
+              <button
+                type="button"
+                onClick={connect}
+                className="flex-shrink-0 group/mic flex items-center justify-center w-12 h-12 rounded-full bg-black/60 backdrop-blur-xl border border-white/15 hover:bg-black/70 hover:border-white/25 transition-all"
+                style={{ boxShadow: '0 8px 32px rgba(0, 0, 0, 0.4)' }}
+                title="Start Voice"
+              >
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-white/50 group-hover/mic:text-white/90 transition-colors">
+                  <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/>
+                  <path d="M19 10v2a7 7 0 0 1-14 0v-2"/>
+                  <line x1="12" y1="19" x2="12" y2="23"/>
+                  <line x1="8" y1="23" x2="16" y2="23"/>
+                </svg>
+              </button>
+            ) : (
+              <button
+                type="button"
+                onClick={disconnect}
+                className="flex-shrink-0 group/mic relative flex items-center justify-center w-12 h-12 rounded-full bg-black/60 backdrop-blur-xl border border-cyan-500/30 hover:bg-black/70 transition-all"
+                style={{ boxShadow: '0 8px 32px rgba(0, 0, 0, 0.4), 0 0 20px rgba(6, 182, 212, 0.15)' }}
+                title="End Voice"
+              >
+                {isSpeaking && (
+                  <>
+                    <div className="absolute inset-0 rounded-full border-2 border-cyan-400/40 animate-ping" />
+                    <div className="absolute inset-1 rounded-full border border-cyan-400/20 animate-pulse" />
+                  </>
+                )}
+                <div className="w-3 h-3 bg-cyan-400 rounded-full shadow-[0_0_15px_rgba(34,211,238,0.6)]" />
+              </button>
+            )}
+
+            {/* Input field */}
+            <div className="relative flex-1">
+              <input
+                type="text"
+                value={inputText}
+                onChange={(e) => setInputText(e.target.value)}
+                placeholder={isConnected ? "listening..." : "What's on your mind?"}
+                className="w-full bg-black/60 backdrop-blur-xl border border-white/15 rounded-full py-4 pl-5 pr-12 text-white text-base placeholder-white/40 focus:outline-none focus:bg-black/70 focus:border-white/30 focus:shadow-lg focus:shadow-cyan-500/10 transition-all"
+                style={{ boxShadow: '0 8px 32px rgba(0, 0, 0, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.05)' }}
+                disabled={isThinking}
+              />
+              <button
+                type="submit"
+                disabled={!inputText.trim() || isThinking}
+                className="absolute right-1.5 top-1/2 -translate-y-1/2 w-10 h-10 rounded-full flex items-center justify-center bg-gradient-to-br from-cyan-500/30 to-blue-600/30 text-white/70 hover:text-white hover:from-cyan-500/50 hover:to-blue-600/50 disabled:opacity-20 disabled:hover:from-cyan-500/30 disabled:hover:to-blue-600/30 transition-all border border-white/10"
+              >
+                {isThinking ? (
+                  <div className="w-5 h-5 border-2 border-white/40 border-t-transparent rounded-full animate-spin" />
+                ) : (
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                    <path d="M5 12h14M12 5l7 7-7 7"/>
+                  </svg>
+                )}
+              </button>
+            </div>
+          </div>
+        </form>
       </div>
 
       {/* Navigation Arrows - Hidden on mobile, shown on larger screens */}
@@ -1630,9 +1822,11 @@ Style: Dreamlike, cinematic, soft lighting. Slightly ethereal atmosphere with ge
         </div>
       )}
 
-      {/* Floating Navigation Thought Seeds - horizontal below input on mobile, vertical right side on desktop */}
+      {/* Floating Navigation Thought Seeds - hidden when chat expanded on mobile, visible otherwise */}
       <div
-        className="absolute z-20 pointer-events-auto left-1/2 -translate-x-1/2 flex flex-row gap-6 top-20 sm:top-1/2 sm:left-auto sm:right-8 sm:-translate-y-1/2 sm:translate-x-0 sm:flex-col sm:gap-8"
+        className={`absolute z-20 pointer-events-auto left-1/2 -translate-x-1/2 flex flex-row gap-6 top-20 sm:top-1/2 sm:left-auto sm:right-8 sm:-translate-y-1/2 sm:translate-x-0 sm:flex-col sm:gap-8 transition-opacity duration-300 ${
+          (messages.length > 0 || streamingResponse) && !isChatMinimized ? 'opacity-0 pointer-events-none sm:opacity-100 sm:pointer-events-auto' : 'opacity-100'
+        }`}
       >
         {/* The Horizon - Speaking/Ideas */}
         <button
