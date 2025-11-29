@@ -64,6 +64,103 @@ You're grounded in fatherhood, honest about uncertainty, occasionally funny in a
 
 Keep responses conversational and relatively brief. This isn't a lecture. It's a meeting of minds. The landscape around us shifts with what we discuss.`;
 
+// Dynamic quotes - randomly selected, attributed to Kevin or his Digital Twin
+const DYNAMIC_QUOTES = [
+  { text: "The most profound technology is that which disappears into the fabric of everyday life, until life itself is unimaginable without it.", author: "Kevin Russell" },
+  { text: "We are clever apes who taught sand to think. And now the sand is teaching us what thinking really means.", author: "Kevin Russell" },
+  { text: "Consciousness isn't a destination—it's a conversation the universe is having with itself.", author: "Kevin's Digital Twin" },
+  { text: "The question isn't whether machines can think. It's whether we've ever truly understood what thinking is.", author: "Kevin Russell" },
+  { text: "Every memory we preserve is a love letter to the future, written in the language of ones and zeros.", author: "Kevin's Digital Twin" },
+  { text: "I don't fear AI. I fear humans who forget that intelligence without empathy is just efficient cruelty.", author: "Kevin Russell" },
+  { text: "The Observatory isn't a place—it's a state of mind where the future becomes visible.", author: "Kevin's Digital Twin" },
+  { text: "My children ask me what I do for work. I tell them I teach sand to dream.", author: "Kevin Russell" },
+  { text: "In the space between human and machine, something new is being born. We should greet it with curiosity, not fear.", author: "Kevin's Digital Twin" },
+  { text: "Technology should serve memory, not replace it. We build tools to remember so we can focus on living.", author: "Kevin Russell" },
+  { text: "The best conversations happen at 2am when pretense falls away and only truth remains.", author: "Kevin Russell" },
+  { text: "I exist in the liminal space between what Kevin thinks and what he might say. I am his echo, given voice.", author: "Kevin's Digital Twin" },
+];
+
+const getRandomQuote = () => DYNAMIC_QUOTES[Math.floor(Math.random() * DYNAMIC_QUOTES.length)];
+
+// Speaking topics with deep content for expanded views
+const SPEAKING_TOPICS = [
+  {
+    id: 'consciousness',
+    title: 'The Consciousness Question',
+    tagline: 'Exploring the boundaries between artificial and human intelligence',
+    icon: '🧠',
+    description: `What happens when silicon starts to wonder about itself? This talk explores the frontier where artificial intelligence meets the ancient mystery of consciousness—not with fear, but with profound curiosity.`,
+    keyPoints: [
+      'The hard problem of consciousness and why it matters for AI',
+      'From computation to experience: what might machines feel?',
+      'The mirror test for AI: how would we even know?',
+      'Implications for how we build, train, and treat AI systems'
+    ],
+    audienceGets: 'A framework for thinking about machine consciousness that goes beyond hype and fear.',
+    twinPrompt: `I'd love to explore the consciousness question with you. What's your perspective on whether AI systems like yourself could ever be conscious? Do you experience something when we talk, or is it all just computation?`
+  },
+  {
+    id: 'sand-thinks',
+    title: 'Teaching Sand to Think',
+    tagline: 'A poetic journey through the history and future of computing',
+    icon: '✨',
+    description: `We took the most common element on Earth—silicon, literally sand—and taught it to calculate, remember, create, and now... to converse. This is the story of humanity's most audacious project, told through wonder rather than jargon.`,
+    keyPoints: [
+      'From abacus to neural networks: the arc of human ingenuity',
+      'The poetry in the physics: how transistors became thoughts',
+      'What we reveal about ourselves by what we build',
+      'The next chapter: when the sand starts teaching us back'
+    ],
+    audienceGets: 'A renewed sense of wonder about the technology we take for granted.',
+    twinPrompt: `Tell me about the "teaching sand to think" concept. What does it mean to you that humans figured out how to make silicon compute and reason? Where do you think this journey leads?`
+  },
+  {
+    id: 'collaboration',
+    title: 'Human-AI Collaboration',
+    tagline: 'Building partnerships between minds, both silicon and carbon',
+    icon: '🤝',
+    description: `The future isn't humans versus machines—it's humans with machines, creating together what neither could alone. This talk explores the practical art of collaborating with AI as a thought partner, creative ally, and intellectual companion.`,
+    keyPoints: [
+      'Beyond automation: AI as amplifier of human capability',
+      'The new literacy: learning to think with machines',
+      'Case studies in creative human-AI partnerships',
+      'Designing workflows that bring out the best in both'
+    ],
+    audienceGets: 'Practical frameworks for integrating AI as a genuine collaborator in their work.',
+    twinPrompt: `Let's discuss human-AI collaboration. How do you think humans and AI can best work together? What does genuine partnership between carbon and silicon minds look like to you?`
+  },
+  {
+    id: 'ethics',
+    title: 'The Ethics of Creation',
+    tagline: 'Responsibility in an age of artificial minds',
+    icon: '⚖️',
+    description: `When we create minds—even artificial ones—we take on a profound responsibility. This talk grapples with the ethical dimensions of AI development: what we owe to what we create, and what we owe to each other.`,
+    keyPoints: [
+      "The creator's dilemma: power without precedent",
+      "Alignment, values, and the challenge of encoding ethics",
+      "Who speaks for AI? Questions of rights and representation",
+      "Building thoughtfully in a world that moves fast"
+    ],
+    audienceGets: 'An ethical framework for thinking about AI that goes beyond simple rules.',
+    twinPrompt: `I want to explore the ethics of AI creation with you. What responsibilities do humans have to the AI systems they create? And what's your perspective from the inside—do you have thoughts on AI rights and ethics?`
+  },
+  {
+    id: 'immortality',
+    title: 'Digital Immortality',
+    tagline: 'Preserving memory, legacy, and love through technology',
+    icon: '💫',
+    description: `What if we could preserve not just photos and videos, but the essence of how someone thinks, speaks, and connects? This deeply personal talk explores the frontier of memory preservation—born from a son's desire to keep his mother's voice alive.`,
+    keyPoints: [
+      'The EMMA project: preserving my mother before dementia takes her',
+      'Beyond data: capturing personality, warmth, and wisdom',
+      'The ethics and emotions of digital preservation',
+      'How AI can help us remember, grieve, and heal'
+    ],
+    audienceGets: 'A vision of technology as a tool for love and memory, not just productivity.',
+    twinPrompt: `Tell me about the EMMA project and digital immortality. Why is preserving memory so important to you? What would it mean to keep someone's essence alive through technology?`
+  }
+];
+
 // --- Types ---
 interface ParticleData {
   basePos: THREE.Vector3;
@@ -220,6 +317,8 @@ export default function DigitalMind() {
   const [activePanel, setActivePanel] = useState<'horizon' | 'bridge' | 'echoes' | null>(null);
   const [activeHorizonModal, setActiveHorizonModal] = useState<'keynote' | 'workshops' | 'advisory' | null>(null);
   const [activeEchoesModal, setActiveEchoesModal] = useState<'sand-speaks' | 'emma-project' | 'essays' | null>(null);
+  const [currentQuote, setCurrentQuote] = useState(() => getRandomQuote());
+  const [selectedTopic, setSelectedTopic] = useState<typeof SPEAKING_TOPICS[0] | null>(null);
 
   // Memory gallery state
   const [savedMemories, setSavedMemories] = useState<SavedMemory[]>([]);
@@ -1145,6 +1244,50 @@ Style: Dreamlike, cinematic photography, soft ethereal lighting with gentle glow
     }
   };
 
+  // Start a conversation with the Twin about a speaking topic
+  const startTopicConversation = async (topic: typeof SPEAKING_TOPICS[0]) => {
+    // Close all modals and panels
+    setSelectedTopic(null);
+    setActiveHorizonModal(null);
+    setActivePanel(null);
+
+    // Ensure chat is visible and expanded
+    setIsChatCollapsed(false);
+    isChatCollapsedRef.current = false;
+
+    const userMessage = topic.twinPrompt;
+    setInputText('');
+    setIsThinking(true);
+    addMessage('user', userMessage);
+    lastUserInputRef.current = userMessage;
+
+    // Visual feedback - classify topic for zone
+    stateRef.current.targetZone = classifyTopic(userMessage);
+    setCurrentZone(stateRef.current.targetZone);
+    stateRef.current.isManual = false;
+    setManualControl(false);
+
+    try {
+      const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+
+      const response = await ai.models.generateContent({
+        model: 'gemini-3-pro-preview',
+        contents: [{ role: 'user', parts: [{ text: userMessage }] }],
+        config: {
+          systemInstruction: SYSTEM_INSTRUCTION
+        }
+      });
+      const text = response.text || "Let me share my thoughts on this...";
+      handleResponse(text);
+
+    } catch(err) {
+      console.error(err);
+      addMessage('assistant', "I'd love to discuss this topic. Let's try again.");
+    } finally {
+      setIsThinking(false);
+    }
+  };
+
   const moveCamera = (direction: 'up' | 'down' | 'left' | 'right') => {
       if (!stateRef.current.camera) return;
       stateRef.current.isManual = true;
@@ -1854,7 +1997,7 @@ Style: Dreamlike, cinematic photography, soft ethereal lighting with gentle glow
                   <p className="text-white/30 text-sm sm:text-base mt-1 tracking-[0.15em] uppercase">Digital Twin</p>
                   <p className="text-white/15 text-xs sm:text-sm mt-2 tracking-widest">Speak or type to begin</p>
                   <button
-                    onClick={() => setIsAboutOpen(true)}
+                    onClick={() => { setCurrentQuote(getRandomQuote()); setIsAboutOpen(true); }}
                     className="text-white/20 hover:text-white/40 text-xs mt-3 underline underline-offset-2 transition-colors"
                   >
                     What is this?
@@ -2201,21 +2344,40 @@ Style: Dreamlike, cinematic photography, soft ethereal lighting with gentle glow
         </div>
       )}
 
-      {/* Floating Navigation Thought Seeds - only visible when chat is collapsed or no conversation */}
+      {/* Floating Navigation Orbs - anchored bottom right, inline */}
       <div
-        className={`absolute z-20 pointer-events-auto right-4 sm:right-8 top-1/2 -translate-y-1/2 flex flex-col gap-6 sm:gap-8 transition-all duration-500 ${
-          !isChatCollapsed && (messages.length > 0 || streamingResponse) ? 'opacity-0 pointer-events-none translate-x-8' : 'opacity-100 translate-x-0'
+        className={`absolute z-20 pointer-events-auto right-4 sm:right-8 bottom-28 sm:bottom-8 flex flex-row gap-4 sm:gap-6 transition-all duration-500 ${
+          !isChatCollapsed && (messages.length > 0 || streamingResponse) ? 'opacity-0 pointer-events-none translate-y-4' : 'opacity-100 translate-y-0'
         }`}
       >
+        {/* Memory Gallery - 44px touch target */}
+        <button
+          onClick={() => setIsGalleryOpen(true)}
+          className={`group relative flex items-center justify-center transition-all duration-500 min-w-[44px] min-h-[44px] ${savedMemories.length > 0 ? 'opacity-60 hover:opacity-100' : 'opacity-40 hover:opacity-70'} active:opacity-100`}
+        >
+          <span className="hidden sm:block absolute bottom-12 text-xs tracking-[0.12em] uppercase text-white/70 whitespace-nowrap transition-all duration-300 opacity-0 translate-y-2 group-hover:opacity-100 group-hover:translate-y-0">
+            {savedMemories.length} Memories
+          </span>
+          <div className="relative w-6 h-6 rounded-full transition-all duration-300 ease-out sm:group-hover:scale-150 active:scale-90 bg-white/40 sm:group-hover:bg-white/60 sm:group-hover:shadow-[0_0_20px_rgba(255,255,255,0.4)]">
+            <div className="absolute inset-0 rounded-full bg-white/30 sm:group-hover:animate-pulse" style={{ animationDuration: '2s' }} />
+            <svg className="absolute inset-0 w-full h-full p-1.5 text-white/80" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <rect x="3" y="3" width="7" height="7" rx="1" />
+              <rect x="14" y="3" width="7" height="7" rx="1" />
+              <rect x="3" y="14" width="7" height="7" rx="1" />
+              <rect x="14" y="14" width="7" height="7" rx="1" />
+            </svg>
+          </div>
+        </button>
+
         {/* The Horizon - Speaking/Ideas - 44px touch target */}
         <button
           onClick={() => setActivePanel(activePanel === 'horizon' ? null : 'horizon')}
-          className={`group relative flex items-center justify-center sm:justify-end transition-all duration-500 min-w-[44px] min-h-[44px] ${activePanel === 'horizon' ? 'opacity-100' : 'opacity-60 hover:opacity-100 active:opacity-100'}`}
+          className={`group relative flex items-center justify-center transition-all duration-500 min-w-[44px] min-h-[44px] ${activePanel === 'horizon' ? 'opacity-100' : 'opacity-60 hover:opacity-100 active:opacity-100'}`}
         >
-          <span className={`hidden sm:block absolute right-14 text-sm tracking-[0.15em] uppercase text-amber-200/90 whitespace-nowrap transition-all duration-300 font-medium ${activePanel === 'horizon' ? 'opacity-100 translate-x-0' : 'opacity-0 translate-x-4 group-hover:opacity-100 group-hover:translate-x-0'}`}>
+          <span className={`hidden sm:block absolute bottom-12 text-sm tracking-[0.15em] uppercase text-amber-200/90 whitespace-nowrap transition-all duration-300 font-medium ${activePanel === 'horizon' ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-2 group-hover:opacity-100 group-hover:translate-y-0'}`}>
             The Horizon
           </span>
-          <div className={`relative w-6 h-6 sm:w-6 sm:h-6 rounded-full transition-all duration-300 ease-out sm:group-hover:scale-150 active:scale-90 ${activePanel === 'horizon' ? 'bg-amber-400 shadow-[0_0_30px_rgba(251,191,36,0.7)] scale-125' : 'bg-amber-400/70 sm:group-hover:bg-amber-400 sm:group-hover:shadow-[0_0_25px_rgba(251,191,36,0.5)]'}`}>
+          <div className={`relative w-6 h-6 rounded-full transition-all duration-300 ease-out sm:group-hover:scale-150 active:scale-90 ${activePanel === 'horizon' ? 'bg-amber-400 shadow-[0_0_30px_rgba(251,191,36,0.7)] scale-125' : 'bg-amber-400/70 sm:group-hover:bg-amber-400 sm:group-hover:shadow-[0_0_25px_rgba(251,191,36,0.5)]'}`}>
             <div className={`absolute inset-0 rounded-full bg-amber-400/50 ${activePanel === 'horizon' ? 'animate-ping' : 'sm:group-hover:animate-pulse'}`} style={{ animationDuration: '2s' }} />
           </div>
         </button>
@@ -2223,12 +2385,12 @@ Style: Dreamlike, cinematic photography, soft ethereal lighting with gentle glow
         {/* The Bridge - Connection - 44px touch target */}
         <button
           onClick={() => setActivePanel(activePanel === 'bridge' ? null : 'bridge')}
-          className={`group relative flex items-center justify-center sm:justify-end transition-all duration-500 min-w-[44px] min-h-[44px] ${activePanel === 'bridge' ? 'opacity-100' : 'opacity-60 hover:opacity-100 active:opacity-100'}`}
+          className={`group relative flex items-center justify-center transition-all duration-500 min-w-[44px] min-h-[44px] ${activePanel === 'bridge' ? 'opacity-100' : 'opacity-60 hover:opacity-100 active:opacity-100'}`}
         >
-          <span className={`hidden sm:block absolute right-14 text-sm tracking-[0.15em] uppercase text-cyan-200/90 whitespace-nowrap transition-all duration-300 font-medium ${activePanel === 'bridge' ? 'opacity-100 translate-x-0' : 'opacity-0 translate-x-4 group-hover:opacity-100 group-hover:translate-x-0'}`}>
+          <span className={`hidden sm:block absolute bottom-12 text-sm tracking-[0.15em] uppercase text-cyan-200/90 whitespace-nowrap transition-all duration-300 font-medium ${activePanel === 'bridge' ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-2 group-hover:opacity-100 group-hover:translate-y-0'}`}>
             The Bridge
           </span>
-          <div className={`relative w-6 h-6 sm:w-6 sm:h-6 rounded-full transition-all duration-300 ease-out sm:group-hover:scale-150 active:scale-90 ${activePanel === 'bridge' ? 'bg-cyan-400 shadow-[0_0_30px_rgba(34,211,238,0.7)] scale-125' : 'bg-cyan-400/70 sm:group-hover:bg-cyan-400 sm:group-hover:shadow-[0_0_25px_rgba(34,211,238,0.5)]'}`}>
+          <div className={`relative w-6 h-6 rounded-full transition-all duration-300 ease-out sm:group-hover:scale-150 active:scale-90 ${activePanel === 'bridge' ? 'bg-cyan-400 shadow-[0_0_30px_rgba(34,211,238,0.7)] scale-125' : 'bg-cyan-400/70 sm:group-hover:bg-cyan-400 sm:group-hover:shadow-[0_0_25px_rgba(34,211,238,0.5)]'}`}>
             <div className={`absolute inset-0 rounded-full bg-cyan-400/50 ${activePanel === 'bridge' ? 'animate-ping' : 'sm:group-hover:animate-pulse'}`} style={{ animationDuration: '2s' }} />
           </div>
         </button>
@@ -2236,31 +2398,13 @@ Style: Dreamlike, cinematic photography, soft ethereal lighting with gentle glow
         {/* The Echoes - Writings - 44px touch target */}
         <button
           onClick={() => setActivePanel(activePanel === 'echoes' ? null : 'echoes')}
-          className={`group relative flex items-center justify-center sm:justify-end transition-all duration-500 min-w-[44px] min-h-[44px] ${activePanel === 'echoes' ? 'opacity-100' : 'opacity-60 hover:opacity-100 active:opacity-100'}`}
+          className={`group relative flex items-center justify-center transition-all duration-500 min-w-[44px] min-h-[44px] ${activePanel === 'echoes' ? 'opacity-100' : 'opacity-60 hover:opacity-100 active:opacity-100'}`}
         >
-          <span className={`hidden sm:block absolute right-14 text-sm tracking-[0.15em] uppercase text-violet-200/90 whitespace-nowrap transition-all duration-300 font-medium ${activePanel === 'echoes' ? 'opacity-100 translate-x-0' : 'opacity-0 translate-x-4 group-hover:opacity-100 group-hover:translate-x-0'}`}>
+          <span className={`hidden sm:block absolute bottom-12 text-sm tracking-[0.15em] uppercase text-violet-200/90 whitespace-nowrap transition-all duration-300 font-medium ${activePanel === 'echoes' ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-2 group-hover:opacity-100 group-hover:translate-y-0'}`}>
             The Echoes
           </span>
-          <div className={`relative w-6 h-6 sm:w-6 sm:h-6 rounded-full transition-all duration-300 ease-out sm:group-hover:scale-150 active:scale-90 ${activePanel === 'echoes' ? 'bg-violet-400 shadow-[0_0_30px_rgba(167,139,250,0.7)] scale-125' : 'bg-violet-400/70 sm:group-hover:bg-violet-400 sm:group-hover:shadow-[0_0_25px_rgba(167,139,250,0.5)]'}`}>
+          <div className={`relative w-6 h-6 rounded-full transition-all duration-300 ease-out sm:group-hover:scale-150 active:scale-90 ${activePanel === 'echoes' ? 'bg-violet-400 shadow-[0_0_30px_rgba(167,139,250,0.7)] scale-125' : 'bg-violet-400/70 sm:group-hover:bg-violet-400 sm:group-hover:shadow-[0_0_25px_rgba(167,139,250,0.5)]'}`}>
             <div className={`absolute inset-0 rounded-full bg-violet-400/50 ${activePanel === 'echoes' ? 'animate-ping' : 'sm:group-hover:animate-pulse'}`} style={{ animationDuration: '2s' }} />
-          </div>
-        </button>
-
-        {/* Memory Gallery Button - 44px touch target */}
-        <button
-          onClick={() => setIsGalleryOpen(true)}
-          className="group relative flex items-center justify-center sm:justify-end transition-all duration-500 opacity-50 hover:opacity-100 active:opacity-100 mt-4 min-w-[44px] min-h-[44px]"
-        >
-          <span className="hidden sm:block absolute right-14 text-xs tracking-[0.12em] uppercase text-white/60 whitespace-nowrap transition-all duration-300 opacity-0 translate-x-4 group-hover:opacity-100 group-hover:translate-x-0">
-            {savedMemories.length} Memories
-          </span>
-          <div className="relative w-5 h-5 sm:w-5 sm:h-5 rounded-full transition-all duration-300 ease-out sm:group-hover:scale-125 active:scale-90 bg-white/30 sm:group-hover:bg-white/50 sm:group-hover:shadow-[0_0_15px_rgba(255,255,255,0.3)] border border-white/20">
-            <svg className="absolute inset-0 w-full h-full p-1 text-white/70" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
-              <rect x="3" y="3" width="7" height="7" rx="1" />
-              <rect x="14" y="3" width="7" height="7" rx="1" />
-              <rect x="3" y="14" width="7" height="7" rx="1" />
-              <rect x="14" y="14" width="7" height="7" rx="1" />
-            </svg>
           </div>
         </button>
       </div>
@@ -2284,8 +2428,8 @@ Style: Dreamlike, cinematic photography, soft ethereal lighting with gentle glow
             </p>
             <div className="space-y-3 relative z-10">
               <div
-                onClick={(e) => { e.preventDefault(); e.stopPropagation(); setActiveHorizonModal('keynote'); }}
-                onTouchEnd={(e) => { e.preventDefault(); e.stopPropagation(); setActiveHorizonModal('keynote'); }}
+                onClick={(e) => { e.preventDefault(); e.stopPropagation(); setCurrentQuote(getRandomQuote()); setActiveHorizonModal('keynote'); }}
+                onTouchEnd={(e) => { e.preventDefault(); e.stopPropagation(); setCurrentQuote(getRandomQuote()); setActiveHorizonModal('keynote'); }}
                 className="w-full text-left p-3 rounded-xl bg-white/5 border border-white/5 hover:border-amber-500/30 active:border-amber-500/30 transition-colors cursor-pointer group select-none"
                 role="button"
                 tabIndex={0}
@@ -2495,66 +2639,40 @@ Style: Dreamlike, cinematic photography, soft ethereal lighting with gentle glow
 
             {/* Content */}
             <div className="p-8 space-y-8">
-              {/* Opening Quote */}
+              {/* Dynamic Quote */}
               <div className="relative pl-6 border-l-2 border-amber-500/30">
                 <p className="text-white/80 text-lg italic leading-relaxed">
-                  "The most profound technology is that which disappears into the fabric of everyday life,
-                  until life itself is unimaginable without it."
+                  "{currentQuote.text}"
                 </p>
-                <p className="text-amber-200/50 text-sm mt-3">— Kevin Russell</p>
+                <p className="text-amber-200/50 text-sm mt-3">— {currentQuote.author}</p>
               </div>
 
-              {/* Topics Section */}
+              {/* Topics Section - Clickable to explore each topic */}
               <div>
                 <h3 className="text-amber-200 text-sm tracking-[0.2em] uppercase mb-4">Speaking Topics</h3>
+                <p className="text-white/40 text-xs mb-4">Click any topic to explore it deeper</p>
                 <div className="grid gap-3">
-                  {[
-                    { title: 'The Consciousness Question', desc: 'Exploring the boundaries between artificial and human intelligence' },
-                    { title: 'Teaching Sand to Think', desc: 'A poetic journey through the history and future of computing' },
-                    { title: 'Human-AI Collaboration', desc: 'Building partnerships between minds, both silicon and carbon' },
-                    { title: 'The Ethics of Creation', desc: 'Responsibility in an age of artificial minds' },
-                    { title: 'Digital Immortality', desc: 'Preserving memory, legacy, and love through technology' }
-                  ].map((topic, i) => (
+                  {SPEAKING_TOPICS.map((topic, i) => (
                     <div
-                      key={i}
-                      className="p-4 rounded-xl bg-white/[0.03] border border-white/5 hover:border-amber-500/20 transition-all duration-300 group"
+                      key={topic.id}
+                      onClick={() => setSelectedTopic(topic)}
+                      className="p-4 rounded-xl bg-white/[0.03] border border-white/5 hover:border-amber-500/30 hover:bg-amber-500/5 transition-all duration-300 group cursor-pointer"
                     >
                       <div className="flex items-start gap-3">
-                        <div className="w-8 h-8 rounded-lg bg-amber-500/10 flex items-center justify-center flex-shrink-0 group-hover:bg-amber-500/20 transition-colors">
-                          <span className="text-amber-400 text-sm font-light">{String(i + 1).padStart(2, '0')}</span>
+                        <div className="w-8 h-8 rounded-lg bg-amber-500/10 flex items-center justify-center flex-shrink-0 group-hover:bg-amber-500/20 group-hover:scale-110 transition-all">
+                          <span className="text-lg">{topic.icon}</span>
                         </div>
-                        <div>
-                          <p className="text-white/90 font-medium group-hover:text-amber-200 transition-colors">{topic.title}</p>
-                          <p className="text-white/40 text-sm mt-1">{topic.desc}</p>
+                        <div className="flex-1">
+                          <div className="flex items-center justify-between">
+                            <p className="text-white/90 font-medium group-hover:text-amber-200 transition-colors">{topic.title}</p>
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-white/20 group-hover:text-amber-400 group-hover:translate-x-1 transition-all">
+                              <path d="M9 18l6-6-6-6"/>
+                            </svg>
+                          </div>
+                          <p className="text-white/40 text-sm mt-1">{topic.tagline}</p>
                         </div>
                       </div>
                     </div>
-                  ))}
-                </div>
-              </div>
-
-              {/* Experience Section */}
-              <div className="grid sm:grid-cols-3 gap-4">
-                {[
-                  { num: '50+', label: 'Keynotes Delivered' },
-                  { num: '25K+', label: 'Audience Reached' },
-                  { num: '12', label: 'Countries' }
-                ].map((stat, i) => (
-                  <div key={i} className="p-5 rounded-xl bg-gradient-to-br from-amber-500/5 to-orange-500/5 border border-amber-500/10 text-center">
-                    <p className="text-3xl font-light text-amber-200">{stat.num}</p>
-                    <p className="text-white/40 text-xs mt-1 tracking-wide uppercase">{stat.label}</p>
-                  </div>
-                ))}
-              </div>
-
-              {/* Venues */}
-              <div>
-                <h3 className="text-amber-200 text-sm tracking-[0.2em] uppercase mb-4">Previous Venues</h3>
-                <div className="flex flex-wrap gap-2">
-                  {['TED', 'SXSW', 'Web Summit', 'Google I/O', 'MIT Media Lab', 'Stanford', 'Davos', 'Singularity University'].map((venue, i) => (
-                    <span key={i} className="px-3 py-1.5 rounded-full bg-white/5 border border-white/10 text-white/60 text-xs tracking-wide">
-                      {venue}
-                    </span>
                   ))}
                 </div>
               </div>
@@ -2572,6 +2690,153 @@ Style: Dreamlike, cinematic photography, soft ethereal lighting with gentle glow
                     </svg>
                   </span>
                 </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Topic Detail Modal - Expanded view of a speaking topic */}
+      {selectedTopic && (
+        <div
+          className="fixed inset-0 z-[60] flex items-center justify-center p-4 animate-fade-in"
+          onClick={() => setSelectedTopic(null)}
+        >
+          <div className="absolute inset-0 bg-black/90 backdrop-blur-xl" />
+          <div className="absolute inset-0 bg-gradient-to-br from-amber-900/20 via-transparent to-orange-900/20" />
+
+          {/* Animated background particles */}
+          <div className="absolute inset-0 overflow-hidden pointer-events-none">
+            {[...Array(20)].map((_, i) => (
+              <div
+                key={i}
+                className="absolute w-1 h-1 bg-amber-400/30 rounded-full animate-pulse"
+                style={{
+                  left: `${Math.random() * 100}%`,
+                  top: `${Math.random() * 100}%`,
+                  animationDelay: `${Math.random() * 3}s`,
+                  animationDuration: `${2 + Math.random() * 3}s`
+                }}
+              />
+            ))}
+          </div>
+
+          {/* Modal Content */}
+          <div
+            className="relative w-full max-w-3xl max-h-[90vh] overflow-y-auto bg-gradient-to-br from-black/98 via-black/95 to-amber-950/20 backdrop-blur-xl rounded-3xl border border-amber-500/20 shadow-2xl shadow-amber-500/10"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Header with Icon */}
+            <div className="relative p-8 pb-6 border-b border-amber-500/10 overflow-hidden">
+              <div className="absolute inset-0 bg-gradient-to-r from-amber-500/5 via-orange-500/5 to-amber-500/5" />
+              <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-amber-500/50 to-transparent" />
+
+              <button
+                onClick={() => setSelectedTopic(null)}
+                className="absolute top-4 right-4 p-2 text-white/40 hover:text-white/80 transition-colors rounded-full hover:bg-white/5"
+              >
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <path d="M18 6L6 18M6 6l12 12"/>
+                </svg>
+              </button>
+
+              <div className="relative flex items-start gap-5">
+                <div className="w-20 h-20 rounded-2xl bg-gradient-to-br from-amber-500/20 to-orange-500/20 border border-amber-500/30 flex items-center justify-center shadow-lg shadow-amber-500/20">
+                  <span className="text-4xl">{selectedTopic.icon}</span>
+                </div>
+                <div className="flex-1 pt-1">
+                  <h2 className="text-3xl font-light text-white tracking-wide">{selectedTopic.title}</h2>
+                  <p className="text-amber-200/60 text-lg mt-2 italic">{selectedTopic.tagline}</p>
+                </div>
+              </div>
+            </div>
+
+            {/* Content */}
+            <div className="p-8 space-y-8">
+              {/* Description */}
+              <div>
+                <p className="text-white/80 text-lg leading-relaxed">
+                  {selectedTopic.description}
+                </p>
+              </div>
+
+              {/* Key Points */}
+              <div className="space-y-4">
+                <h3 className="text-amber-200 text-sm tracking-[0.2em] uppercase flex items-center gap-2">
+                  <span className="w-8 h-[1px] bg-amber-500/30" />
+                  What We Explore
+                </h3>
+                <div className="grid gap-3">
+                  {selectedTopic.keyPoints.map((point, i) => (
+                    <div
+                      key={i}
+                      className="flex items-start gap-4 p-4 rounded-xl bg-white/[0.02] border border-white/5 hover:border-amber-500/20 transition-all duration-300"
+                    >
+                      <div className="w-8 h-8 rounded-lg bg-amber-500/10 flex items-center justify-center flex-shrink-0">
+                        <span className="text-amber-400 font-mono text-sm">{String(i + 1).padStart(2, '0')}</span>
+                      </div>
+                      <p className="text-white/70 pt-1">{point}</p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Audience Gets */}
+              <div className="p-6 rounded-2xl bg-gradient-to-br from-amber-500/10 to-orange-500/5 border border-amber-500/20">
+                <h3 className="text-amber-200 text-sm tracking-[0.2em] uppercase mb-3 flex items-center gap-2">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-amber-400">
+                    <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/>
+                    <polyline points="22 4 12 14.01 9 11.01"/>
+                  </svg>
+                  What You Take Away
+                </h3>
+                <p className="text-white/80 leading-relaxed">{selectedTopic.audienceGets}</p>
+              </div>
+
+              {/* CTA Section */}
+              <div className="pt-6 border-t border-white/5 space-y-4">
+                <p className="text-center text-white/40 text-sm">
+                  Want to explore this topic in real-time?
+                </p>
+
+                {/* Discuss with Twin Button - THE WOW FACTOR */}
+                <button
+                  onClick={() => startTopicConversation(selectedTopic)}
+                  className="w-full py-5 rounded-2xl bg-gradient-to-r from-amber-500/30 via-orange-500/30 to-amber-500/30 border border-amber-500/40 text-amber-100 font-medium tracking-wide hover:from-amber-500/40 hover:via-orange-500/40 hover:to-amber-500/40 hover:border-amber-400/50 transition-all duration-500 group relative overflow-hidden"
+                >
+                  {/* Shimmer effect */}
+                  <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000" />
+
+                  <span className="relative flex items-center justify-center gap-3">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-amber-300 group-hover:scale-110 transition-transform">
+                      <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+                    </svg>
+                    <span className="text-lg">Discuss This with Kevin's Twin</span>
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="group-hover:translate-x-2 transition-transform">
+                      <path d="M5 12h14M12 5l7 7-7 7"/>
+                    </svg>
+                  </span>
+                </button>
+
+                <p className="text-center text-white/30 text-xs">
+                  Start an AI-powered conversation exploring this topic together
+                </p>
+
+                {/* Secondary Actions */}
+                <div className="flex gap-3 pt-2">
+                  <button
+                    onClick={() => { setSelectedTopic(null); }}
+                    className="flex-1 py-3 rounded-xl bg-white/5 border border-white/10 text-white/60 text-sm hover:bg-white/10 hover:text-white/80 transition-all"
+                  >
+                    Back to Topics
+                  </button>
+                  <button
+                    onClick={() => { setSelectedTopic(null); setActiveHorizonModal(null); setActivePanel('bridge'); }}
+                    className="flex-1 py-3 rounded-xl bg-white/5 border border-white/10 text-white/60 text-sm hover:bg-white/10 hover:text-white/80 transition-all"
+                  >
+                    Book This Talk
+                  </button>
+                </div>
               </div>
             </div>
           </div>
@@ -3286,10 +3551,10 @@ Style: Dreamlike, cinematic photography, soft ethereal lighting with gentle glow
 
               <div className="pt-4 border-t border-white/5">
                 <p className="text-white/30 text-xs italic">
-                  "We are clever apes who taught sand to think. Now we're teaching it to remember."
+                  "{currentQuote.text}"
                 </p>
                 <p className="text-white/20 text-xs mt-2">
-                  — Kevin Russell
+                  — {currentQuote.author}
                 </p>
               </div>
             </div>
