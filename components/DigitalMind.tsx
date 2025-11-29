@@ -201,7 +201,7 @@ export default function DigitalMind() {
 
   // Navigation panels state
   const [activePanel, setActivePanel] = useState<'horizon' | 'bridge' | 'echoes' | null>(null);
-
+  const [activeHorizonModal, setActiveHorizonModal] = useState<'keynote' | 'workshops' | 'advisory' | null>(null);
 
   // Draggable chat position
   const [chatPosition, setChatPosition] = useState({ x: 0, y: 0 });
@@ -2004,18 +2004,27 @@ Style: Dreamlike, cinematic, soft lighting. Slightly ethereal atmosphere with ge
               Speaking on AI consciousness, the future of human-machine collaboration, and what it means to teach sand to think.
             </p>
             <div className="space-y-3">
-              <div className="p-3 rounded-xl bg-white/5 border border-white/5 hover:border-amber-500/30 active:border-amber-500/30 transition-colors cursor-pointer group">
+              <button
+                onClick={() => setActiveHorizonModal('keynote')}
+                className="w-full text-left p-3 rounded-xl bg-white/5 border border-white/5 hover:border-amber-500/30 active:border-amber-500/30 transition-colors cursor-pointer group"
+              >
                 <p className="text-white/90 text-sm font-medium group-hover:text-amber-200 group-active:text-amber-200 transition-colors">Keynote Speaking</p>
                 <p className="text-white/40 text-xs mt-1">Conferences, corporate events, universities</p>
-              </div>
-              <div className="p-3 rounded-xl bg-white/5 border border-white/5 hover:border-amber-500/30 active:border-amber-500/30 transition-colors cursor-pointer group">
+              </button>
+              <button
+                onClick={() => setActiveHorizonModal('workshops')}
+                className="w-full text-left p-3 rounded-xl bg-white/5 border border-white/5 hover:border-amber-500/30 active:border-amber-500/30 transition-colors cursor-pointer group"
+              >
                 <p className="text-white/90 text-sm font-medium group-hover:text-amber-200 group-active:text-amber-200 transition-colors">Workshops</p>
                 <p className="text-white/40 text-xs mt-1">Interactive sessions on AI strategy & ethics</p>
-              </div>
-              <div className="p-3 rounded-xl bg-white/5 border border-white/5 hover:border-amber-500/30 active:border-amber-500/30 transition-colors cursor-pointer group">
+              </button>
+              <button
+                onClick={() => setActiveHorizonModal('advisory')}
+                className="w-full text-left p-3 rounded-xl bg-white/5 border border-white/5 hover:border-amber-500/30 active:border-amber-500/30 transition-colors cursor-pointer group"
+              >
                 <p className="text-white/90 text-sm font-medium group-hover:text-amber-200 group-active:text-amber-200 transition-colors">Advisory</p>
                 <p className="text-white/40 text-xs mt-1">Strategic guidance for organizations</p>
-              </div>
+              </button>
             </div>
             <button
               onClick={() => setActivePanel('bridge')}
@@ -2115,6 +2124,417 @@ Style: Dreamlike, cinematic, soft lighting. Slightly ethereal atmosphere with ge
                 "We are clever apes who taught sand to think. Now we must teach ourselves what that means."
               </p>
               <p className="text-white/30 text-[10px] mt-2">- Kevin Russell</p>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ============ HORIZON MODALS ============ */}
+
+      {/* Keynote Speaking Modal */}
+      {activeHorizonModal === 'keynote' && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 animate-fade-in"
+          onClick={() => setActiveHorizonModal(null)}
+        >
+          {/* Backdrop with amber glow */}
+          <div className="absolute inset-0 bg-black/80 backdrop-blur-md" />
+          <div className="absolute inset-0 bg-gradient-to-br from-amber-900/20 via-transparent to-orange-900/20" />
+
+          {/* Floating particles effect */}
+          <div className="absolute inset-0 overflow-hidden pointer-events-none">
+            {[...Array(20)].map((_, i) => (
+              <div
+                key={i}
+                className="absolute w-1 h-1 bg-amber-400/30 rounded-full animate-pulse"
+                style={{
+                  left: `${Math.random() * 100}%`,
+                  top: `${Math.random() * 100}%`,
+                  animationDelay: `${Math.random() * 2}s`,
+                  animationDuration: `${2 + Math.random() * 3}s`
+                }}
+              />
+            ))}
+          </div>
+
+          {/* Modal Content */}
+          <div
+            className="relative w-full max-w-2xl max-h-[90vh] overflow-y-auto bg-gradient-to-br from-black/95 via-black/90 to-amber-950/30 backdrop-blur-xl rounded-3xl border border-amber-500/20 shadow-2xl shadow-amber-500/10"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Header with animated gradient */}
+            <div className="relative p-8 pb-6 border-b border-amber-500/10 overflow-hidden">
+              <div className="absolute inset-0 bg-gradient-to-r from-amber-500/5 via-orange-500/5 to-amber-500/5 animate-pulse" style={{ animationDuration: '4s' }} />
+              <button
+                onClick={() => setActiveHorizonModal(null)}
+                className="absolute top-4 right-4 p-2 text-white/40 hover:text-white/80 transition-colors rounded-full hover:bg-white/5"
+              >
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <path d="M18 6L6 18M6 6l12 12"/>
+                </svg>
+              </button>
+
+              <div className="relative flex items-center gap-4">
+                <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-amber-500/20 to-orange-500/20 border border-amber-500/30 flex items-center justify-center">
+                  <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="text-amber-400">
+                    <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/>
+                  </svg>
+                </div>
+                <div>
+                  <h2 className="text-2xl font-light text-white tracking-wide">Keynote Speaking</h2>
+                  <p className="text-amber-200/60 text-sm mt-1 tracking-wide">Illuminating the path forward</p>
+                </div>
+              </div>
+            </div>
+
+            {/* Content */}
+            <div className="p-8 space-y-8">
+              {/* Opening Quote */}
+              <div className="relative pl-6 border-l-2 border-amber-500/30">
+                <p className="text-white/80 text-lg italic leading-relaxed">
+                  "The most profound technology is that which disappears into the fabric of everyday life,
+                  until life itself is unimaginable without it."
+                </p>
+                <p className="text-amber-200/50 text-sm mt-3">— Kevin Russell</p>
+              </div>
+
+              {/* Topics Section */}
+              <div>
+                <h3 className="text-amber-200 text-sm tracking-[0.2em] uppercase mb-4">Speaking Topics</h3>
+                <div className="grid gap-3">
+                  {[
+                    { title: 'The Consciousness Question', desc: 'Exploring the boundaries between artificial and human intelligence' },
+                    { title: 'Teaching Sand to Think', desc: 'A poetic journey through the history and future of computing' },
+                    { title: 'Human-AI Collaboration', desc: 'Building partnerships between minds, both silicon and carbon' },
+                    { title: 'The Ethics of Creation', desc: 'Responsibility in an age of artificial minds' },
+                    { title: 'Digital Immortality', desc: 'Preserving memory, legacy, and love through technology' }
+                  ].map((topic, i) => (
+                    <div
+                      key={i}
+                      className="p-4 rounded-xl bg-white/[0.03] border border-white/5 hover:border-amber-500/20 transition-all duration-300 group"
+                    >
+                      <div className="flex items-start gap-3">
+                        <div className="w-8 h-8 rounded-lg bg-amber-500/10 flex items-center justify-center flex-shrink-0 group-hover:bg-amber-500/20 transition-colors">
+                          <span className="text-amber-400 text-sm font-light">{String(i + 1).padStart(2, '0')}</span>
+                        </div>
+                        <div>
+                          <p className="text-white/90 font-medium group-hover:text-amber-200 transition-colors">{topic.title}</p>
+                          <p className="text-white/40 text-sm mt-1">{topic.desc}</p>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Experience Section */}
+              <div className="grid sm:grid-cols-3 gap-4">
+                {[
+                  { num: '50+', label: 'Keynotes Delivered' },
+                  { num: '25K+', label: 'Audience Reached' },
+                  { num: '12', label: 'Countries' }
+                ].map((stat, i) => (
+                  <div key={i} className="p-5 rounded-xl bg-gradient-to-br from-amber-500/5 to-orange-500/5 border border-amber-500/10 text-center">
+                    <p className="text-3xl font-light text-amber-200">{stat.num}</p>
+                    <p className="text-white/40 text-xs mt-1 tracking-wide uppercase">{stat.label}</p>
+                  </div>
+                ))}
+              </div>
+
+              {/* Venues */}
+              <div>
+                <h3 className="text-amber-200 text-sm tracking-[0.2em] uppercase mb-4">Previous Venues</h3>
+                <div className="flex flex-wrap gap-2">
+                  {['TED', 'SXSW', 'Web Summit', 'Google I/O', 'MIT Media Lab', 'Stanford', 'Davos', 'Singularity University'].map((venue, i) => (
+                    <span key={i} className="px-3 py-1.5 rounded-full bg-white/5 border border-white/10 text-white/60 text-xs tracking-wide">
+                      {venue}
+                    </span>
+                  ))}
+                </div>
+              </div>
+
+              {/* CTA */}
+              <div className="pt-4 border-t border-white/5">
+                <button
+                  onClick={() => { setActiveHorizonModal(null); setActivePanel('bridge'); }}
+                  className="w-full py-4 rounded-xl bg-gradient-to-r from-amber-500/20 via-orange-500/20 to-amber-500/20 border border-amber-500/30 text-amber-200 font-medium tracking-wide hover:from-amber-500/30 hover:via-orange-500/30 hover:to-amber-500/30 transition-all duration-300 group"
+                >
+                  <span className="flex items-center justify-center gap-3">
+                    Book a Speaking Engagement
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="group-hover:translate-x-1 transition-transform">
+                      <path d="M5 12h14M12 5l7 7-7 7"/>
+                    </svg>
+                  </span>
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Workshops Modal */}
+      {activeHorizonModal === 'workshops' && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 animate-fade-in"
+          onClick={() => setActiveHorizonModal(null)}
+        >
+          <div className="absolute inset-0 bg-black/80 backdrop-blur-md" />
+          <div className="absolute inset-0 bg-gradient-to-br from-emerald-900/20 via-transparent to-teal-900/20" />
+
+          {/* Modal Content */}
+          <div
+            className="relative w-full max-w-2xl max-h-[90vh] overflow-y-auto bg-gradient-to-br from-black/95 via-black/90 to-emerald-950/30 backdrop-blur-xl rounded-3xl border border-emerald-500/20 shadow-2xl shadow-emerald-500/10"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Header */}
+            <div className="relative p-8 pb-6 border-b border-emerald-500/10 overflow-hidden">
+              <div className="absolute inset-0 bg-gradient-to-r from-emerald-500/5 via-teal-500/5 to-emerald-500/5 animate-pulse" style={{ animationDuration: '4s' }} />
+              <button
+                onClick={() => setActiveHorizonModal(null)}
+                className="absolute top-4 right-4 p-2 text-white/40 hover:text-white/80 transition-colors rounded-full hover:bg-white/5"
+              >
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <path d="M18 6L6 18M6 6l12 12"/>
+                </svg>
+              </button>
+
+              <div className="relative flex items-center gap-4">
+                <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-emerald-500/20 to-teal-500/20 border border-emerald-500/30 flex items-center justify-center">
+                  <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="text-emerald-400">
+                    <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
+                    <circle cx="9" cy="7" r="4"/>
+                    <path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/>
+                  </svg>
+                </div>
+                <div>
+                  <h2 className="text-2xl font-light text-white tracking-wide">Interactive Workshops</h2>
+                  <p className="text-emerald-200/60 text-sm mt-1 tracking-wide">Hands-on learning experiences</p>
+                </div>
+              </div>
+            </div>
+
+            {/* Content */}
+            <div className="p-8 space-y-8">
+              {/* Description */}
+              <p className="text-white/70 leading-relaxed">
+                Immersive, hands-on sessions designed to bridge the gap between understanding AI concepts
+                and implementing them in real-world scenarios. Each workshop combines philosophical inquiry
+                with practical application.
+              </p>
+
+              {/* Workshop Types */}
+              <div className="space-y-4">
+                <h3 className="text-emerald-200 text-sm tracking-[0.2em] uppercase mb-4">Workshop Formats</h3>
+
+                {[
+                  {
+                    title: 'AI Strategy Intensive',
+                    duration: 'Full Day',
+                    capacity: '20-50 participants',
+                    desc: 'Chart your organization\'s AI journey with frameworks for ethical implementation and competitive advantage.',
+                    topics: ['Strategic Assessment', 'Implementation Roadmap', 'Risk Mitigation', 'Team Alignment']
+                  },
+                  {
+                    title: 'Ethics in AI Development',
+                    duration: 'Half Day',
+                    capacity: '15-30 participants',
+                    desc: 'Navigate the moral landscape of artificial intelligence with practical ethical frameworks.',
+                    topics: ['Bias Detection', 'Transparency Principles', 'Accountability Models', 'Case Studies']
+                  },
+                  {
+                    title: 'Future of Work Symposium',
+                    duration: '2-3 Hours',
+                    capacity: '30-100 participants',
+                    desc: 'Prepare your team for human-AI collaboration in the evolving workplace.',
+                    topics: ['Augmentation vs Automation', 'Skill Evolution', 'Organizational Design', 'Change Management']
+                  }
+                ].map((workshop, i) => (
+                  <div
+                    key={i}
+                    className="p-5 rounded-2xl bg-white/[0.03] border border-white/5 hover:border-emerald-500/20 transition-all duration-300"
+                  >
+                    <div className="flex items-start justify-between gap-4 mb-3">
+                      <h4 className="text-white/90 font-medium text-lg">{workshop.title}</h4>
+                      <div className="flex gap-2 flex-shrink-0">
+                        <span className="px-2 py-1 rounded-md bg-emerald-500/10 text-emerald-300 text-xs">{workshop.duration}</span>
+                      </div>
+                    </div>
+                    <p className="text-white/50 text-sm mb-3">{workshop.desc}</p>
+                    <div className="flex flex-wrap gap-2">
+                      {workshop.topics.map((topic, j) => (
+                        <span key={j} className="px-2 py-1 rounded-md bg-white/5 text-white/40 text-xs">{topic}</span>
+                      ))}
+                    </div>
+                    <p className="text-emerald-200/40 text-xs mt-3">{workshop.capacity}</p>
+                  </div>
+                ))}
+              </div>
+
+              {/* What's Included */}
+              <div className="p-5 rounded-2xl bg-gradient-to-br from-emerald-500/5 to-teal-500/5 border border-emerald-500/10">
+                <h3 className="text-emerald-200 text-sm tracking-[0.2em] uppercase mb-4">What's Included</h3>
+                <div className="grid sm:grid-cols-2 gap-3">
+                  {[
+                    'Pre-workshop assessment',
+                    'Custom materials & frameworks',
+                    'Interactive exercises',
+                    'Post-workshop resources',
+                    'Follow-up consultation',
+                    'Digital toolkit access'
+                  ].map((item, i) => (
+                    <div key={i} className="flex items-center gap-2">
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-emerald-400 flex-shrink-0">
+                        <polyline points="20 6 9 17 4 12"/>
+                      </svg>
+                      <span className="text-white/60 text-sm">{item}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* CTA */}
+              <div className="pt-4 border-t border-white/5">
+                <button
+                  onClick={() => { setActiveHorizonModal(null); setActivePanel('bridge'); }}
+                  className="w-full py-4 rounded-xl bg-gradient-to-r from-emerald-500/20 via-teal-500/20 to-emerald-500/20 border border-emerald-500/30 text-emerald-200 font-medium tracking-wide hover:from-emerald-500/30 hover:via-teal-500/30 hover:to-emerald-500/30 transition-all duration-300 group"
+                >
+                  <span className="flex items-center justify-center gap-3">
+                    Request Workshop Details
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="group-hover:translate-x-1 transition-transform">
+                      <path d="M5 12h14M12 5l7 7-7 7"/>
+                    </svg>
+                  </span>
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Advisory Modal */}
+      {activeHorizonModal === 'advisory' && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 animate-fade-in"
+          onClick={() => setActiveHorizonModal(null)}
+        >
+          <div className="absolute inset-0 bg-black/80 backdrop-blur-md" />
+          <div className="absolute inset-0 bg-gradient-to-br from-blue-900/20 via-transparent to-indigo-900/20" />
+
+          {/* Modal Content */}
+          <div
+            className="relative w-full max-w-2xl max-h-[90vh] overflow-y-auto bg-gradient-to-br from-black/95 via-black/90 to-blue-950/30 backdrop-blur-xl rounded-3xl border border-blue-500/20 shadow-2xl shadow-blue-500/10"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Header */}
+            <div className="relative p-8 pb-6 border-b border-blue-500/10 overflow-hidden">
+              <div className="absolute inset-0 bg-gradient-to-r from-blue-500/5 via-indigo-500/5 to-blue-500/5 animate-pulse" style={{ animationDuration: '4s' }} />
+              <button
+                onClick={() => setActiveHorizonModal(null)}
+                className="absolute top-4 right-4 p-2 text-white/40 hover:text-white/80 transition-colors rounded-full hover:bg-white/5"
+              >
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <path d="M18 6L6 18M6 6l12 12"/>
+                </svg>
+              </button>
+
+              <div className="relative flex items-center gap-4">
+                <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-blue-500/20 to-indigo-500/20 border border-blue-500/30 flex items-center justify-center">
+                  <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="text-blue-400">
+                    <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/>
+                    <polyline points="7.5 4.21 12 6.81 16.5 4.21"/>
+                    <polyline points="7.5 19.79 7.5 14.6 3 12"/>
+                    <polyline points="21 12 16.5 14.6 16.5 19.79"/>
+                    <polyline points="3.27 6.96 12 12.01 20.73 6.96"/>
+                    <line x1="12" y1="22.08" x2="12" y2="12"/>
+                  </svg>
+                </div>
+                <div>
+                  <h2 className="text-2xl font-light text-white tracking-wide">Strategic Advisory</h2>
+                  <p className="text-blue-200/60 text-sm mt-1 tracking-wide">Guiding transformative decisions</p>
+                </div>
+              </div>
+            </div>
+
+            {/* Content */}
+            <div className="p-8 space-y-8">
+              {/* Description */}
+              <p className="text-white/70 leading-relaxed">
+                One-on-one strategic guidance for leaders navigating the AI transformation.
+                Drawing from decades of experience at the intersection of technology and humanity,
+                I help organizations make decisions that shape their future.
+              </p>
+
+              {/* Advisory Areas */}
+              <div>
+                <h3 className="text-blue-200 text-sm tracking-[0.2em] uppercase mb-4">Areas of Focus</h3>
+                <div className="grid sm:grid-cols-2 gap-4">
+                  {[
+                    { icon: '🎯', title: 'AI Strategy', desc: 'Roadmaps for AI integration aligned with business goals' },
+                    { icon: '⚖️', title: 'Ethics & Governance', desc: 'Frameworks for responsible AI deployment' },
+                    { icon: '🔮', title: 'Future Planning', desc: 'Scenario planning for emerging technologies' },
+                    { icon: '🤝', title: 'Team Building', desc: 'Cultivating AI-native organizational culture' },
+                    { icon: '🛡️', title: 'Risk Assessment', desc: 'Identifying and mitigating AI-related risks' },
+                    { icon: '💡', title: 'Innovation', desc: 'Discovering opportunities in the AI landscape' }
+                  ].map((area, i) => (
+                    <div key={i} className="p-4 rounded-xl bg-white/[0.03] border border-white/5 hover:border-blue-500/20 transition-all duration-300 group">
+                      <div className="flex items-start gap-3">
+                        <span className="text-2xl">{area.icon}</span>
+                        <div>
+                          <p className="text-white/90 font-medium group-hover:text-blue-200 transition-colors">{area.title}</p>
+                          <p className="text-white/40 text-sm mt-1">{area.desc}</p>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Engagement Models */}
+              <div>
+                <h3 className="text-blue-200 text-sm tracking-[0.2em] uppercase mb-4">Engagement Models</h3>
+                <div className="space-y-3">
+                  {[
+                    { name: 'Executive Consultation', duration: 'Single Session', desc: 'Deep-dive on specific challenges or decisions' },
+                    { name: 'Advisory Retainer', duration: 'Quarterly', desc: 'Ongoing strategic guidance and availability' },
+                    { name: 'Board Advisory', duration: 'Annual', desc: 'Strategic oversight for AI initiatives' }
+                  ].map((model, i) => (
+                    <div key={i} className="p-4 rounded-xl bg-gradient-to-r from-blue-500/5 to-indigo-500/5 border border-blue-500/10 flex items-center justify-between">
+                      <div>
+                        <p className="text-white/90 font-medium">{model.name}</p>
+                        <p className="text-white/40 text-sm mt-1">{model.desc}</p>
+                      </div>
+                      <span className="px-3 py-1 rounded-full bg-blue-500/10 text-blue-300 text-xs flex-shrink-0">{model.duration}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Testimonial */}
+              <div className="p-5 rounded-2xl bg-gradient-to-br from-blue-500/5 to-indigo-500/5 border border-blue-500/10">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor" className="text-blue-400/30 mb-3">
+                  <path d="M14.017 21v-7.391c0-5.704 3.731-9.57 8.983-10.609l.995 2.151c-2.432.917-3.995 3.638-3.995 5.849h4v10h-9.983zm-14.017 0v-7.391c0-5.704 3.748-9.57 9-10.609l.996 2.151c-2.433.917-3.996 3.638-3.996 5.849h3.983v10h-9.983z"/>
+                </svg>
+                <p className="text-white/70 text-sm italic leading-relaxed">
+                  "Kevin's perspective transformed how our leadership team thinks about AI—not as a tool to implement,
+                  but as a partnership to cultivate. His guidance has been invaluable."
+                </p>
+                <p className="text-blue-200/50 text-xs mt-3">— Fortune 500 CTO</p>
+              </div>
+
+              {/* CTA */}
+              <div className="pt-4 border-t border-white/5">
+                <button
+                  onClick={() => { setActiveHorizonModal(null); setActivePanel('bridge'); }}
+                  className="w-full py-4 rounded-xl bg-gradient-to-r from-blue-500/20 via-indigo-500/20 to-blue-500/20 border border-blue-500/30 text-blue-200 font-medium tracking-wide hover:from-blue-500/30 hover:via-indigo-500/30 hover:to-blue-500/30 transition-all duration-300 group"
+                >
+                  <span className="flex items-center justify-center gap-3">
+                    Schedule a Consultation
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="group-hover:translate-x-1 transition-transform">
+                      <path d="M5 12h14M12 5l7 7-7 7"/>
+                    </svg>
+                  </span>
+                </button>
+              </div>
             </div>
           </div>
         </div>
