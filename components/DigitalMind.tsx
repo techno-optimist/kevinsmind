@@ -189,7 +189,6 @@ export default function DigitalMind() {
   const [inputText, setInputText] = useState('');
   const [isThinking, setIsThinking] = useState(false);
   const [manualControl, setManualControl] = useState(false);
-  const [isChatMinimized, setIsChatMinimized] = useState(false);
   const [isChatCollapsed, setIsChatCollapsed] = useState(false); // Collapsed = just input bar visible
   const [isNavigatingToImages, setIsNavigatingToImages] = useState(false);
   const [expandedPrompt, setExpandedPrompt] = useState<{ label: string; prompt: string } | null>(null);
@@ -224,7 +223,7 @@ export default function DigitalMind() {
   // Scroll to bottom of chat
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [messages, streamingResponse, isChatMinimized, pendingImages]);
+  }, [messages, streamingResponse, isChatCollapsed, pendingImages]);
 
   // Drag handlers for chat panel
   const handleDragStart = useCallback((e: React.MouseEvent | React.TouchEvent) => {
@@ -271,17 +270,17 @@ export default function DigitalMind() {
     };
   }, [isDragging]);
 
-  // Auto-minimize chat when user takes manual control of constellation
+  // Auto-collapse chat when user takes manual control of constellation
   useEffect(() => {
     if (manualControl) {
-      setIsChatMinimized(true);
+      setIsChatCollapsed(true);
     }
   }, [manualControl]);
 
   // Expand chat when new streaming response starts (but not during image navigation)
   useEffect(() => {
     if (streamingResponse && !isNavigatingToImages) {
-      setIsChatMinimized(false);
+      setIsChatCollapsed(false);
     }
   }, [streamingResponse, isNavigatingToImages]);
 
@@ -527,12 +526,12 @@ Return 1-3 memories based on context richness, each with LABEL: and MEMORY: on s
             S.cameraFocusQueue.push(pos.clone());
             S.cameraFocusNodes.push(node);
 
-            // Set first as immediate focus and auto-minimize chat to reveal mindscape
+            // Set first as immediate focus and auto-collapse chat to reveal mindscape
             if (i === 0 && !S.isManual) {
                 S.cameraFocusTarget = pos.clone();
                 S.cameraOrbitPhase = 0;
                 setIsNavigatingToImages(true);
-                setIsChatMinimized(true);
+                setIsChatCollapsed(true);
             }
         });
 
@@ -1618,39 +1617,11 @@ Style: Dreamlike, cinematic, soft lighting. Slightly ethereal atmosphere with ge
           One component for all screens with 3 states:
           1. Welcome: Centered input with title (no messages)
           2. Active: Centered expanded chat panel (during conversation)
-          3. Minimized: Small pill at top (during image navigation)
+          3. Collapsed: Input bar only with expand option
           ============================================ */}
 
-      {/* Minimized state - pill at top when navigating or manually minimized */}
-      {isChatMinimized && (messages.length > 0 || streamingResponse) && (
-        <div className="absolute top-4 left-1/2 -translate-x-1/2 z-40 pointer-events-auto animate-fade-in">
-          <button
-            onClick={() => {
-              setIsChatMinimized(false);
-              setIsNavigatingToImages(false);
-            }}
-            className="group flex items-center gap-3 px-5 py-3 rounded-full bg-black/70 backdrop-blur-xl border border-white/15 hover:bg-black/80 hover:border-white/25 transition-all"
-            style={{ boxShadow: '0 8px 32px rgba(0, 0, 0, 0.5)' }}
-          >
-            <div className="w-2 h-2 rounded-full bg-cyan-400/80 animate-pulse" />
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-white/60 group-hover:text-white/90">
-              <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
-            </svg>
-            <span className="text-sm text-white/60 group-hover:text-white/90 font-medium">{messages.length}</span>
-            {streamingResponse && (
-              <div className="flex gap-0.5 ml-1">
-                <div className="w-1 h-1 rounded-full bg-cyan-400 animate-bounce" style={{ animationDelay: '0ms' }} />
-                <div className="w-1 h-1 rounded-full bg-cyan-400 animate-bounce" style={{ animationDelay: '150ms' }} />
-                <div className="w-1 h-1 rounded-full bg-cyan-400 animate-bounce" style={{ animationDelay: '300ms' }} />
-              </div>
-            )}
-            <span className="text-xs text-white/40 ml-1">tap to expand</span>
-          </button>
-        </div>
-      )}
-
-      {/* Main Chat Container - Positioned at top to leave room for particle text */}
-      {!isChatMinimized && (
+      {/* Main Chat Container - Always visible (just collapses to input bar) */}
+      {(
         <div className="absolute top-4 left-1/2 -translate-x-1/2 z-30 pointer-events-none p-4 w-full max-w-2xl">
           <div
             className={`pointer-events-auto w-full transition-all duration-500 ease-out ${
@@ -1676,13 +1647,13 @@ Style: Dreamlike, cinematic, soft lighting. Slightly ethereal atmosphere with ge
                     <span className="text-xs uppercase tracking-[0.15em] text-white/40">Mind of Kevin</span>
                   </div>
                   <button
-                    onClick={() => setIsChatMinimized(true)}
+                    onClick={() => setIsChatCollapsed(true)}
                     className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-white/5 hover:bg-white/10 border border-white/10 transition-all text-white/40 hover:text-white/60"
                   >
                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                       <path d="M18 15l-6-6-6 6"/>
                     </svg>
-                    <span className="text-xs">Minimize</span>
+                    <span className="text-xs">Collapse</span>
                   </button>
                 </div>
               )}
@@ -1797,7 +1768,7 @@ Style: Dreamlike, cinematic, soft lighting. Slightly ethereal atmosphere with ge
                                         S.cameraOrbitPhase = 0;
                                         S.isManual = false;
                                         setManualControl(false);
-                                        setIsChatMinimized(true);
+                                        setIsChatCollapsed(true);
                                         setIsNavigatingToImages(true);
                                       }
                                     }}
@@ -1998,10 +1969,10 @@ Style: Dreamlike, cinematic, soft lighting. Slightly ethereal atmosphere with ge
         </div>
       )}
 
-      {/* Floating Navigation Thought Seeds - only visible when chat is minimized or no conversation */}
+      {/* Floating Navigation Thought Seeds - only visible when chat is collapsed or no conversation */}
       <div
         className={`absolute z-20 pointer-events-auto right-4 sm:right-8 top-1/2 -translate-y-1/2 flex flex-col gap-6 sm:gap-8 transition-all duration-500 ${
-          !isChatMinimized && (messages.length > 0 || streamingResponse) ? 'opacity-0 pointer-events-none translate-x-8' : 'opacity-100 translate-x-0'
+          !isChatCollapsed && (messages.length > 0 || streamingResponse) ? 'opacity-0 pointer-events-none translate-x-8' : 'opacity-100 translate-x-0'
         }`}
       >
         {/* The Horizon - Speaking/Ideas */}
