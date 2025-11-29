@@ -2004,27 +2004,33 @@ Style: Dreamlike, cinematic, soft lighting. Slightly ethereal atmosphere with ge
               Speaking on AI consciousness, the future of human-machine collaboration, and what it means to teach sand to think.
             </p>
             <div className="space-y-3">
-              <button
-                onClick={() => setActiveHorizonModal('keynote')}
+              <div
+                onClick={(e) => { e.stopPropagation(); setActiveHorizonModal('keynote'); }}
                 className="w-full text-left p-3 rounded-xl bg-white/5 border border-white/5 hover:border-amber-500/30 active:border-amber-500/30 transition-colors cursor-pointer group"
+                role="button"
+                tabIndex={0}
               >
-                <p className="text-white/90 text-sm font-medium group-hover:text-amber-200 group-active:text-amber-200 transition-colors">Keynote Speaking</p>
-                <p className="text-white/40 text-xs mt-1">Conferences, corporate events, universities</p>
-              </button>
-              <button
-                onClick={() => setActiveHorizonModal('workshops')}
+                <span className="block text-white/90 text-sm font-medium group-hover:text-amber-200 group-active:text-amber-200 transition-colors">Keynote Speaking</span>
+                <span className="block text-white/40 text-xs mt-1">Conferences, corporate events, universities</span>
+              </div>
+              <div
+                onClick={(e) => { e.stopPropagation(); setActiveHorizonModal('workshops'); }}
                 className="w-full text-left p-3 rounded-xl bg-white/5 border border-white/5 hover:border-amber-500/30 active:border-amber-500/30 transition-colors cursor-pointer group"
+                role="button"
+                tabIndex={0}
               >
-                <p className="text-white/90 text-sm font-medium group-hover:text-amber-200 group-active:text-amber-200 transition-colors">Workshops</p>
-                <p className="text-white/40 text-xs mt-1">Interactive sessions on AI strategy & ethics</p>
-              </button>
-              <button
-                onClick={() => setActiveHorizonModal('advisory')}
+                <span className="block text-white/90 text-sm font-medium group-hover:text-amber-200 group-active:text-amber-200 transition-colors">Workshops</span>
+                <span className="block text-white/40 text-xs mt-1">Interactive sessions on AI strategy & ethics</span>
+              </div>
+              <div
+                onClick={(e) => { e.stopPropagation(); setActiveHorizonModal('advisory'); }}
                 className="w-full text-left p-3 rounded-xl bg-white/5 border border-white/5 hover:border-amber-500/30 active:border-amber-500/30 transition-colors cursor-pointer group"
+                role="button"
+                tabIndex={0}
               >
-                <p className="text-white/90 text-sm font-medium group-hover:text-amber-200 group-active:text-amber-200 transition-colors">Advisory</p>
-                <p className="text-white/40 text-xs mt-1">Strategic guidance for organizations</p>
-              </button>
+                <span className="block text-white/90 text-sm font-medium group-hover:text-amber-200 group-active:text-amber-200 transition-colors">Advisory</span>
+                <span className="block text-white/40 text-xs mt-1">Strategic guidance for organizations</span>
+              </div>
             </div>
             <button
               onClick={() => setActivePanel('bridge')}
