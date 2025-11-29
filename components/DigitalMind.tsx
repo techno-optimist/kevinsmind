@@ -205,6 +205,8 @@ export default function DigitalMind() {
   const [pendingImages, setPendingImages] = useState<string[]>([]);
   const pendingImagesRef = useRef<string[]>([]);
   const expectedImageCountRef = useRef<number>(0);
+  const [isImagining, setIsImagining] = useState(false); // Visual memory being generated
+  const [imaginingLabel, setImaginingLabel] = useState(''); // The label for the memory being created
 
   // Kevin's reference images for character-consistent image generation
   const kevinReferenceImagesRef = useRef<Array<{ inlineData: { mimeType: string; data: string } }>>([]);
@@ -617,6 +619,10 @@ Return exactly ONE scene with LABEL: and SCENE: on separate lines.`
         setPendingImages([]);
         expectedImageCountRef.current = memoryScenes.length;
 
+        // Start imagining indicator
+        setIsImagining(true);
+        setImaginingLabel(memoryScenes[0]?.label || 'A visual memory');
+
         // Store the starting index in the queue for this batch
         batchQueueStartIndexRef.current = S.cameraFocusQueue.length;
 
@@ -815,6 +821,9 @@ Style: Dreamlike, cinematic photography, soft ethereal lighting with gentle glow
                                 images: [...pendingImagesRef.current],
                                 queueStartIndex: batchQueueStartIndexRef.current
                             }]);
+                            // Stop imagining indicator
+                            setIsImagining(false);
+                            setImaginingLabel('');
                         }
 
                         // Replace placeholder with real image
@@ -839,6 +848,9 @@ Style: Dreamlike, cinematic photography, soft ethereal lighting with gentle glow
                 }
             } catch (e) {
                 console.warn(`Failed to generate image ${sceneIndex}:`, e);
+                // Stop imagining on error
+                setIsImagining(false);
+                setImaginingLabel('');
             }
 
             // Continue to next image
@@ -1909,6 +1921,50 @@ Style: Dreamlike, cinematic photography, soft ethereal lighting with gentle glow
                         )}
                       </div>
                     ))}
+                    {/* Imagining visual memory indicator */}
+                    {isImagining && (
+                      <div className="flex justify-start animate-fade-in">
+                        <div className="max-w-[85%] px-4 py-3 rounded-2xl rounded-bl-md bg-gradient-to-br from-violet-500/10 via-cyan-500/5 to-purple-500/10 border border-violet-500/20">
+                          <div className="flex items-center gap-3">
+                            {/* Animated thought bubble / eye icon */}
+                            <div className="relative w-10 h-10 flex-shrink-0">
+                              {/* Outer glow ring */}
+                              <div className="absolute inset-0 rounded-full bg-gradient-to-br from-violet-400/30 to-cyan-400/30 animate-pulse" />
+                              {/* Inner circle with eye */}
+                              <div className="absolute inset-1 rounded-full bg-black/40 flex items-center justify-center">
+                                <svg className="w-5 h-5 text-violet-300/80" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+                                  <path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z" />
+                                  <circle cx="12" cy="12" r="3" />
+                                </svg>
+                              </div>
+                              {/* Orbiting particles */}
+                              <div className="absolute inset-0 animate-spin" style={{ animationDuration: '3s' }}>
+                                <div className="absolute top-0 left-1/2 w-1 h-1 -ml-0.5 rounded-full bg-cyan-400/60" />
+                              </div>
+                              <div className="absolute inset-0 animate-spin" style={{ animationDuration: '4s', animationDirection: 'reverse' }}>
+                                <div className="absolute bottom-0 left-1/2 w-1 h-1 -ml-0.5 rounded-full bg-violet-400/60" />
+                              </div>
+                            </div>
+
+                            <div className="flex-1 min-w-0">
+                              <p className="text-violet-200/80 text-sm font-medium">Imagining a visual memory...</p>
+                              <p className="text-white/40 text-xs mt-0.5 truncate italic">"{imaginingLabel}"</p>
+                            </div>
+                          </div>
+
+                          {/* Progress shimmer bar */}
+                          <div className="mt-3 h-1 rounded-full bg-white/5 overflow-hidden">
+                            <div
+                              className="h-full w-1/3 rounded-full bg-gradient-to-r from-transparent via-violet-400/50 to-transparent animate-shimmer"
+                              style={{
+                                animation: 'shimmer 2s ease-in-out infinite',
+                              }}
+                            />
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
                     {/* Pending images - show loading state */}
                     {pendingImages.length > 0 && pendingImages.length < expectedImageCountRef.current && (
                       <div className="flex justify-center">
@@ -3359,6 +3415,13 @@ Style: Dreamlike, cinematic photography, soft ethereal lighting with gentle glow
         @keyframes slideUp {
           from { opacity: 1; transform: translateY(0); }
           to { opacity: 0; transform: translateY(-20px); }
+        }
+        @keyframes shimmer {
+          0% { transform: translateX(-100%); }
+          100% { transform: translateX(400%); }
+        }
+        .animate-shimmer {
+          animation: shimmer 2s ease-in-out infinite;
         }
         .line-clamp-4 {
           display: -webkit-box;
