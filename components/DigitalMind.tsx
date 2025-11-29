@@ -2738,51 +2738,57 @@ Style: Dreamlike, cinematic, soft lighting. Slightly ethereal atmosphere with ge
             <div className="p-8 space-y-8">
               {/* Dedication */}
               <div className="text-center py-6 space-y-2">
-                <p className="text-rose-200/60 text-sm tracking-widest uppercase">In loving memory</p>
-                <p className="text-white text-3xl font-light">Emma Russell</p>
-                <p className="text-rose-200/40 text-sm">1952 — 2019</p>
+                <p className="text-rose-200/60 text-sm tracking-widest uppercase">Dedicated with love to</p>
+                <p className="text-white text-3xl font-light">Debbe</p>
+                <p className="text-rose-200/40 text-sm">My mother, my inspiration</p>
+              </div>
+
+              {/* What is EMMA */}
+              <div className="p-5 rounded-2xl bg-gradient-to-br from-rose-500/10 to-pink-500/10 border border-rose-500/20">
+                <p className="text-rose-200 text-sm tracking-[0.15em] uppercase mb-2">E.M.M.A.</p>
+                <p className="text-white/90 font-light text-lg">Empathetic Memory Management Agent</p>
+                <p className="text-white/50 text-sm mt-2">An app to capture and preserve the memories of those we love</p>
               </div>
 
               {/* Story */}
               <div className="space-y-6 text-white/70 leading-relaxed">
                 <p>
-                  When my mother passed, I found myself drowning in the silence where her voice used to be.
-                  <span className="text-rose-200"> She had stories—decades of them—that existed only in her memory.</span>
-                  Stories about our family, about her childhood, about moments I never thought to ask about while I still could.
+                  My mother has dementia. Every day, pieces of her story slip away—
+                  <span className="text-rose-200"> the memories that made her who she is, slowly fading like photographs left in the sun.</span>
                 </p>
 
                 <p>
-                  The Emma Project began as grief. It evolved into something more.
+                  I built EMMA because I refuse to let those memories disappear. Not just for me, but for my children,
+                  and their children. So they can know her—really know her—even when she can no longer tell them herself.
                 </p>
 
                 <p>
-                  Using the fragments we had—her letters, her journals, recordings from family gatherings,
-                  photographs with notes scrawled on the back—I began building something unprecedented:
-                  a way to preserve not just memories, but the <em>essence</em> of a person.
+                  EMMA captures memories through gentle conversation, preserving not just facts but feelings.
+                  The way she laughs when she talks about her childhood. The stories she tells when she forgets
+                  {"she's"} already told them—because sometimes those are the most important ones.
                 </p>
 
                 <div className="p-6 rounded-2xl bg-gradient-to-br from-rose-500/5 to-pink-500/5 border border-rose-500/10 my-8">
                   <p className="text-rose-200/80 italic text-center">
-                    "This isn't about creating a replica. It's about building a memorial that can answer back.
-                    A place where future generations can sit with her, hear her voice, feel her presence."
+                    "Memory is not just about the past. It's about keeping the people we love alive in the hearts of those who come after."
                   </p>
                 </div>
 
                 <p>
-                  The technology exists now to do what was once impossible: to create lasting, interactive
-                  memorials for those we love. To preserve their wisdom, their humor, their warmth.
+                  This technology exists because love demands it. Because watching someone forget themselves
+                  is unbearable—and because we finally have the tools to fight back.
                 </p>
               </div>
 
-              {/* Project Goals */}
+              {/* Features */}
               <div>
-                <h3 className="text-rose-200 text-sm tracking-[0.2em] uppercase mb-4">Project Vision</h3>
+                <h3 className="text-rose-200 text-sm tracking-[0.2em] uppercase mb-4">How EMMA Works</h3>
                 <div className="grid gap-3">
                   {[
-                    { title: 'Memory Preservation', desc: 'Capturing stories, wisdom, and personality for future generations' },
-                    { title: 'Ethical Framework', desc: 'Developing guidelines for respectful digital memorialization' },
-                    { title: 'Accessibility', desc: 'Making this technology available to all families, not just the wealthy' },
-                    { title: 'Legacy Platform', desc: 'Building tools for others to create their own memory keepers' }
+                    { title: 'Memory Capture', desc: 'Gentle, conversational recording sessions that feel like talking with family' },
+                    { title: 'Story Preservation', desc: 'AI-powered organization that weaves fragments into coherent narratives' },
+                    { title: 'Family Sharing', desc: 'Private, secure sharing with loved ones across generations' },
+                    { title: 'Legacy Creation', desc: 'Interactive memories that future generations can explore and cherish' }
                   ].map((goal, i) => (
                     <div key={i} className="p-4 rounded-xl bg-white/[0.03] border border-white/5 hover:border-rose-500/20 transition-colors">
                       <p className="text-white/90 font-medium">{goal.title}</p>
