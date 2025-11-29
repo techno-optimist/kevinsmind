@@ -1993,12 +1993,12 @@ Style: Dreamlike, cinematic photography, soft ethereal lighting with gentle glow
               {/* Welcome Title & Starter Prompts - Only when no messages and not collapsed */}
               {messages.length === 0 && !streamingResponse && !isChatCollapsed && (
                 <div className="text-center py-6 px-6">
-                  <p className="text-white/25 text-2xl sm:text-3xl tracking-[0.2em] sm:tracking-[0.3em] uppercase font-light">Mind of Kevin</p>
-                  <p className="text-white/30 text-sm sm:text-base mt-1 tracking-[0.15em] uppercase">Digital Twin</p>
-                  <p className="text-white/15 text-xs sm:text-sm mt-2 tracking-widest">Speak or type to begin</p>
+                  <p className="text-white text-2xl sm:text-3xl tracking-[0.2em] sm:tracking-[0.3em] uppercase font-light">Mind of Kevin</p>
+                  <p className="text-white/90 text-sm sm:text-base mt-1 tracking-[0.15em] uppercase">Digital Twin</p>
+                  <p className="text-white/70 text-xs sm:text-sm mt-2 tracking-widest">Speak or type to begin</p>
                   <button
                     onClick={() => { setCurrentQuote(getRandomQuote()); setIsAboutOpen(true); }}
-                    className="text-white/20 hover:text-white/40 text-xs mt-3 underline underline-offset-2 transition-colors"
+                    className="text-white/80 hover:text-white text-sm mt-4 underline underline-offset-4 transition-colors"
                   >
                     What is this?
                   </button>
