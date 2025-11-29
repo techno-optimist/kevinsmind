@@ -113,6 +113,14 @@ interface StateRef {
   cameraOrbitPhase: number;
 }
 
+interface SavedMemory {
+  label: string;
+  prompt: string;
+  timestamp: number;
+  filename: string;
+  imagePath: string;
+}
+
 interface Message {
   id: string;
   role: 'user' | 'assistant' | 'images';
@@ -207,6 +215,12 @@ export default function DigitalMind() {
   const [activePanel, setActivePanel] = useState<'horizon' | 'bridge' | 'echoes' | null>(null);
   const [activeHorizonModal, setActiveHorizonModal] = useState<'keynote' | 'workshops' | 'advisory' | null>(null);
   const [activeEchoesModal, setActiveEchoesModal] = useState<'sand-speaks' | 'emma-project' | 'essays' | null>(null);
+
+  // Memory gallery state
+  const [savedMemories, setSavedMemories] = useState<SavedMemory[]>([]);
+  const [isGalleryOpen, setIsGalleryOpen] = useState(false);
+  const [selectedMemory, setSelectedMemory] = useState<SavedMemory | null>(null);
+  const memoryConstellationLoadedRef = useRef(false);
 
   // Draggable chat position
   const [chatPosition, setChatPosition] = useState({ x: 0, y: 0 });
@@ -627,6 +641,9 @@ Style: Dreamlike, cinematic photography, soft ethereal lighting with gentle glow
                         // Apply circular vignette mask
                         const vignettedImage = await applyCircularVignette(rawImageData);
 
+                        // Save to memory constellation (non-blocking)
+                        saveMemoryImage(vignettedImage, scene.label, scene.prompt);
+
                         // Add to pending images for chat display
                         pendingImagesRef.current = [...pendingImagesRef.current, vignettedImage];
                         setPendingImages([...pendingImagesRef.current]);
@@ -676,151 +693,127 @@ Style: Dreamlike, cinematic photography, soft ethereal lighting with gentle glow
     } catch (error) {
         console.error("Mind's eye visualization failed:", error);
     }
-  }, []);
+  }, [saveMemoryImage]);
 
-  // Spawn video memories - autoplay videos with circular vignette in the mindscape
-  const spawnVideoMemories = useCallback(() => {
+  // Load and spawn memory constellation - all saved memories as background stars
+  const spawnMemoryConstellation = useCallback(async (memories: SavedMemory[]) => {
     const S = stateRef.current;
-    if (!S.constellationGroup) return;
+    if (!S.constellationGroup || memories.length === 0) return;
 
-    // Available videos
-    const videos = [
-      { src: '/video/camamile.mp4', label: 'Chamomile Dreams', prompt: 'I remember the fields of chamomile, their gentle petals swaying in the afternoon light...' },
-      { src: '/video/tallvideo.mp4', label: 'Standing Tall', prompt: 'I see myself reaching upward, always growing, always becoming...' }
-    ];
+    console.log("Spawning memory constellation:", memories.length, "memories");
 
-    console.log("Spawning video memories:", videos.length);
+    // Create a spherical distribution for the memory constellation
+    // Using fibonacci sphere for even distribution
+    const goldenRatio = (1 + Math.sqrt(5)) / 2;
 
-    // Position videos in the mindscape
-    videos.forEach((videoInfo, i) => {
-      const goldenAngle = Math.PI * (3 - Math.sqrt(5));
-      const angle = i * goldenAngle * 2.5 + S.time * 0.1;
-      const radius = 30 + i * 20;
-      const height = 15 + Math.sin(i * 1.5) * 5;
+    memories.forEach((memory, i) => {
+      // Fibonacci sphere distribution for beautiful even spacing
+      const theta = 2 * Math.PI * i / goldenRatio;
+      const phi = Math.acos(1 - 2 * (i + 0.5) / memories.length);
+
+      // Larger radius for background constellation (60-120 units out)
+      const radius = 70 + (i % 5) * 12 + Math.random() * 10;
+
       const position = new THREE.Vector3(
-        Math.cos(angle) * radius,
-        height,
-        Math.sin(angle) * radius - 40
+        radius * Math.sin(phi) * Math.cos(theta),
+        radius * Math.cos(phi) * 0.6 + 5, // Flatten slightly, keep above ground
+        radius * Math.sin(phi) * Math.sin(theta) - 30
       );
 
-      // Create video element
-      const video = document.createElement('video');
-      video.src = videoInfo.src;
-      video.crossOrigin = 'anonymous';
-      video.loop = true;
-      video.muted = true;
-      video.playsInline = true;
-      video.autoplay = true;
+      // Load texture from saved memory image
+      const loader = new THREE.TextureLoader();
+      loader.load(memory.imagePath, (texture) => {
+        // Create sprite material with the memory image
+        const spriteMat = new THREE.SpriteMaterial({
+          map: texture,
+          transparent: true,
+          opacity: 0.7, // Slightly faded for background feel
+          blending: THREE.AdditiveBlending // Ethereal glow effect
+        });
 
-      // Create video texture
-      const videoTexture = new THREE.VideoTexture(video);
-      videoTexture.minFilter = THREE.LinearFilter;
-      videoTexture.magFilter = THREE.LinearFilter;
-      videoTexture.format = THREE.RGBAFormat;
+        const sprite = new THREE.Sprite(spriteMat);
+        sprite.position.copy(position);
 
-      // Create shader material with circular vignette
-      const vignetteShader = {
-        uniforms: {
-          uTexture: { value: videoTexture },
-          uTime: { value: 0 }
-        },
-        vertexShader: `
-          varying vec2 vUv;
-          void main() {
-            vUv = uv;
-            gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
-          }
-        `,
-        fragmentShader: `
-          uniform sampler2D uTexture;
-          uniform float uTime;
-          varying vec2 vUv;
+        // Smaller scale for background stars (5-9 units)
+        const baseScale = 5 + Math.random() * 4;
+        sprite.scale.set(baseScale, baseScale, 1);
 
-          void main() {
-            vec2 center = vUv - 0.5;
-            float dist = length(center) * 2.0;
+        S.constellationGroup!.add(sprite);
 
-            // Circular mask with soft edges
-            float mask = 1.0 - smoothstep(0.7, 1.0, dist);
+        const node: ConstellationNode = {
+          mesh: sprite,
+          velocity: new THREE.Vector3(
+            (Math.random() - 0.5) * 0.0003,
+            (Math.random() - 0.5) * 0.0003,
+            (Math.random() - 0.5) * 0.0002
+          ),
+          targetScale: baseScale,
+          id: memory.timestamp,
+          shortLabel: memory.label,
+          fullPrompt: memory.prompt
+        };
 
-            // Vignette darkening
-            float vignette = 1.0 - smoothstep(0.3, 0.95, dist) * 0.7;
+        S.constellationNodes.push(node);
 
-            // Sample video texture
-            vec4 texColor = texture2D(uTexture, vUv);
-
-            // Apply vignette and mask
-            texColor.rgb *= vignette;
-            texColor.a *= mask;
-
-            // Add subtle glow at edges
-            float glow = smoothstep(0.6, 0.8, dist) * (1.0 - smoothstep(0.8, 1.0, dist));
-            texColor.rgb += vec3(0.1, 0.2, 0.3) * glow * 0.5;
-
-            gl_FragColor = texColor;
-          }
-        `
-      };
-
-      // Create a plane geometry for the video (sprites can't use custom shaders easily)
-      const planeGeom = new THREE.PlaneGeometry(1, 1);
-      const planeMat = new THREE.ShaderMaterial({
-        uniforms: vignetteShader.uniforms,
-        vertexShader: vignetteShader.vertexShader,
-        fragmentShader: vignetteShader.fragmentShader,
-        transparent: true,
-        side: THREE.DoubleSide,
-        blending: THREE.NormalBlending
+        // Store memory reference for click interactions
+        sprite.userData.memory = memory;
+        sprite.userData.isMemoryNode = true;
+      }, undefined, (err) => {
+        console.warn(`Failed to load memory image: ${memory.imagePath}`, err);
       });
-
-      const videoMesh = new THREE.Mesh(planeGeom, planeMat);
-      videoMesh.position.copy(position);
-      videoMesh.scale.set(0, 0, 0);
-
-      // Make it always face camera (billboard effect)
-      videoMesh.userData.isBillboard = true;
-
-      S.constellationGroup.add(videoMesh);
-
-      // Create a sprite wrapper for the node system (for click detection and movement)
-      // But we'll store the actual mesh reference
-      const spriteMat = new THREE.SpriteMaterial({ opacity: 0, transparent: true });
-      const sprite = new THREE.Sprite(spriteMat);
-      sprite.position.copy(position);
-      sprite.scale.set(15, 15, 1);
-      sprite.userData.videoMesh = videoMesh;
-
-      const node: ConstellationNode = {
-        mesh: sprite,
-        velocity: new THREE.Vector3(
-          (Math.random() - 0.5) * 0.001,
-          (Math.random() - 0.5) * 0.001,
-          (Math.random() - 0.5) * 0.0005
-        ),
-        targetScale: 18,
-        id: Math.random(),
-        shortLabel: videoInfo.label,
-        fullPrompt: videoInfo.prompt,
-        videoElement: video,
-        videoTexture: videoTexture
-      };
-
-      S.constellationNodes.push(node);
-      S.cameraFocusQueue.push(position.clone());
-      S.cameraFocusNodes.push(node);
-
-      // Start video playback
-      video.play().catch(e => console.warn('Video autoplay failed:', e));
-
-      // Set first video as camera focus
-      if (i === 0 && !S.isManual) {
-        S.cameraFocusTarget = position.clone();
-        S.cameraOrbitPhase = 0;
-        setIsNavigatingToImages(true);
-        setIsChatCollapsed(true); // Collapse to just input bar, not full minimize
-      }
     });
   }, []);
+
+  // Fetch saved memories from API
+  const loadSavedMemories = useCallback(async () => {
+    try {
+      const response = await fetch('/api/memories');
+      if (response.ok) {
+        const memories: SavedMemory[] = await response.json();
+        setSavedMemories(memories);
+        console.log(`Loaded ${memories.length} saved memories`);
+        return memories;
+      }
+    } catch (error) {
+      console.warn('Failed to load saved memories:', error);
+    }
+    return [];
+  }, []);
+
+  // Save a new memory image to the server
+  const saveMemoryImage = useCallback(async (imageData: string, label: string, prompt: string) => {
+    try {
+      const response = await fetch('/api/save-memory', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          imageData,
+          label,
+          prompt,
+          timestamp: Date.now()
+        })
+      });
+
+      if (response.ok) {
+        const result = await response.json();
+        console.log(`Saved memory: ${result.filename}`);
+
+        // Refresh the memories list
+        const updatedMemories = await loadSavedMemories();
+
+        // Add the new memory as a small background star
+        const newMemory = updatedMemories.find(m => m.filename === result.filename);
+        if (newMemory) {
+          spawnMemoryConstellation([newMemory]);
+        }
+
+        return result;
+      }
+    } catch (error) {
+      console.warn('Failed to save memory:', error);
+    }
+    return null;
+  }, [loadSavedMemories, spawnMemoryConstellation]);
 
   const addMessage = useCallback((role: 'user' | 'assistant', content: string) => {
     setMessages(prev => [...prev, { id: Date.now().toString() + Math.random(), role, content }]);
@@ -1021,12 +1014,6 @@ Style: Dreamlike, cinematic photography, soft ethereal lighting with gentle glow
     setInputText('');
     setIsThinking(true);
     addMessage('user', userMessage);
-
-    // Check for "Who is Kevin" query to spawn video memories
-    const lowerMessage = userMessage.toLowerCase();
-    if (lowerMessage.includes('who is kevin') || lowerMessage.includes('who\'s kevin') || lowerMessage.includes('about kevin')) {
-      spawnVideoMemories();
-    }
 
     // Immediate visual feedback
     stateRef.current.targetZone = classifyTopic(userMessage);
@@ -1322,6 +1309,16 @@ Style: Dreamlike, cinematic photography, soft ethereal lighting with gentle glow
     // ============ MIND'S EYE - Dynamic imagery replaces static formations ============
     // The constellation group now serves as the primary visual representation
     // Images are generated contextually based on conversation
+
+    // Load existing memories as background constellation on startup
+    if (!memoryConstellationLoadedRef.current) {
+      memoryConstellationLoadedRef.current = true;
+      loadSavedMemories().then(memories => {
+        if (memories.length > 0) {
+          spawnMemoryConstellation(memories);
+        }
+      });
+    }
 
     // Ground - expanded for full viewport coverage
     const groundGeom = new THREE.PlaneGeometry(800, 800, 80, 80);
@@ -1770,12 +1767,6 @@ Style: Dreamlike, cinematic photography, soft ethereal lighting with gentle glow
                           setIsThinking(true);
                           addMessage('user', prompt);
 
-                          // Check for "Who is Kevin" to spawn video memories
-                          const lowerMessage = prompt.toLowerCase();
-                          if (lowerMessage.includes('who is kevin')) {
-                            spawnVideoMemories();
-                          }
-
                           // Visual feedback
                           stateRef.current.targetZone = classifyTopic(prompt);
                           setCurrentZone(stateRef.current.targetZone);
@@ -2078,6 +2069,24 @@ Style: Dreamlike, cinematic photography, soft ethereal lighting with gentle glow
           </span>
           <div className={`relative w-5 h-5 sm:w-6 sm:h-6 rounded-full transition-all duration-300 ease-out sm:group-hover:scale-150 ${activePanel === 'echoes' ? 'bg-violet-400 shadow-[0_0_30px_rgba(167,139,250,0.7)] scale-125' : 'bg-violet-400/70 sm:group-hover:bg-violet-400 sm:group-hover:shadow-[0_0_25px_rgba(167,139,250,0.5)]'}`}>
             <div className={`absolute inset-0 rounded-full bg-violet-400/50 ${activePanel === 'echoes' ? 'animate-ping' : 'sm:group-hover:animate-pulse'}`} style={{ animationDuration: '2s' }} />
+          </div>
+        </button>
+
+        {/* Memory Gallery Button */}
+        <button
+          onClick={() => setIsGalleryOpen(true)}
+          className="group relative flex items-center justify-center sm:justify-end transition-all duration-500 opacity-50 hover:opacity-100 mt-4"
+        >
+          <span className="hidden sm:block absolute right-14 text-xs tracking-[0.12em] uppercase text-white/60 whitespace-nowrap transition-all duration-300 opacity-0 translate-x-4 group-hover:opacity-100 group-hover:translate-x-0">
+            {savedMemories.length} Memories
+          </span>
+          <div className="relative w-4 h-4 sm:w-5 sm:h-5 rounded-full transition-all duration-300 ease-out sm:group-hover:scale-125 bg-white/30 sm:group-hover:bg-white/50 sm:group-hover:shadow-[0_0_15px_rgba(255,255,255,0.3)] border border-white/20">
+            <svg className="absolute inset-0 w-full h-full p-1 text-white/70" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+              <rect x="3" y="3" width="7" height="7" rx="1" />
+              <rect x="14" y="3" width="7" height="7" rx="1" />
+              <rect x="3" y="14" width="7" height="7" rx="1" />
+              <rect x="14" y="14" width="7" height="7" rx="1" />
+            </svg>
           </div>
         </button>
       </div>
@@ -3027,6 +3036,144 @@ Style: Dreamlike, cinematic photography, soft ethereal lighting with gentle glow
                   </button>
                 </div>
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Memory Gallery Modal */}
+      {isGalleryOpen && (
+        <div
+          className="fixed inset-0 z-[200] flex items-center justify-center p-4"
+          onClick={() => { setIsGalleryOpen(false); setSelectedMemory(null); }}
+        >
+          {/* Backdrop */}
+          <div className="absolute inset-0 bg-black/80 backdrop-blur-xl" />
+
+          {/* Gallery Container */}
+          <div
+            className="relative w-full max-w-6xl max-h-[85vh] bg-gradient-to-br from-slate-900/95 via-black/95 to-slate-900/95 rounded-3xl border border-white/10 overflow-hidden animate-fade-in"
+            onClick={e => e.stopPropagation()}
+          >
+            {/* Header */}
+            <div className="p-6 border-b border-white/5 flex items-center justify-between">
+              <div>
+                <h2 className="text-2xl font-light text-white">Memory Constellation</h2>
+                <p className="text-white/40 text-sm mt-1">
+                  {savedMemories.length} memories preserved in the mindscape
+                </p>
+              </div>
+              <button
+                onClick={() => { setIsGalleryOpen(false); setSelectedMemory(null); }}
+                className="p-2 rounded-full bg-white/5 hover:bg-white/10 transition-colors"
+              >
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-white/50">
+                  <path d="M18 6L6 18M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+
+            {/* Content Area */}
+            <div className="p-6 overflow-y-auto custom-scrollbar" style={{ maxHeight: 'calc(85vh - 120px)' }}>
+              {selectedMemory ? (
+                /* Detail View */
+                <div className="animate-fade-in">
+                  <button
+                    onClick={() => setSelectedMemory(null)}
+                    className="flex items-center gap-2 text-white/50 hover:text-white/80 mb-6 transition-colors"
+                  >
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <path d="M19 12H5M12 19l-7-7 7-7" />
+                    </svg>
+                    Back to gallery
+                  </button>
+
+                  <div className="grid md:grid-cols-2 gap-8">
+                    {/* Image */}
+                    <div className="relative aspect-square rounded-2xl overflow-hidden bg-black/40">
+                      <img
+                        src={selectedMemory.imagePath}
+                        alt={selectedMemory.label}
+                        className="w-full h-full object-cover"
+                      />
+                    </div>
+
+                    {/* Details */}
+                    <div className="space-y-6">
+                      <div>
+                        <h3 className="text-3xl font-light text-white mb-2">{selectedMemory.label}</h3>
+                        <p className="text-white/40 text-sm">
+                          {new Date(selectedMemory.timestamp).toLocaleDateString('en-US', {
+                            weekday: 'long',
+                            year: 'numeric',
+                            month: 'long',
+                            day: 'numeric',
+                            hour: '2-digit',
+                            minute: '2-digit'
+                          })}
+                        </p>
+                      </div>
+
+                      <div className="p-4 rounded-xl bg-white/[0.02] border border-white/5">
+                        <p className="text-white/60 text-sm italic leading-relaxed">
+                          "{selectedMemory.prompt}"
+                        </p>
+                      </div>
+
+                      <div className="pt-4 border-t border-white/5">
+                        <p className="text-white/30 text-xs">
+                          Part of Kevin's evolving memory constellation
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                /* Grid View */
+                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
+                  {savedMemories.length === 0 ? (
+                    <div className="col-span-full text-center py-20">
+                      <div className="w-20 h-20 mx-auto mb-6 rounded-full bg-white/5 flex items-center justify-center">
+                        <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1" className="text-white/20">
+                          <circle cx="12" cy="12" r="10" />
+                          <path d="M8 14s1.5 2 4 2 4-2 4-2" />
+                          <line x1="9" y1="9" x2="9.01" y2="9" />
+                          <line x1="15" y1="9" x2="15.01" y2="9" />
+                        </svg>
+                      </div>
+                      <h3 className="text-white/50 text-lg mb-2">No memories yet</h3>
+                      <p className="text-white/30 text-sm max-w-md mx-auto">
+                        Start a conversation to generate visual memories. Each interaction adds new stars to Kevin's constellation.
+                      </p>
+                    </div>
+                  ) : (
+                    savedMemories.map((memory, i) => (
+                      <div
+                        key={memory.timestamp}
+                        className="group cursor-pointer"
+                        onClick={() => setSelectedMemory(memory)}
+                        style={{ animationDelay: `${i * 30}ms` }}
+                      >
+                        <div className="relative aspect-square rounded-xl overflow-hidden bg-black/40 border border-white/5 group-hover:border-cyan-500/30 transition-all duration-300">
+                          <img
+                            src={memory.imagePath}
+                            alt={memory.label}
+                            className="w-full h-full object-cover opacity-80 group-hover:opacity-100 group-hover:scale-105 transition-all duration-500"
+                          />
+                          {/* Hover overlay */}
+                          <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+                          <div className="absolute bottom-0 left-0 right-0 p-3 transform translate-y-full group-hover:translate-y-0 transition-transform duration-300">
+                            <p className="text-white text-sm font-medium truncate">{memory.label}</p>
+                            <p className="text-white/50 text-xs">
+                              {new Date(memory.timestamp).toLocaleDateString()}
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+                    ))
+                  )}
+                </div>
+              )}
             </div>
           </div>
         </div>
