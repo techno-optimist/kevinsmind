@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import * as THREE from 'three';
+import { CSS2DRenderer, CSS2DObject } from 'three/examples/jsm/renderers/CSS2DRenderer.js';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { GoogleGenAI, LiveServerMessage, Modality } from "@google/genai";
 import { pcmToBase64, base64ToAudioBuffer } from '../utils/audioUtils';
@@ -79,11 +80,13 @@ interface ConstellationNode {
   id: number;
   shortLabel?: string;      // Brief poetic label (2-4 words)
   fullPrompt?: string;      // Full first-person memory prompt
+  labelObject?: CSS2DObject; // 3D-anchored label
 }
 
 interface StateRef {
   scene: THREE.Scene | null;
   renderer: THREE.WebGLRenderer | null;
+  labelRenderer: CSS2DRenderer | null;
   camera: THREE.PerspectiveCamera | null;
   controls: OrbitControls | null;
   particles: THREE.Points | null;
@@ -166,7 +169,7 @@ const generateTextPoints = (text: string): THREE.Vector3[] => {
 export default function DigitalMind() {
   const containerRef = useRef<HTMLDivElement>(null);
   const stateRef = useRef<StateRef>({
-    scene: null, renderer: null, camera: null, controls: null,
+    scene: null, renderer: null, labelRenderer: null, camera: null, controls: null,
     particles: null, particleData: [], connections: null,
     ground: null, mainLight: null, rimLight: null,
     constellationGroup: null, constellationNodes: [], constellationLines: null,
@@ -197,8 +200,6 @@ export default function DigitalMind() {
   // Navigation panels state
   const [activePanel, setActivePanel] = useState<'horizon' | 'bridge' | 'echoes' | null>(null);
 
-  // Expanded label state - tracks which image node's label is expanded
-  const [expandedLabelId, setExpandedLabelId] = useState<number | null>(null);
 
   // Draggable chat position
   const [chatPosition, setChatPosition] = useState({ x: 0, y: 0 });
@@ -208,8 +209,6 @@ export default function DigitalMind() {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const chatPanelRef = useRef<HTMLDivElement>(null);
 
-  // Label position update callback (called from animation loop)
-  const updateLabelsRef = useRef<() => void>(() => {});
 
   // Gemini Live Logic
   const audioContextRef = useRef<AudioContext | null>(null);
@@ -268,11 +267,10 @@ export default function DigitalMind() {
     };
   }, [isDragging]);
 
-  // Auto-minimize chat and close labels when user takes manual control of constellation
+  // Auto-minimize chat when user takes manual control of constellation
   useEffect(() => {
     if (manualControl) {
       setIsChatMinimized(true);
-      setExpandedLabelId(null);
     }
   }, [manualControl]);
 
@@ -500,6 +498,35 @@ Return exactly 3 memories, each with LABEL: and MEMORY: on separate lines.`
             S.constellationGroup?.add(sprite);
 
             const scene = memoryScenes[i];
+
+            // Create CSS2D label element
+            const labelDiv = document.createElement('div');
+            labelDiv.className = 'constellation-label';
+            labelDiv.innerHTML = `
+              <div class="label-content" style="
+                text-align: center;
+                pointer-events: auto;
+                cursor: pointer;
+                padding: 8px 12px;
+                transform: translateY(-20px);
+              ">
+                <p class="short-label" style="
+                  color: rgba(255,255,255,0.7);
+                  font-size: 11px;
+                  letter-spacing: 0.15em;
+                  text-transform: uppercase;
+                  font-weight: 300;
+                  text-shadow: 0 2px 10px rgba(0,0,0,0.8), 0 0 30px rgba(0,0,0,0.5);
+                  margin: 0;
+                  white-space: nowrap;
+                ">${scene?.label || 'Memory'}</p>
+              </div>
+            `;
+
+            const labelObject = new CSS2DObject(labelDiv);
+            labelObject.position.set(0, 12, 0); // Position above the sprite
+            sprite.add(labelObject);
+
             const node: ConstellationNode = {
                 mesh: sprite,
                 velocity: new THREE.Vector3(
@@ -510,7 +537,8 @@ Return exactly 3 memories, each with LABEL: and MEMORY: on separate lines.`
                 targetScale: 15,
                 id: Math.random(),
                 shortLabel: scene?.label || 'Memory',
-                fullPrompt: scene?.prompt || ''
+                fullPrompt: scene?.prompt || '',
+                labelObject: labelObject
             };
 
             S.constellationNodes.push(node);
@@ -883,6 +911,15 @@ Style: Dreamlike, cinematic, soft lighting. Slightly ethereal atmosphere with ge
     S.renderer.domElement.style.width = '100%';
     S.renderer.domElement.style.height = '100%';
     containerRef.current.appendChild(S.renderer.domElement);
+
+    // CSS2D Renderer for labels anchored to 3D objects
+    S.labelRenderer = new CSS2DRenderer();
+    S.labelRenderer.setSize(w, h);
+    S.labelRenderer.domElement.style.position = 'absolute';
+    S.labelRenderer.domElement.style.top = '0';
+    S.labelRenderer.domElement.style.left = '0';
+    S.labelRenderer.domElement.style.pointerEvents = 'none';
+    containerRef.current.appendChild(S.labelRenderer.domElement);
 
     // Lighter fog to see more of the expanded field
     S.scene.fog = new THREE.FogExp2(0x020206, 0.003);
@@ -1322,8 +1359,10 @@ Style: Dreamlike, cinematic, soft lighting. Slightly ethereal atmosphere with ge
 
       if(S.renderer && S.scene && S.camera) {
         S.renderer.render(S.scene, S.camera);
-        // Update floating label positions after render
-        updateLabelsRef.current();
+        // Render CSS2D labels (anchored to 3D objects)
+        if (S.labelRenderer) {
+          S.labelRenderer.render(S.scene, S.camera);
+        }
       }
     };
 
@@ -1334,6 +1373,7 @@ Style: Dreamlike, cinematic, soft lighting. Slightly ethereal atmosphere with ge
       const h = containerRef.current?.clientHeight || window.innerHeight;
       if(S.camera) { S.camera.aspect = w / h; S.camera.updateProjectionMatrix(); }
       if(S.renderer) S.renderer.setSize(w, h);
+      if(S.labelRenderer) S.labelRenderer.setSize(w, h);
     };
     window.addEventListener('resize', handleResize);
     return () => {
@@ -1356,99 +1396,11 @@ Style: Dreamlike, cinematic, soft lighting. Slightly ethereal atmosphere with ge
     ambient: ''
   };
 
-  // State to track label positions (updated every frame via ref callback)
-  const [labelPositions, setLabelPositions] = useState<Map<number, { x: number; y: number; visible: boolean }>>(new Map());
-
-  // Set up the label update function (updateLabelsRef is defined earlier with other refs)
-  useEffect(() => {
-    updateLabelsRef.current = () => {
-      const S = stateRef.current;
-      if (!S.camera || !S.renderer || S.cameraFocusNodes.length === 0) return;
-
-      const newPositions = new Map<number, { x: number; y: number; visible: boolean }>();
-      const widthHalf = S.renderer.domElement.clientWidth / 2;
-      const heightHalf = S.renderer.domElement.clientHeight / 2;
-
-      S.cameraFocusNodes.forEach((node) => {
-        if (node.mesh && node.shortLabel) {
-          const worldPos = new THREE.Vector3();
-          node.mesh.getWorldPosition(worldPos);
-          // Offset label slightly above the image
-          worldPos.y += node.mesh.scale.y * 0.6;
-
-          const vector = worldPos.clone();
-          vector.project(S.camera!);
-
-          const x = (vector.x * widthHalf) + widthHalf;
-          const y = -(vector.y * heightHalf) + heightHalf;
-          const visible = vector.z < 1 && vector.z > -1;
-
-          newPositions.set(node.id, { x, y, visible });
-        }
-      });
-
-      setLabelPositions(newPositions);
-    };
-  }, []);
-
   return (
     <div className="relative w-full h-screen overflow-hidden bg-black font-sans">
       <div ref={containerRef} className="absolute inset-0 z-0" />
 
-      {/* Floating Labels for Constellation Images */}
-      {isChatMinimized && stateRef.current.cameraFocusNodes.map((node) => {
-        const pos = labelPositions.get(node.id);
-        if (!pos || !pos.visible || !node.shortLabel) return null;
-
-        const isExpanded = expandedLabelId === node.id;
-
-        return (
-          <div
-            key={node.id}
-            className="absolute z-10 pointer-events-auto transition-all duration-300 ease-out"
-            style={{
-              left: pos.x,
-              top: pos.y,
-              transform: 'translate(-50%, -100%)',
-              opacity: pos.visible ? 1 : 0,
-            }}
-          >
-            <button
-              onClick={() => setExpandedLabelId(isExpanded ? null : node.id)}
-              className={`group text-center transition-all duration-300 ${
-                isExpanded ? 'max-w-xs sm:max-w-sm' : 'max-w-[200px]'
-              }`}
-            >
-              {/* Short label - always visible */}
-              <p
-                className={`text-white/70 text-xs sm:text-sm tracking-[0.15em] uppercase font-light transition-all duration-300 ${
-                  isExpanded ? 'text-cyan-300/90 mb-2' : 'group-hover:text-white/90'
-                }`}
-                style={{
-                  textShadow: '0 2px 10px rgba(0,0,0,0.8), 0 0 30px rgba(0,0,0,0.5)'
-                }}
-              >
-                {node.shortLabel}
-              </p>
-
-              {/* Expanded prompt - shown on click */}
-              {isExpanded && node.fullPrompt && (
-                <div
-                  className="animate-fade-in bg-black/80 backdrop-blur-xl rounded-2xl border border-white/10 p-4 mt-2"
-                  style={{ boxShadow: '0 10px 40px rgba(0,0,0,0.6)' }}
-                >
-                  <p className="text-white/80 text-xs sm:text-sm leading-relaxed italic text-left">
-                    "{node.fullPrompt}"
-                  </p>
-                  <p className="text-white/30 text-[10px] mt-2 tracking-wider uppercase">
-                    tap to close
-                  </p>
-                </div>
-              )}
-            </button>
-          </div>
-        );
-      })}
+      {/* Labels are now rendered via CSS2DRenderer directly in Three.js scene */}
 
       {/* ============================================
           UNIFIED CHAT INTERFACE
