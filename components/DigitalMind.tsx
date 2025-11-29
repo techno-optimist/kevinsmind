@@ -52,7 +52,7 @@ const classifyTopic = (text: string): string => {
   if (/\b(ai|artificial|machine|algorithm|silicon|code|tech|digital|computer|neural|model|robot|data|learn|network)\b/.test(t)) return 'technology';
   if (/\b(family|father|daughter|son|child|parent|kid|wife|husband|love|home|heart|mom|dad|mother)\b/.test(t)) return 'family';
   if (/\b(conscious|mind|aware|soul|spirit|exist|meaning|universe|cosmic|reality|think|feel|being|death|life|purpose|infinite|god|why)\b/.test(t)) return 'consciousness';
-  if (/\b(project|build|emma|observatory|book|work|write|create|making|sand speaks|memory)\b/.test(t)) return 'projects';
+  if (/\b(project|build|emma|mindscape|book|work|write|create|making|sand speaks|memory)\b/.test(t)) return 'projects';
   return 'ambient';
 };
 
@@ -1874,7 +1874,7 @@ Style: Dreamlike, cinematic photography, soft ethereal lighting with gentle glow
   };
 
   const zoneLabels: Record<string, string> = {
-    technology: 'THE OBSERVATORY',
+    technology: 'THE NEXUS',
     family: 'THE HEARTH',
     consciousness: 'THE EDGE',
     projects: 'THE LIBRARY',
@@ -3479,7 +3479,7 @@ Style: Dreamlike, cinematic photography, soft ethereal lighting with gentle glow
             {/* Header */}
             <div className="p-6 border-b border-white/5 flex items-center justify-between">
               <div>
-                <h2 className="text-2xl font-light text-white">About This Experiment</h2>
+                <h2 className="text-2xl font-light text-white">Welcome to MindScape</h2>
               </div>
               <button
                 onClick={() => setIsAboutOpen(false)}
@@ -3526,7 +3526,7 @@ Style: Dreamlike, cinematic photography, soft ethereal lighting with gentle glow
                   </li>
                   <li className="flex items-start gap-3">
                     <div className="w-1.5 h-1.5 rounded-full bg-cyan-400/60 mt-2 flex-shrink-0" />
-                    <span>A living landscape that shifts based on what we discuss—technology, consciousness, family, the future</span>
+                    <span>A living MindScape that shifts based on what we discuss—technology, consciousness, family, the future</span>
                   </li>
                 </ul>
               </div>
