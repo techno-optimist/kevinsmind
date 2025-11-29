@@ -79,6 +79,8 @@ interface ConstellationNode {
   id: number;
   shortLabel?: string;           // Brief poetic label (2-4 words)
   fullPrompt?: string;           // Full first-person memory prompt
+  videoElement?: HTMLVideoElement; // For video memories
+  videoTexture?: THREE.VideoTexture; // Video texture that needs updating
 }
 
 interface StateRef {
@@ -608,6 +610,150 @@ Style: Dreamlike, cinematic, soft lighting. Slightly ethereal atmosphere with ge
     }
   }, []);
 
+  // Spawn video memories - autoplay videos with circular vignette in the mindscape
+  const spawnVideoMemories = useCallback(() => {
+    const S = stateRef.current;
+    if (!S.constellationGroup) return;
+
+    // Available videos
+    const videos = [
+      { src: '/video/camamile.mp4', label: 'Chamomile Dreams', prompt: 'I remember the fields of chamomile, their gentle petals swaying in the afternoon light...' },
+      { src: '/video/tallvideo.mp4', label: 'Standing Tall', prompt: 'I see myself reaching upward, always growing, always becoming...' }
+    ];
+
+    console.log("Spawning video memories:", videos.length);
+
+    // Position videos in the mindscape
+    videos.forEach((videoInfo, i) => {
+      const goldenAngle = Math.PI * (3 - Math.sqrt(5));
+      const angle = i * goldenAngle * 2.5 + S.time * 0.1;
+      const radius = 30 + i * 20;
+      const height = 15 + Math.sin(i * 1.5) * 5;
+      const position = new THREE.Vector3(
+        Math.cos(angle) * radius,
+        height,
+        Math.sin(angle) * radius - 40
+      );
+
+      // Create video element
+      const video = document.createElement('video');
+      video.src = videoInfo.src;
+      video.crossOrigin = 'anonymous';
+      video.loop = true;
+      video.muted = true;
+      video.playsInline = true;
+      video.autoplay = true;
+
+      // Create video texture
+      const videoTexture = new THREE.VideoTexture(video);
+      videoTexture.minFilter = THREE.LinearFilter;
+      videoTexture.magFilter = THREE.LinearFilter;
+      videoTexture.format = THREE.RGBAFormat;
+
+      // Create shader material with circular vignette
+      const vignetteShader = {
+        uniforms: {
+          uTexture: { value: videoTexture },
+          uTime: { value: 0 }
+        },
+        vertexShader: `
+          varying vec2 vUv;
+          void main() {
+            vUv = uv;
+            gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+          }
+        `,
+        fragmentShader: `
+          uniform sampler2D uTexture;
+          uniform float uTime;
+          varying vec2 vUv;
+
+          void main() {
+            vec2 center = vUv - 0.5;
+            float dist = length(center) * 2.0;
+
+            // Circular mask with soft edges
+            float mask = 1.0 - smoothstep(0.7, 1.0, dist);
+
+            // Vignette darkening
+            float vignette = 1.0 - smoothstep(0.3, 0.95, dist) * 0.7;
+
+            // Sample video texture
+            vec4 texColor = texture2D(uTexture, vUv);
+
+            // Apply vignette and mask
+            texColor.rgb *= vignette;
+            texColor.a *= mask;
+
+            // Add subtle glow at edges
+            float glow = smoothstep(0.6, 0.8, dist) * (1.0 - smoothstep(0.8, 1.0, dist));
+            texColor.rgb += vec3(0.1, 0.2, 0.3) * glow * 0.5;
+
+            gl_FragColor = texColor;
+          }
+        `
+      };
+
+      // Create a plane geometry for the video (sprites can't use custom shaders easily)
+      const planeGeom = new THREE.PlaneGeometry(1, 1);
+      const planeMat = new THREE.ShaderMaterial({
+        uniforms: vignetteShader.uniforms,
+        vertexShader: vignetteShader.vertexShader,
+        fragmentShader: vignetteShader.fragmentShader,
+        transparent: true,
+        side: THREE.DoubleSide,
+        blending: THREE.NormalBlending
+      });
+
+      const videoMesh = new THREE.Mesh(planeGeom, planeMat);
+      videoMesh.position.copy(position);
+      videoMesh.scale.set(0, 0, 0);
+
+      // Make it always face camera (billboard effect)
+      videoMesh.userData.isBillboard = true;
+
+      S.constellationGroup.add(videoMesh);
+
+      // Create a sprite wrapper for the node system (for click detection and movement)
+      // But we'll store the actual mesh reference
+      const spriteMat = new THREE.SpriteMaterial({ opacity: 0, transparent: true });
+      const sprite = new THREE.Sprite(spriteMat);
+      sprite.position.copy(position);
+      sprite.scale.set(15, 15, 1);
+      sprite.userData.videoMesh = videoMesh;
+
+      const node: ConstellationNode = {
+        mesh: sprite,
+        velocity: new THREE.Vector3(
+          (Math.random() - 0.5) * 0.001,
+          (Math.random() - 0.5) * 0.001,
+          (Math.random() - 0.5) * 0.0005
+        ),
+        targetScale: 18,
+        id: Math.random(),
+        shortLabel: videoInfo.label,
+        fullPrompt: videoInfo.prompt,
+        videoElement: video,
+        videoTexture: videoTexture
+      };
+
+      S.constellationNodes.push(node);
+      S.cameraFocusQueue.push(position.clone());
+      S.cameraFocusNodes.push(node);
+
+      // Start video playback
+      video.play().catch(e => console.warn('Video autoplay failed:', e));
+
+      // Set first video as camera focus
+      if (i === 0 && !S.isManual) {
+        S.cameraFocusTarget = position.clone();
+        S.cameraOrbitPhase = 0;
+        setIsNavigatingToImages(true);
+        setIsChatMinimized(true);
+      }
+    });
+  }, []);
+
   const addMessage = useCallback((role: 'user' | 'assistant', content: string) => {
     setMessages(prev => [...prev, { id: Date.now().toString() + Math.random(), role, content }]);
   }, []);
@@ -807,6 +953,12 @@ Style: Dreamlike, cinematic, soft lighting. Slightly ethereal atmosphere with ge
     setInputText('');
     setIsThinking(true);
     addMessage('user', userMessage);
+
+    // Check for "Who is Kevin" query to spawn video memories
+    const lowerMessage = userMessage.toLowerCase();
+    if (lowerMessage.includes('who is kevin') || lowerMessage.includes('who\'s kevin') || lowerMessage.includes('about kevin')) {
+      spawnVideoMemories();
+    }
 
     // Immediate visual feedback
     stateRef.current.targetZone = classifyTopic(userMessage);
@@ -1227,8 +1379,33 @@ Style: Dreamlike, cinematic, soft lighting. Slightly ethereal atmosphere with ge
               node.mesh.position.add(node.velocity);
               node.mesh.position.y += Math.sin(t + node.id) * 0.02;
 
+              // Handle video nodes - sync video mesh with sprite position and make it billboard
+              if (node.videoElement && node.mesh.userData.videoMesh) {
+                  const videoMesh = node.mesh.userData.videoMesh as THREE.Mesh;
+                  videoMesh.position.copy(node.mesh.position);
+                  videoMesh.scale.setScalar(newScale);
+
+                  // Billboard effect - make video face the camera
+                  if (S.camera) {
+                      videoMesh.quaternion.copy(S.camera.quaternion);
+                  }
+
+                  // Update video texture
+                  if (node.videoTexture) {
+                      node.videoTexture.needsUpdate = true;
+                  }
+              }
+
               if (node.mesh.material.opacity <= 0 && node.targetScale === 0) {
                   S.constellationGroup?.remove(node.mesh);
+                  // Also remove video mesh if exists
+                  if (node.mesh.userData.videoMesh) {
+                      S.constellationGroup?.remove(node.mesh.userData.videoMesh);
+                      if (node.videoElement) {
+                          node.videoElement.pause();
+                          node.videoElement.src = '';
+                      }
+                  }
                   if (node.mesh.material.map) node.mesh.material.map.dispose();
                   node.mesh.material.dispose();
                   return false;
