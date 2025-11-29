@@ -2312,24 +2312,6 @@ Style: Dreamlike, cinematic photography, soft ethereal lighting with gentle glow
         </div>
       )}
 
-      {/* Navigation Arrows - Hidden on mobile, shown on larger screens */}
-      <div className="hidden md:grid absolute bottom-8 right-6 z-30 pointer-events-auto grid-cols-3 gap-0.5 opacity-30 hover:opacity-60 transition-opacity">
-          <div />
-          <button onClick={() => moveCamera('up')} className="w-8 h-8 rounded flex items-center justify-center hover:bg-white/10 active:bg-white/20 transition-all">
-             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2"><path d="M18 15l-6-6-6 6"/></svg>
-          </button>
-          <div />
-          <button onClick={() => moveCamera('left')} className="w-8 h-8 rounded flex items-center justify-center hover:bg-white/10 active:bg-white/20 transition-all">
-             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2"><path d="M15 18l-6-6 6-6"/></svg>
-          </button>
-          <button onClick={() => moveCamera('down')} className="w-8 h-8 rounded flex items-center justify-center hover:bg-white/10 active:bg-white/20 transition-all">
-             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2"><path d="M6 9l6 6 6-6"/></svg>
-          </button>
-          <button onClick={() => moveCamera('right')} className="w-8 h-8 rounded flex items-center justify-center hover:bg-white/10 active:bg-white/20 transition-all">
-             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2"><path d="M9 18l6-6-6-6"/></svg>
-          </button>
-      </div>
-
       {/* Zone Label - hidden on mobile, shown on desktop */}
       {currentZone !== 'ambient' && (
         <div className="hidden sm:block absolute bottom-20 left-6 pointer-events-none z-0">
