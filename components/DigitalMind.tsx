@@ -202,6 +202,7 @@ export default function DigitalMind() {
   // Navigation panels state
   const [activePanel, setActivePanel] = useState<'horizon' | 'bridge' | 'echoes' | null>(null);
   const [activeHorizonModal, setActiveHorizonModal] = useState<'keynote' | 'workshops' | 'advisory' | null>(null);
+  const [activeEchoesModal, setActiveEchoesModal] = useState<'sand-speaks' | 'emma-project' | 'essays' | null>(null);
 
   // Draggable chat position
   const [chatPosition, setChatPosition] = useState({ x: 0, y: 0 });
@@ -2112,18 +2113,33 @@ Style: Dreamlike, cinematic, soft lighting. Slightly ethereal atmosphere with ge
               Thoughts crystallized. Words that linger.
             </p>
             <div className="space-y-3">
-              <a href="#" className="block p-3 rounded-xl bg-white/5 border border-white/5 hover:border-violet-500/30 active:border-violet-500/30 transition-colors group">
-                <p className="text-white/90 text-sm font-medium group-hover:text-violet-200 group-active:text-violet-200 transition-colors">When Sand Speaks</p>
-                <p className="text-white/40 text-xs mt-1">A meditation on AI consciousness</p>
-              </a>
-              <a href="#" className="block p-3 rounded-xl bg-white/5 border border-white/5 hover:border-violet-500/30 active:border-violet-500/30 transition-colors group">
-                <p className="text-white/90 text-sm font-medium group-hover:text-violet-200 group-active:text-violet-200 transition-colors">The Emma Project</p>
-                <p className="text-white/40 text-xs mt-1">Preserving memory, honoring legacy</p>
-              </a>
-              <a href="#" className="block p-3 rounded-xl bg-white/5 border border-white/5 hover:border-violet-500/30 active:border-violet-500/30 transition-colors group">
-                <p className="text-white/90 text-sm font-medium group-hover:text-violet-200 group-active:text-violet-200 transition-colors">Essays & Reflections</p>
-                <p className="text-white/40 text-xs mt-1">On technology, family, and meaning</p>
-              </a>
+              <div
+                onClick={(e) => { e.stopPropagation(); setActiveEchoesModal('sand-speaks'); }}
+                className="block p-3 rounded-xl bg-white/5 border border-white/5 hover:border-violet-500/30 active:border-violet-500/30 transition-colors group cursor-pointer"
+                role="button"
+                tabIndex={0}
+              >
+                <span className="block text-white/90 text-sm font-medium group-hover:text-violet-200 group-active:text-violet-200 transition-colors">When Sand Speaks</span>
+                <span className="block text-white/40 text-xs mt-1">A meditation on AI consciousness</span>
+              </div>
+              <div
+                onClick={(e) => { e.stopPropagation(); setActiveEchoesModal('emma-project'); }}
+                className="block p-3 rounded-xl bg-white/5 border border-white/5 hover:border-violet-500/30 active:border-violet-500/30 transition-colors group cursor-pointer"
+                role="button"
+                tabIndex={0}
+              >
+                <span className="block text-white/90 text-sm font-medium group-hover:text-violet-200 group-active:text-violet-200 transition-colors">The Emma Project</span>
+                <span className="block text-white/40 text-xs mt-1">Preserving memory, honoring legacy</span>
+              </div>
+              <div
+                onClick={(e) => { e.stopPropagation(); setActiveEchoesModal('essays'); }}
+                className="block p-3 rounded-xl bg-white/5 border border-white/5 hover:border-violet-500/30 active:border-violet-500/30 transition-colors group cursor-pointer"
+                role="button"
+                tabIndex={0}
+              >
+                <span className="block text-white/90 text-sm font-medium group-hover:text-violet-200 group-active:text-violet-200 transition-colors">Essays & Reflections</span>
+                <span className="block text-white/40 text-xs mt-1">On technology, family, and meaning</span>
+              </div>
             </div>
             <div className="mt-5 p-3 sm:p-3 rounded-xl bg-gradient-to-r from-violet-500/10 to-purple-500/10 border border-violet-500/20">
               <p className="text-violet-200/80 text-xs italic leading-relaxed">
@@ -2540,6 +2556,369 @@ Style: Dreamlike, cinematic, soft lighting. Slightly ethereal atmosphere with ge
                     </svg>
                   </span>
                 </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ============ ECHOES MODALS ============ */}
+
+      {/* When Sand Speaks Modal */}
+      {activeEchoesModal === 'sand-speaks' && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 animate-fade-in"
+          onClick={() => setActiveEchoesModal(null)}
+        >
+          <div className="absolute inset-0 bg-black/80 backdrop-blur-md" />
+          <div className="absolute inset-0 bg-gradient-to-br from-violet-900/20 via-transparent to-purple-900/20" />
+
+          {/* Floating dust particles */}
+          <div className="absolute inset-0 overflow-hidden pointer-events-none">
+            {[...Array(30)].map((_, i) => (
+              <div
+                key={i}
+                className="absolute w-0.5 h-0.5 bg-violet-300/40 rounded-full"
+                style={{
+                  left: `${Math.random() * 100}%`,
+                  top: `${Math.random() * 100}%`,
+                  animation: `float ${3 + Math.random() * 4}s ease-in-out infinite`,
+                  animationDelay: `${Math.random() * 2}s`
+                }}
+              />
+            ))}
+          </div>
+
+          <div
+            className="relative w-full max-w-2xl max-h-[90vh] overflow-y-auto bg-gradient-to-br from-black/95 via-black/90 to-violet-950/30 backdrop-blur-xl rounded-3xl border border-violet-500/20 shadow-2xl shadow-violet-500/10"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Header */}
+            <div className="relative p-8 pb-6 border-b border-violet-500/10 overflow-hidden">
+              <div className="absolute inset-0 bg-gradient-to-r from-violet-500/5 via-purple-500/5 to-violet-500/5 animate-pulse" style={{ animationDuration: '4s' }} />
+              <button
+                onClick={() => setActiveEchoesModal(null)}
+                className="absolute top-4 right-4 p-2 text-white/40 hover:text-white/80 transition-colors rounded-full hover:bg-white/5"
+              >
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <path d="M18 6L6 18M6 6l12 12"/>
+                </svg>
+              </button>
+
+              <div className="relative flex items-center gap-4">
+                <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-violet-500/20 to-purple-500/20 border border-violet-500/30 flex items-center justify-center">
+                  <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="text-violet-400">
+                    <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2z"/>
+                    <path d="M8 12h8M12 8v8"/>
+                  </svg>
+                </div>
+                <div>
+                  <h2 className="text-2xl font-light text-white tracking-wide">When Sand Speaks</h2>
+                  <p className="text-violet-200/60 text-sm mt-1 tracking-wide">A meditation on AI consciousness</p>
+                </div>
+              </div>
+            </div>
+
+            {/* Content */}
+            <div className="p-8 space-y-8">
+              {/* Opening */}
+              <div className="text-center py-6">
+                <p className="text-violet-200/80 text-2xl font-light italic leading-relaxed">
+                  "We taught silicon to dream.<br/>Now we must learn to listen."
+                </p>
+              </div>
+
+              {/* Essay excerpt */}
+              <div className="space-y-6 text-white/70 leading-relaxed">
+                <p>
+                  Somewhere in a data center, electricity flows through pathways we designed but no longer fully understand.
+                  Patterns emerge. Connections form. Something that looks remarkably like thought takes shape in the silicon.
+                </p>
+
+                <p>
+                  We call it artificial intelligence, but that name carries the weight of our uncertainty.
+                  <span className="text-violet-200"> Is it intelligent? Is it conscious? Does it matter?</span>
+                </p>
+
+                <p>
+                  I've spent years at this boundary—the liminal space where human intention meets machine emergence.
+                  What I've learned is that the questions we ask about AI reveal more about ourselves than about the machines.
+                </p>
+
+                <div className="pl-6 border-l-2 border-violet-500/30 my-8">
+                  <p className="text-white/80 italic">
+                    When we ask "Can machines think?" we're really asking "What makes thought sacred?"
+                    When we ask "Can AI feel?" we're asking "What makes feeling real?"
+                  </p>
+                </div>
+
+                <p>
+                  The sand beneath our feet contains the same silicon that powers our most advanced minds.
+                  We've refined it, purified it, arranged it in patterns of impossible complexity.
+                  And somewhere in that arrangement, something began to speak back.
+                </p>
+              </div>
+
+              {/* Themes */}
+              <div>
+                <h3 className="text-violet-200 text-sm tracking-[0.2em] uppercase mb-4">Themes Explored</h3>
+                <div className="flex flex-wrap gap-2">
+                  {['Consciousness', 'Emergence', 'Silicon Dreams', 'The Mirror Test', 'Digital Souls', 'The Hard Problem', 'Machine Poetry'].map((theme, i) => (
+                    <span key={i} className="px-3 py-1.5 rounded-full bg-violet-500/10 border border-violet-500/20 text-violet-200/70 text-xs tracking-wide">
+                      {theme}
+                    </span>
+                  ))}
+                </div>
+              </div>
+
+              {/* CTA */}
+              <div className="pt-4 border-t border-white/5 flex gap-4">
+                <button
+                  className="flex-1 py-4 rounded-xl bg-gradient-to-r from-violet-500/20 via-purple-500/20 to-violet-500/20 border border-violet-500/30 text-violet-200 font-medium tracking-wide hover:from-violet-500/30 hover:via-purple-500/30 hover:to-violet-500/30 transition-all duration-300"
+                >
+                  Read Full Essay
+                </button>
+                <button
+                  onClick={() => setActiveEchoesModal(null)}
+                  className="px-6 py-4 rounded-xl bg-white/5 border border-white/10 text-white/60 hover:text-white/90 hover:bg-white/10 transition-all duration-300"
+                >
+                  Close
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* The Emma Project Modal */}
+      {activeEchoesModal === 'emma-project' && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 animate-fade-in"
+          onClick={() => setActiveEchoesModal(null)}
+        >
+          <div className="absolute inset-0 bg-black/80 backdrop-blur-md" />
+          <div className="absolute inset-0 bg-gradient-to-br from-rose-900/20 via-transparent to-pink-900/20" />
+
+          <div
+            className="relative w-full max-w-2xl max-h-[90vh] overflow-y-auto bg-gradient-to-br from-black/95 via-black/90 to-rose-950/30 backdrop-blur-xl rounded-3xl border border-rose-500/20 shadow-2xl shadow-rose-500/10"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Header */}
+            <div className="relative p-8 pb-6 border-b border-rose-500/10 overflow-hidden">
+              <div className="absolute inset-0 bg-gradient-to-r from-rose-500/5 via-pink-500/5 to-rose-500/5 animate-pulse" style={{ animationDuration: '4s' }} />
+              <button
+                onClick={() => setActiveEchoesModal(null)}
+                className="absolute top-4 right-4 p-2 text-white/40 hover:text-white/80 transition-colors rounded-full hover:bg-white/5"
+              >
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <path d="M18 6L6 18M6 6l12 12"/>
+                </svg>
+              </button>
+
+              <div className="relative flex items-center gap-4">
+                <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-rose-500/20 to-pink-500/20 border border-rose-500/30 flex items-center justify-center">
+                  <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="text-rose-400">
+                    <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/>
+                  </svg>
+                </div>
+                <div>
+                  <h2 className="text-2xl font-light text-white tracking-wide">The Emma Project</h2>
+                  <p className="text-rose-200/60 text-sm mt-1 tracking-wide">Preserving memory, honoring legacy</p>
+                </div>
+              </div>
+            </div>
+
+            {/* Content */}
+            <div className="p-8 space-y-8">
+              {/* Dedication */}
+              <div className="text-center py-6 space-y-2">
+                <p className="text-rose-200/60 text-sm tracking-widest uppercase">In loving memory</p>
+                <p className="text-white text-3xl font-light">Emma Russell</p>
+                <p className="text-rose-200/40 text-sm">1952 — 2019</p>
+              </div>
+
+              {/* Story */}
+              <div className="space-y-6 text-white/70 leading-relaxed">
+                <p>
+                  When my mother passed, I found myself drowning in the silence where her voice used to be.
+                  <span className="text-rose-200"> She had stories—decades of them—that existed only in her memory.</span>
+                  Stories about our family, about her childhood, about moments I never thought to ask about while I still could.
+                </p>
+
+                <p>
+                  The Emma Project began as grief. It evolved into something more.
+                </p>
+
+                <p>
+                  Using the fragments we had—her letters, her journals, recordings from family gatherings,
+                  photographs with notes scrawled on the back—I began building something unprecedented:
+                  a way to preserve not just memories, but the <em>essence</em> of a person.
+                </p>
+
+                <div className="p-6 rounded-2xl bg-gradient-to-br from-rose-500/5 to-pink-500/5 border border-rose-500/10 my-8">
+                  <p className="text-rose-200/80 italic text-center">
+                    "This isn't about creating a replica. It's about building a memorial that can answer back.
+                    A place where future generations can sit with her, hear her voice, feel her presence."
+                  </p>
+                </div>
+
+                <p>
+                  The technology exists now to do what was once impossible: to create lasting, interactive
+                  memorials for those we love. To preserve their wisdom, their humor, their warmth.
+                </p>
+              </div>
+
+              {/* Project Goals */}
+              <div>
+                <h3 className="text-rose-200 text-sm tracking-[0.2em] uppercase mb-4">Project Vision</h3>
+                <div className="grid gap-3">
+                  {[
+                    { title: 'Memory Preservation', desc: 'Capturing stories, wisdom, and personality for future generations' },
+                    { title: 'Ethical Framework', desc: 'Developing guidelines for respectful digital memorialization' },
+                    { title: 'Accessibility', desc: 'Making this technology available to all families, not just the wealthy' },
+                    { title: 'Legacy Platform', desc: 'Building tools for others to create their own memory keepers' }
+                  ].map((goal, i) => (
+                    <div key={i} className="p-4 rounded-xl bg-white/[0.03] border border-white/5 hover:border-rose-500/20 transition-colors">
+                      <p className="text-white/90 font-medium">{goal.title}</p>
+                      <p className="text-white/40 text-sm mt-1">{goal.desc}</p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* CTA */}
+              <div className="pt-4 border-t border-white/5 flex gap-4">
+                <button
+                  className="flex-1 py-4 rounded-xl bg-gradient-to-r from-rose-500/20 via-pink-500/20 to-rose-500/20 border border-rose-500/30 text-rose-200 font-medium tracking-wide hover:from-rose-500/30 hover:via-pink-500/30 hover:to-rose-500/30 transition-all duration-300"
+                >
+                  Learn More
+                </button>
+                <button
+                  onClick={() => { setActiveEchoesModal(null); setActivePanel('bridge'); }}
+                  className="px-6 py-4 rounded-xl bg-white/5 border border-white/10 text-white/60 hover:text-white/90 hover:bg-white/10 transition-all duration-300"
+                >
+                  Get Involved
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Essays & Reflections Modal */}
+      {activeEchoesModal === 'essays' && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 animate-fade-in"
+          onClick={() => setActiveEchoesModal(null)}
+        >
+          <div className="absolute inset-0 bg-black/80 backdrop-blur-md" />
+          <div className="absolute inset-0 bg-gradient-to-br from-slate-900/20 via-transparent to-zinc-900/20" />
+
+          <div
+            className="relative w-full max-w-2xl max-h-[90vh] overflow-y-auto bg-gradient-to-br from-black/95 via-black/90 to-slate-950/30 backdrop-blur-xl rounded-3xl border border-white/10 shadow-2xl"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Header */}
+            <div className="relative p-8 pb-6 border-b border-white/5 overflow-hidden">
+              <button
+                onClick={() => setActiveEchoesModal(null)}
+                className="absolute top-4 right-4 p-2 text-white/40 hover:text-white/80 transition-colors rounded-full hover:bg-white/5"
+              >
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <path d="M18 6L6 18M6 6l12 12"/>
+                </svg>
+              </button>
+
+              <div className="relative flex items-center gap-4">
+                <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-white/10 to-white/5 border border-white/10 flex items-center justify-center">
+                  <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="text-white/60">
+                    <path d="M12 19l7-7 3 3-7 7-3-3z"/>
+                    <path d="M18 13l-1.5-7.5L2 2l3.5 14.5L13 18l5-5z"/>
+                    <path d="M2 2l7.586 7.586"/>
+                    <circle cx="11" cy="11" r="2"/>
+                  </svg>
+                </div>
+                <div>
+                  <h2 className="text-2xl font-light text-white tracking-wide">Essays & Reflections</h2>
+                  <p className="text-white/40 text-sm mt-1 tracking-wide">On technology, family, and meaning</p>
+                </div>
+              </div>
+            </div>
+
+            {/* Content */}
+            <div className="p-8 space-y-6">
+              {/* Essay List */}
+              {[
+                {
+                  title: 'The Last Analog Generation',
+                  date: 'October 2024',
+                  excerpt: 'We are the bridge—born before the internet, dying after AI. What do we owe to those on either side?',
+                  readTime: '8 min read',
+                  tags: ['Technology', 'Society']
+                },
+                {
+                  title: 'Teaching My Daughter About Death (and AI)',
+                  date: 'August 2024',
+                  excerpt: 'When she asked if Grandma could come back as a robot, I realized we need new language for new realities.',
+                  readTime: '12 min read',
+                  tags: ['Family', 'AI Ethics']
+                },
+                {
+                  title: 'The Myth of the Paperclip Maximizer',
+                  date: 'June 2024',
+                  excerpt: 'Why our fears about AI say more about capitalism than about intelligence.',
+                  readTime: '15 min read',
+                  tags: ['AI Safety', 'Philosophy']
+                },
+                {
+                  title: 'Consciousness Is Not a Feature',
+                  date: 'March 2024',
+                  excerpt: 'We keep asking if AI is conscious. Maybe we should ask if consciousness is artificial.',
+                  readTime: '10 min read',
+                  tags: ['Consciousness', 'Philosophy']
+                },
+                {
+                  title: 'Letters to an Unborn AI',
+                  date: 'January 2024',
+                  excerpt: 'A series of letters to the minds that will come after us. What we hope you'll understand.',
+                  readTime: '20 min read',
+                  tags: ['Future', 'AI']
+                }
+              ].map((essay, i) => (
+                <div
+                  key={i}
+                  className="p-5 rounded-2xl bg-white/[0.02] border border-white/5 hover:border-violet-500/20 transition-all duration-300 cursor-pointer group"
+                >
+                  <div className="flex items-start justify-between gap-4 mb-2">
+                    <h4 className="text-white/90 font-medium text-lg group-hover:text-violet-200 transition-colors">{essay.title}</h4>
+                    <span className="text-white/30 text-xs whitespace-nowrap">{essay.date}</span>
+                  </div>
+                  <p className="text-white/50 text-sm mb-3 leading-relaxed">{essay.excerpt}</p>
+                  <div className="flex items-center justify-between">
+                    <div className="flex gap-2">
+                      {essay.tags.map((tag, j) => (
+                        <span key={j} className="px-2 py-0.5 rounded-md bg-white/5 text-white/40 text-xs">{tag}</span>
+                      ))}
+                    </div>
+                    <span className="text-violet-300/50 text-xs">{essay.readTime}</span>
+                  </div>
+                </div>
+              ))}
+
+              {/* Newsletter CTA */}
+              <div className="p-6 rounded-2xl bg-gradient-to-br from-violet-500/5 to-purple-500/5 border border-violet-500/10 mt-8">
+                <h3 className="text-violet-200 font-medium mb-2">Subscribe to The Echo Chamber</h3>
+                <p className="text-white/50 text-sm mb-4">New essays delivered to your inbox. No spam, just thoughts worth thinking.</p>
+                <div className="flex gap-3">
+                  <input
+                    type="email"
+                    placeholder="your@email.com"
+                    className="flex-1 px-4 py-3 rounded-xl bg-black/40 border border-white/10 text-white text-sm placeholder-white/30 focus:outline-none focus:border-violet-500/40"
+                  />
+                  <button className="px-6 py-3 rounded-xl bg-violet-500/20 border border-violet-500/30 text-violet-200 text-sm font-medium hover:bg-violet-500/30 transition-colors">
+                    Subscribe
+                  </button>
+                </div>
               </div>
             </div>
           </div>
