@@ -194,6 +194,7 @@ export default function DigitalMind() {
   const streamingResponseRef = useRef('');
   const [pendingImages, setPendingImages] = useState<string[]>([]);
   const pendingImagesRef = useRef<string[]>([]);
+  const expectedImageCountRef = useRef<number>(0);
   const batchQueueStartIndexRef = useRef<number>(0);
 
   // Navigation panels state
@@ -378,9 +379,10 @@ Return 1-3 memories based on context richness, each with LABEL: and MEMORY: on s
 
         console.log("Mind's Eye scenes to visualize:", memoryScenes);
 
-        // Clear pending images for new batch
+        // Clear pending images for new batch and set expected count
         pendingImagesRef.current = [];
         setPendingImages([]);
+        expectedImageCountRef.current = memoryScenes.length;
 
         // Store the starting index in the queue for this batch
         batchQueueStartIndexRef.current = S.cameraFocusQueue.length;
@@ -1599,7 +1601,7 @@ Style: Dreamlike, cinematic, soft lighting. Slightly ethereal atmosphere with ge
                       </div>
                     ))}
                     {/* Pending images - show loading state */}
-                    {pendingImages.length > 0 && pendingImages.length < 3 && (
+                    {pendingImages.length > 0 && pendingImages.length < expectedImageCountRef.current && (
                       <div className="flex justify-center">
                         <div className="flex gap-2 p-2 sm:p-3 rounded-2xl bg-white/[0.04] border border-white/5">
                           {pendingImages.map((img, idx) => (
@@ -1610,7 +1612,7 @@ Style: Dreamlike, cinematic, soft lighting. Slightly ethereal atmosphere with ge
                               className="w-14 h-14 sm:w-16 sm:h-16 rounded-xl object-cover opacity-70"
                             />
                           ))}
-                          {Array.from({ length: 3 - pendingImages.length }).map((_, idx) => (
+                          {Array.from({ length: expectedImageCountRef.current - pendingImages.length }).map((_, idx) => (
                             <div
                               key={`loading-${idx}`}
                               className="w-14 h-14 sm:w-16 sm:h-16 rounded-xl bg-white/5 flex items-center justify-center"
