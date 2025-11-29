@@ -72,13 +72,6 @@ interface ParticleData {
   phase: number;
 }
 
-interface LabelParticleData {
-  basePos: THREE.Vector3;      // Rest position (scattered near image)
-  targetPos: THREE.Vector3;    // Text formation position
-  currentPos: THREE.Vector3;   // Current animated position
-  phase: number;
-}
-
 interface ConstellationNode {
   mesh: THREE.Sprite;
   velocity: THREE.Vector3;
@@ -86,8 +79,6 @@ interface ConstellationNode {
   id: number;
   shortLabel?: string;           // Brief poetic label (2-4 words)
   fullPrompt?: string;           // Full first-person memory prompt
-  labelParticles?: LabelParticleData[];  // Particles for this label
-  labelOpacity: number;          // For fade in/out
 }
 
 interface StateRef {
@@ -97,7 +88,6 @@ interface StateRef {
   controls: OrbitControls | null;
   particles: THREE.Points | null;
   particleData: ParticleData[];
-  labelParticles: THREE.Points | null;  // Dedicated particles for image labels
   connections: THREE.LineSegments | null;
   ground: THREE.Mesh | null;
   mainLight: THREE.PointLight | null;
@@ -174,76 +164,11 @@ const generateTextPoints = (text: string): THREE.Vector3[] => {
   return points;
 };
 
-// --- Generate Label Particles for Image Labels ---
-// Creates particle data that will form text below an image
-const generateLabelParticles = (text: string, imageScale: number): LabelParticleData[] => {
-  const canvas = document.createElement('canvas');
-  const ctx = canvas.getContext('2d');
-  if(!ctx) return [];
-
-  // Scale font based on image size
-  const fontSize = 40;
-  ctx.font = `bold ${fontSize}px Arial`;
-  const metrics = ctx.measureText(text.toUpperCase());
-  const width = Math.ceil(metrics.width) + 20;
-  const height = fontSize * 1.5;
-
-  canvas.width = width;
-  canvas.height = height;
-
-  ctx.fillStyle = 'black';
-  ctx.fillRect(0, 0, width, height);
-  ctx.font = `bold ${fontSize}px Arial`;
-  ctx.fillStyle = 'white';
-  ctx.textAlign = 'center';
-  ctx.textBaseline = 'middle';
-  ctx.fillText(text.toUpperCase(), width / 2, height / 2);
-
-  const imageData = ctx.getImageData(0, 0, width, height);
-  const data = imageData.data;
-  const particles: LabelParticleData[] = [];
-
-  // Scale text to be proportional to image (smaller than image width)
-  const textScale = (imageScale * 0.4) / width;
-  const step = 3; // Larger step = fewer particles per label
-
-  for (let y = 0; y < height; y += step) {
-    for (let x = 0; x < width; x += step) {
-      const i = (y * width + x) * 4;
-      if (data[i] > 100) {
-        const px = (x - width/2) * textScale;
-        const py = -(y - height/2) * textScale;
-        const pz = (Math.random() - 0.5) * 0.3;
-
-        // Target position (where text forms) - relative to image center, below it
-        const targetPos = new THREE.Vector3(px, py - imageScale * 0.6, pz);
-
-        // Base position (scattered around, for animation from)
-        const scatter = imageScale * 0.8;
-        const basePos = new THREE.Vector3(
-          px + (Math.random() - 0.5) * scatter,
-          py - imageScale * 0.6 + (Math.random() - 0.5) * scatter * 0.5,
-          pz + (Math.random() - 0.5) * scatter * 0.3
-        );
-
-        particles.push({
-          basePos,
-          targetPos,
-          currentPos: basePos.clone(),
-          phase: Math.random() * Math.PI * 2
-        });
-      }
-    }
-  }
-
-  return particles;
-};
-
 export default function DigitalMind() {
   const containerRef = useRef<HTMLDivElement>(null);
   const stateRef = useRef<StateRef>({
     scene: null, renderer: null, camera: null, controls: null,
-    particles: null, particleData: [], labelParticles: null, connections: null,
+    particles: null, particleData: [], connections: null,
     ground: null, mainLight: null, rimLight: null,
     constellationGroup: null, constellationNodes: [], constellationLines: null,
     zone: 'ambient', targetZone: 'ambient', transition: 0,
@@ -576,9 +501,6 @@ Return 1-3 memories based on context richness, each with LABEL: and MEMORY: on s
             const targetScale = 15;
             const labelText = scene?.label || 'Memory';
 
-            // Generate label particles for this image
-            const labelParticles = generateLabelParticles(labelText, targetScale);
-
             const node: ConstellationNode = {
                 mesh: sprite,
                 velocity: new THREE.Vector3(
@@ -589,9 +511,7 @@ Return 1-3 memories based on context richness, each with LABEL: and MEMORY: on s
                 targetScale,
                 id: Math.random(),
                 shortLabel: labelText,
-                fullPrompt: scene?.prompt || '',
-                labelParticles,
-                labelOpacity: 0
+                fullPrompt: scene?.prompt || ''
             };
 
             S.constellationNodes.push(node);
@@ -1129,69 +1049,6 @@ Style: Dreamlike, cinematic, soft lighting. Slightly ethereal atmosphere with ge
     S.particles = new THREE.Points(particleGeom, particleMat);
     S.scene.add(S.particles);
 
-    // ============ LABEL PARTICLES (for image labels) ============
-    const labelParticleCount = 5000; // Enough for ~10 images with ~500 particles each
-    const labelPositions = new Float32Array(labelParticleCount * 3);
-    const labelColors = new Float32Array(labelParticleCount * 3);
-    const labelSizes = new Float32Array(labelParticleCount);
-
-    // Initialize all label particles far away (hidden)
-    for (let i = 0; i < labelParticleCount; i++) {
-      labelPositions[i * 3] = 0;
-      labelPositions[i * 3 + 1] = -1000; // Hidden below scene
-      labelPositions[i * 3 + 2] = 0;
-      labelColors[i * 3] = 1;
-      labelColors[i * 3 + 1] = 1;
-      labelColors[i * 3 + 2] = 1;
-      labelSizes[i] = 1.5;
-    }
-
-    const labelGeom = new THREE.BufferGeometry();
-    labelGeom.setAttribute('position', new THREE.BufferAttribute(labelPositions, 3));
-    labelGeom.setAttribute('color', new THREE.BufferAttribute(labelColors, 3));
-    labelGeom.setAttribute('size', new THREE.BufferAttribute(labelSizes, 1));
-
-    const labelMat = new THREE.ShaderMaterial({
-      uniforms: {
-        uPixelRatio: { value: Math.min(window.devicePixelRatio, 2) }
-      },
-      vertexShader: `
-        attribute float size;
-        attribute vec3 color;
-        varying vec3 vColor;
-        varying float vAlpha;
-        uniform float uPixelRatio;
-        void main() {
-          vColor = color;
-          vec4 mvPosition = modelViewMatrix * vec4(position, 1.0);
-          gl_Position = projectionMatrix * mvPosition;
-          float sizeScale = size * (150.0 / -mvPosition.z) * uPixelRatio;
-          gl_PointSize = clamp(sizeScale, 0.5, 12.0);
-          // Fade based on distance
-          vAlpha = smoothstep(300.0, 50.0, -mvPosition.z);
-        }
-      `,
-      fragmentShader: `
-        varying vec3 vColor;
-        varying float vAlpha;
-        void main() {
-          vec2 center = gl_PointCoord - 0.5;
-          float dist = length(center);
-          if (dist > 0.5) discard;
-          float alpha = smoothstep(0.5, 0.0, dist) * vAlpha;
-          float glow = exp(-dist * 3.0) * 0.6;
-          vec3 finalColor = vColor + glow;
-          gl_FragColor = vec4(finalColor, alpha);
-        }
-      `,
-      transparent: true,
-      depthWrite: false,
-      blending: THREE.AdditiveBlending
-    });
-
-    S.labelParticles = new THREE.Points(labelGeom, labelMat);
-    S.scene.add(S.labelParticles);
-
     // ============ CONNECTIONS ============
     const linePositions = new Float32Array(500 * 6);
     const lineColors = new Float32Array(500 * 6);
@@ -1358,15 +1215,10 @@ Style: Dreamlike, cinematic, soft lighting. Slightly ethereal atmosphere with ge
               // Fade in
               if (node.mesh.material.opacity < 1 && node.targetScale > 0) {
                   node.mesh.material.opacity += 0.02;
-                  // Fade in label slightly after image
-                  if (node.mesh.material.opacity > 0.3) {
-                      node.labelOpacity = Math.min(1, node.labelOpacity + 0.025);
-                  }
               }
               // Fade out
               if (node.targetScale === 0) {
                   node.mesh.material.opacity -= 0.05;
-                  node.labelOpacity = Math.max(0, node.labelOpacity - 0.05);
               }
 
               // Movement
@@ -1410,63 +1262,6 @@ Style: Dreamlike, cinematic, soft lighting. Slightly ethereal atmosphere with ge
               // Zero out remaining
               for (let i = idx; i < positions.length; i++) positions[i] = 0;
               S.constellationLines.geometry.attributes.position.needsUpdate = true;
-          }
-
-          // ============ UPDATE LABEL PARTICLES ============
-          if (S.labelParticles) {
-              const labelPositions = S.labelParticles.geometry.attributes.position.array as Float32Array;
-              const labelColors = S.labelParticles.geometry.attributes.color.array as Float32Array;
-              let particleIdx = 0;
-
-              // For each constellation node, update its label particles
-              S.constellationNodes.forEach(node => {
-                  if (!node.labelParticles) return;
-
-                  // Get the world position of the image
-                  const worldPos = new THREE.Vector3();
-                  node.mesh.getWorldPosition(worldPos);
-
-                  const opacity = node.labelOpacity;
-                  const formProgress = Math.min(1, opacity * 1.5); // Form faster than fade
-
-                  node.labelParticles.forEach((lp, lpIdx) => {
-                      if (particleIdx >= labelPositions.length / 3) return;
-
-                      // Lerp between scattered base position and text target position
-                      const easeProgress = 1 - Math.pow(1 - formProgress, 3); // Cubic ease out
-
-                      // Calculate current position with gentle floating
-                      const floatOffset = Math.sin(t * 2 + lp.phase) * 0.1 * (1 - easeProgress);
-
-                      lp.currentPos.x = lp.basePos.x + (lp.targetPos.x - lp.basePos.x) * easeProgress;
-                      lp.currentPos.y = lp.basePos.y + (lp.targetPos.y - lp.basePos.y) * easeProgress + floatOffset;
-                      lp.currentPos.z = lp.basePos.z + (lp.targetPos.z - lp.basePos.z) * easeProgress;
-
-                      // Transform to world space (add image position)
-                      labelPositions[particleIdx * 3] = worldPos.x + lp.currentPos.x;
-                      labelPositions[particleIdx * 3 + 1] = worldPos.y + lp.currentPos.y;
-                      labelPositions[particleIdx * 3 + 2] = worldPos.z + lp.currentPos.z;
-
-                      // Set color with opacity (white with zone tint)
-                      const brightness = 0.8 + formProgress * 0.2;
-                      labelColors[particleIdx * 3] = brightness * opacity;
-                      labelColors[particleIdx * 3 + 1] = brightness * opacity;
-                      labelColors[particleIdx * 3 + 2] = brightness * opacity;
-
-                      particleIdx++;
-                  });
-              });
-
-              // Hide unused particles
-              for (let i = particleIdx; i < labelPositions.length / 3; i++) {
-                  labelPositions[i * 3 + 1] = -1000; // Move far below
-                  labelColors[i * 3] = 0;
-                  labelColors[i * 3 + 1] = 0;
-                  labelColors[i * 3 + 2] = 0;
-              }
-
-              S.labelParticles.geometry.attributes.position.needsUpdate = true;
-              S.labelParticles.geometry.attributes.color.needsUpdate = true;
           }
       }
 
