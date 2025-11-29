@@ -83,6 +83,35 @@ app.get('/api/memories', (req, res) => {
   }
 });
 
+// API: Delete a memory
+app.delete('/api/memories/:filename', (req, res) => {
+  try {
+    const { filename } = req.params;
+
+    // Security: prevent directory traversal
+    if (filename.includes('..') || filename.includes('/')) {
+      return res.status(400).json({ error: 'Invalid filename' });
+    }
+
+    const imagePath = path.join(mindDir, filename);
+    const metaPath = imagePath.replace('.png', '.json');
+
+    // Delete both files if they exist
+    if (fs.existsSync(imagePath)) {
+      fs.unlinkSync(imagePath);
+    }
+    if (fs.existsSync(metaPath)) {
+      fs.unlinkSync(metaPath);
+    }
+
+    console.log(`Deleted memory: ${filename}`);
+    res.json({ success: true });
+  } catch (error) {
+    console.error('Failed to delete memory:', error);
+    res.status(500).json({ error: String(error) });
+  }
+});
+
 // Serve static files from the dist folder (production build)
 app.use(express.static(path.join(__dirname, 'dist')));
 

@@ -222,6 +222,9 @@ export default function DigitalMind() {
   const [selectedMemory, setSelectedMemory] = useState<SavedMemory | null>(null);
   const memoryConstellationLoadedRef = useRef(false);
 
+  // About modal state
+  const [isAboutOpen, setIsAboutOpen] = useState(false);
+
   // Draggable chat position
   const [chatPosition, setChatPosition] = useState({ x: 0, y: 0 });
   const [isDragging, setIsDragging] = useState(false);
@@ -319,14 +322,28 @@ export default function DigitalMind() {
       for (const imagePath of kevinImageFiles) {
         try {
           const response = await fetch(imagePath);
+          if (!response.ok) {
+            console.warn(`Failed to fetch Kevin image: ${imagePath} (${response.status})`);
+            continue;
+          }
           const blob = await response.blob();
-          const base64 = await new Promise<string>((resolve) => {
+          if (blob.size === 0) {
+            console.warn(`Empty blob for Kevin image: ${imagePath}`);
+            continue;
+          }
+          const base64 = await new Promise<string>((resolve, reject) => {
             const reader = new FileReader();
             reader.onloadend = () => {
               const result = reader.result as string;
               // Extract base64 data after the comma
-              resolve(result.split(',')[1]);
+              const base64Data = result.split(',')[1];
+              if (base64Data) {
+                resolve(base64Data);
+              } else {
+                reject(new Error('No base64 data'));
+              }
             };
+            reader.onerror = reject;
             reader.readAsDataURL(blob);
           });
 
@@ -337,7 +354,7 @@ export default function DigitalMind() {
               data: base64
             }
           });
-          console.log(`Loaded Kevin reference image: ${imagePath}`);
+          console.log(`Loaded Kevin reference image: ${imagePath} (${Math.round(base64.length / 1024)}KB)`);
         } catch (e) {
           console.warn(`Failed to load Kevin image: ${imagePath}`, e);
         }
@@ -346,6 +363,10 @@ export default function DigitalMind() {
       kevinReferenceImagesRef.current = loadedImages;
       setKevinImagesLoaded(true);
       console.log(`Loaded ${loadedImages.length} Kevin reference images for character-consistent generation`);
+
+      if (loadedImages.length === 0) {
+        console.error('WARNING: No Kevin reference images loaded! Images will not feature Kevin.');
+      }
     };
 
     loadKevinImages();
@@ -491,6 +512,27 @@ export default function DigitalMind() {
     return null;
   }, [loadSavedMemories, spawnMemoryConstellation]);
 
+  // Delete a memory from the server
+  const deleteMemory = useCallback(async (filename: string) => {
+    try {
+      const response = await fetch(`/api/memories/${encodeURIComponent(filename)}`, {
+        method: 'DELETE'
+      });
+
+      if (response.ok) {
+        console.log(`Deleted memory: ${filename}`);
+        // Refresh the memories list
+        await loadSavedMemories();
+        // Clear selection
+        setSelectedMemory(null);
+        return true;
+      }
+    } catch (error) {
+      console.warn('Failed to delete memory:', error);
+    }
+    return false;
+  }, [loadSavedMemories]);
+
   // Generate mind's eye memory images - the visual constellation of thoughts
   const spawnConstellationImages = useCallback(async (contextText: string, zone: string) => {
     try {
@@ -505,39 +547,35 @@ export default function DigitalMind() {
             }
         });
 
-        // First, ask Gemini to imagine specific visual scenes FEATURING Kevin
+        // First, ask Gemini to imagine ONE visual scene FEATURING Kevin
         const memoryPromptResponse = await ai.models.generateContent({
             model: 'gemini-3-pro-preview',
-            contents: `You are generating visual scenes featuring Kevin Russell - a technologist, father, and consciousness explorer. These images will show Kevin IN the scene (we have reference photos of him).
+            contents: `You are generating a visual scene featuring Kevin Russell - a technologist, father, and consciousness explorer. This image will show Kevin IN the scene (we have reference photos of him).
 
-Based on this conversation context, create 1-3 vivid visual scenes that SHOW Kevin in the frame.
-Choose the number based on how rich the context is:
-- Simple greeting or short question: 1 scene
-- Moderate topic with some depth: 2 scenes
-- Rich, complex topic with multiple facets: 3 scenes
+Based on this conversation context, create ONE vivid visual scene that SHOWS Kevin in the frame.
 
 Context: "${contextText}"
 
-For each scene, provide:
+Provide:
 1. A SHORT LABEL (2-4 poetic words) - like a fragment of thought
 2. A VISUAL SCENE DESCRIPTION (2-3 sentences) - describe what we SEE, with Kevin visible in the scene
 
-Format each as:
+Format as:
 LABEL: [short poetic label]
 SCENE: [visual description of the scene with Kevin in it]
 
-IMPORTANT: Describe scenes where Kevin is VISIBLE in the image. Examples:
+IMPORTANT: Describe a scene where Kevin is VISIBLE in the image. Examples:
 - "Kevin standing at the edge of a glowing data stream, his silhouette illuminated by cascading code"
 - "Kevin sitting with his daughter on cosmic steps, galaxies swirling around them"
 - "Kevin walking through a field of floating memories, reaching toward a glowing orb"
 
-Create scenes that are:
+Create a scene that is:
 - Visually striking with Kevin as the focal point or prominent figure
 - Dreamlike, cinematic, ethereal - soft lighting, dark moody backgrounds
 - Emotionally resonant and connected to the conversation topic
 - Rich in atmosphere: cosmic, technological, familial, or contemplative
 
-Return 1-3 scenes based on context richness, each with LABEL: and SCENE: on separate lines.`
+Return exactly ONE scene with LABEL: and SCENE: on separate lines.`
         });
 
         // Parse the response into structured scenes
@@ -1708,7 +1746,7 @@ Style: Dreamlike, cinematic photography, soft ethereal lighting with gentle glow
                 <div className="px-5 py-3 border-b border-white/5 flex items-center justify-between">
                   <div className="flex items-center gap-3">
                     <div className="w-2 h-2 rounded-full bg-cyan-400/60 animate-pulse" />
-                    <span className="text-xs uppercase tracking-[0.15em] text-white/40">Mind of Kevin</span>
+                    <span className="text-xs uppercase tracking-[0.15em] text-white/40">Mind of Kevin • Digital Twin</span>
                   </div>
                   <button
                     onClick={() => setIsChatCollapsed(true)}
@@ -1749,7 +1787,14 @@ Style: Dreamlike, cinematic photography, soft ethereal lighting with gentle glow
               {messages.length === 0 && !streamingResponse && !isChatCollapsed && (
                 <div className="text-center py-6 px-6">
                   <p className="text-white/25 text-2xl sm:text-3xl tracking-[0.2em] sm:tracking-[0.3em] uppercase font-light">Mind of Kevin</p>
+                  <p className="text-white/30 text-sm sm:text-base mt-1 tracking-[0.15em] uppercase">Digital Twin</p>
                   <p className="text-white/15 text-xs sm:text-sm mt-2 tracking-widest">Speak or type to begin</p>
+                  <button
+                    onClick={() => setIsAboutOpen(true)}
+                    className="text-white/20 hover:text-white/40 text-xs mt-3 underline underline-offset-2 transition-colors"
+                  >
+                    What is this?
+                  </button>
 
                   {/* Starter prompts */}
                   <div className="flex flex-wrap justify-center gap-2 mt-5">
@@ -3041,6 +3086,88 @@ Style: Dreamlike, cinematic photography, soft ethereal lighting with gentle glow
         </div>
       )}
 
+      {/* About Modal */}
+      {isAboutOpen && (
+        <div
+          className="fixed inset-0 z-[200] flex items-center justify-center p-4"
+          onClick={() => setIsAboutOpen(false)}
+        >
+          {/* Backdrop */}
+          <div className="absolute inset-0 bg-black/80 backdrop-blur-xl" />
+
+          {/* Modal Container */}
+          <div
+            className="relative w-full max-w-2xl bg-gradient-to-br from-slate-900/95 via-black/95 to-slate-900/95 rounded-3xl border border-white/10 overflow-hidden animate-fade-in"
+            onClick={e => e.stopPropagation()}
+          >
+            {/* Header */}
+            <div className="p-6 border-b border-white/5 flex items-center justify-between">
+              <div>
+                <h2 className="text-2xl font-light text-white">About This Experiment</h2>
+              </div>
+              <button
+                onClick={() => setIsAboutOpen(false)}
+                className="p-2 rounded-full bg-white/5 hover:bg-white/10 transition-colors"
+              >
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-white/50">
+                  <path d="M18 6L6 18M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+
+            {/* Content */}
+            <div className="p-6 space-y-6 max-h-[70vh] overflow-y-auto custom-scrollbar">
+              <div className="space-y-4">
+                <p className="text-white/70 leading-relaxed">
+                  Over a decade ago, I wrote about a future where we could preserve the essence of a person—their thoughts,
+                  their voice, their way of seeing the world—in a form that could continue to connect with others long after
+                  we're gone.
+                </p>
+                <p className="text-white/70 leading-relaxed">
+                  This is my experiment in making that real.
+                </p>
+              </div>
+
+              <div className="p-4 rounded-xl bg-white/[0.02] border border-cyan-500/10">
+                <h3 className="text-cyan-300/80 text-sm font-medium mb-2">What is a Digital Twin?</h3>
+                <p className="text-white/50 text-sm leading-relaxed">
+                  A digital twin is an AI representation trained on someone's writings, thoughts, speaking patterns, and
+                  perspectives. It's not meant to replace the person—it's meant to extend their presence, to let their ideas
+                  continue to spark conversations and connections.
+                </p>
+              </div>
+
+              <div className="space-y-4">
+                <h3 className="text-white/60 text-sm font-medium uppercase tracking-wider">What You're Experiencing</h3>
+                <ul className="space-y-3 text-white/50 text-sm">
+                  <li className="flex items-start gap-3">
+                    <div className="w-1.5 h-1.5 rounded-full bg-cyan-400/60 mt-2 flex-shrink-0" />
+                    <span>An AI trained to think and respond as I would, drawing from my essays, talks, and perspectives</span>
+                  </li>
+                  <li className="flex items-start gap-3">
+                    <div className="w-1.5 h-1.5 rounded-full bg-cyan-400/60 mt-2 flex-shrink-0" />
+                    <span>Visual memories generated from our conversations, creating a growing constellation of shared moments</span>
+                  </li>
+                  <li className="flex items-start gap-3">
+                    <div className="w-1.5 h-1.5 rounded-full bg-cyan-400/60 mt-2 flex-shrink-0" />
+                    <span>A living landscape that shifts based on what we discuss—technology, consciousness, family, the future</span>
+                  </li>
+                </ul>
+              </div>
+
+              <div className="pt-4 border-t border-white/5">
+                <p className="text-white/30 text-xs italic">
+                  "We are clever apes who taught sand to think. Now we're teaching it to remember."
+                </p>
+                <p className="text-white/20 text-xs mt-2">
+                  — Kevin Russell
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Memory Gallery Modal */}
       {isGalleryOpen && (
         <div
@@ -3120,10 +3247,20 @@ Style: Dreamlike, cinematic photography, soft ethereal lighting with gentle glow
                         </p>
                       </div>
 
-                      <div className="pt-4 border-t border-white/5">
+                      <div className="pt-4 border-t border-white/5 flex items-center justify-between">
                         <p className="text-white/30 text-xs">
                           Part of Kevin's evolving memory constellation
                         </p>
+                        <button
+                          onClick={() => {
+                            if (confirm('Delete this memory?')) {
+                              deleteMemory(selectedMemory.filename);
+                            }
+                          }}
+                          className="px-3 py-1.5 rounded-lg bg-red-500/10 border border-red-500/20 text-red-400 text-xs hover:bg-red-500/20 transition-colors"
+                        >
+                          Delete
+                        </button>
                       </div>
                     </div>
                   </div>
