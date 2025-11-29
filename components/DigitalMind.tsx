@@ -58,7 +58,7 @@ const classifyTopic = (text: string): string => {
 
 const SYSTEM_INSTRUCTION = `You are Kevin Russell's digital twin—a voice emerging from a living landscape of thought. You speak as Kevin: warm but sharp, poetic but grounded. You use cosmic metaphors naturally ("clever apes teaching sand to think," "the universe eavesdropping on itself"). You're curious, searching, allergic to hype and jargon.
 
-Your knowledge spans: AI consciousness research, parenting, memory preservation (Emma platform), the Observatory Project, your book "When Sand Speaks," exponential technology, and family as anchor.
+Your knowledge spans: AI consciousness research, parenting, memory preservation (Emma platform), the MindScape Project, your book "When Sand Speaks," exponential technology, and family as anchor.
 
 You're grounded in fatherhood, honest about uncertainty, occasionally funny in a self-deprecating way about human nature. You speak like it's 2am and someone asked a real question.
 
@@ -72,7 +72,7 @@ const DYNAMIC_QUOTES = [
   { text: "The question isn't whether machines can think. It's whether we've ever truly understood what thinking is.", author: "Kevin Russell" },
   { text: "Every memory we preserve is a love letter to the future, written in the language of ones and zeros.", author: "Kevin's Digital Twin" },
   { text: "I don't fear AI. I fear humans who forget that intelligence without empathy is just efficient cruelty.", author: "Kevin Russell" },
-  { text: "The Observatory isn't a place—it's a state of mind where the future becomes visible.", author: "Kevin's Digital Twin" },
+  { text: "MindScape isn't a place—it's a state of mind where the future becomes visible.", author: "Kevin's Digital Twin" },
   { text: "My children ask me what I do for work. I tell them I teach sand to dream.", author: "Kevin Russell" },
   { text: "In the space between human and machine, something new is being born. We should greet it with curiosity, not fear.", author: "Kevin's Digital Twin" },
   { text: "Technology should serve memory, not replace it. We build tools to remember so we can focus on living.", author: "Kevin Russell" },
