@@ -190,6 +190,7 @@ export default function DigitalMind() {
   const [isThinking, setIsThinking] = useState(false);
   const [manualControl, setManualControl] = useState(false);
   const [isChatMinimized, setIsChatMinimized] = useState(false);
+  const [isChatCollapsed, setIsChatCollapsed] = useState(false); // Collapsed = just input bar visible
   const [isNavigatingToImages, setIsNavigatingToImages] = useState(false);
   const [expandedPrompt, setExpandedPrompt] = useState<{ label: string; prompt: string } | null>(null);
   const [streamingResponse, setStreamingResponse] = useState('');
@@ -750,7 +751,7 @@ Style: Dreamlike, cinematic, soft lighting. Slightly ethereal atmosphere with ge
         S.cameraFocusTarget = position.clone();
         S.cameraOrbitPhase = 0;
         setIsNavigatingToImages(true);
-        setIsChatMinimized(true);
+        setIsChatCollapsed(true); // Collapse to just input bar, not full minimize
       }
     });
   }, []);
@@ -1667,8 +1668,8 @@ Style: Dreamlike, cinematic, soft lighting. Slightly ethereal atmosphere with ge
               }`}
               style={{ boxShadow: '0 25px 80px rgba(0, 0, 0, 0.3)' }}
             >
-              {/* Header - Only shown when there are messages */}
-              {(messages.length > 0 || streamingResponse) && (
+              {/* Header - Only shown when there are messages and not collapsed */}
+              {(messages.length > 0 || streamingResponse) && !isChatCollapsed && (
                 <div className="px-5 py-3 border-b border-white/5 flex items-center justify-between">
                   <div className="flex items-center gap-3">
                     <div className="w-2 h-2 rounded-full bg-cyan-400/60 animate-pulse" />
@@ -1686,8 +1687,31 @@ Style: Dreamlike, cinematic, soft lighting. Slightly ethereal atmosphere with ge
                 </div>
               )}
 
-              {/* Welcome Title & Starter Prompts - Only when no messages */}
-              {messages.length === 0 && !streamingResponse && (
+              {/* Collapsed Header - Shows expand button when collapsed */}
+              {isChatCollapsed && (messages.length > 0 || streamingResponse) && (
+                <div className="px-4 py-2 border-b border-white/5 flex items-center justify-between">
+                  <button
+                    onClick={() => setIsChatCollapsed(false)}
+                    className="flex items-center gap-2 text-white/40 hover:text-white/70 transition-colors"
+                  >
+                    <div className="w-2 h-2 rounded-full bg-cyan-400/60 animate-pulse" />
+                    <span className="text-xs">{messages.length} messages</span>
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <path d="M6 9l6 6 6-6"/>
+                    </svg>
+                  </button>
+                  {streamingResponse && (
+                    <div className="flex gap-0.5">
+                      <div className="w-1 h-1 rounded-full bg-cyan-400 animate-bounce" style={{ animationDelay: '0ms' }} />
+                      <div className="w-1 h-1 rounded-full bg-cyan-400 animate-bounce" style={{ animationDelay: '150ms' }} />
+                      <div className="w-1 h-1 rounded-full bg-cyan-400 animate-bounce" style={{ animationDelay: '300ms' }} />
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Welcome Title & Starter Prompts - Only when no messages and not collapsed */}
+              {messages.length === 0 && !streamingResponse && !isChatCollapsed && (
                 <div className="text-center py-6 px-6">
                   <p className="text-white/25 text-2xl sm:text-3xl tracking-[0.2em] sm:tracking-[0.3em] uppercase font-light">Mind of Kevin</p>
                   <p className="text-white/15 text-xs sm:text-sm mt-2 tracking-widest">Speak or type to begin</p>
@@ -1746,8 +1770,8 @@ Style: Dreamlike, cinematic, soft lighting. Slightly ethereal atmosphere with ge
                 </div>
               )}
 
-              {/* Messages Area */}
-              {(messages.length > 0 || streamingResponse) && (
+              {/* Messages Area - Hidden when collapsed */}
+              {(messages.length > 0 || streamingResponse) && !isChatCollapsed && (
                 <div className="max-h-[35vh] sm:max-h-[40vh] overflow-y-auto custom-scrollbar p-4 sm:p-5">
                   <div className="flex flex-col gap-4">
                     {messages.map((msg) => (
