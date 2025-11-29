@@ -320,7 +320,7 @@ export default function DigitalMind() {
 
         // First, ask Gemini to imagine specific visual scenes from Kevin's perspective
         const memoryPromptResponse = await ai.models.generateContent({
-            model: 'gemini-2.5-flash',
+            model: 'gemini-3-pro-preview',
             contents: `You are generating visual memories from Kevin's mind - a technologist, father, and consciousness explorer.
 
 Based on this conversation context, create 1-3 vivid first-person memories/visions from Kevin's perspective.
@@ -547,7 +547,7 @@ Style: Dreamlike, cinematic, soft lighting. Slightly ethereal atmosphere with ge
 
             try {
                 const imgResponse = await ai.models.generateContent({
-                    model: 'gemini-2.5-flash-image',
+                    model: 'gemini-3-pro-image-preview',
                     contents: fullPrompt,
                     config: { responseModalities: ['TEXT', 'IMAGE'] }
                 });
@@ -973,7 +973,7 @@ Style: Dreamlike, cinematic, soft lighting. Slightly ethereal atmosphere with ge
 
         // 1. Get Text Response
         const response = await ai.models.generateContent({
-            model: 'gemini-2.5-flash',
+            model: 'gemini-3-pro-preview',
             contents: [{ role: 'user', parts: [{ text: userMessage }] }],
             config: {
                 systemInstruction: SYSTEM_INSTRUCTION
@@ -1718,7 +1718,7 @@ Style: Dreamlike, cinematic, soft lighting. Slightly ethereal atmosphere with ge
                           try {
                             const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
                             const response = await ai.models.generateContent({
-                              model: 'gemini-2.5-flash',
+                              model: 'gemini-3-pro-preview',
                               contents: [{ role: 'user', parts: [{ text: prompt }] }],
                               config: { systemInstruction: SYSTEM_INSTRUCTION }
                             });
