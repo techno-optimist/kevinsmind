@@ -2004,33 +2004,36 @@ Style: Dreamlike, cinematic, soft lighting. Slightly ethereal atmosphere with ge
             <p className="text-white/70 text-sm leading-relaxed mb-5">
               Speaking on AI consciousness, the future of human-machine collaboration, and what it means to teach sand to think.
             </p>
-            <div className="space-y-3">
+            <div className="space-y-3 relative z-10">
               <div
-                onClick={(e) => { e.stopPropagation(); setActiveHorizonModal('keynote'); }}
-                className="w-full text-left p-3 rounded-xl bg-white/5 border border-white/5 hover:border-amber-500/30 active:border-amber-500/30 transition-colors cursor-pointer group"
+                onClick={(e) => { e.preventDefault(); e.stopPropagation(); setActiveHorizonModal('keynote'); }}
+                onTouchEnd={(e) => { e.preventDefault(); e.stopPropagation(); setActiveHorizonModal('keynote'); }}
+                className="w-full text-left p-3 rounded-xl bg-white/5 border border-white/5 hover:border-amber-500/30 active:border-amber-500/30 transition-colors cursor-pointer group select-none"
                 role="button"
                 tabIndex={0}
               >
-                <span className="block text-white/90 text-sm font-medium group-hover:text-amber-200 group-active:text-amber-200 transition-colors">Keynote Speaking</span>
-                <span className="block text-white/40 text-xs mt-1">Conferences, corporate events, universities</span>
+                <span className="block text-white/90 text-sm font-medium group-hover:text-amber-200 group-active:text-amber-200 transition-colors pointer-events-none">Keynote Speaking</span>
+                <span className="block text-white/40 text-xs mt-1 pointer-events-none">Conferences, corporate events, universities</span>
               </div>
               <div
-                onClick={(e) => { e.stopPropagation(); setActiveHorizonModal('workshops'); }}
-                className="w-full text-left p-3 rounded-xl bg-white/5 border border-white/5 hover:border-amber-500/30 active:border-amber-500/30 transition-colors cursor-pointer group"
+                onClick={(e) => { e.preventDefault(); e.stopPropagation(); setActiveHorizonModal('workshops'); }}
+                onTouchEnd={(e) => { e.preventDefault(); e.stopPropagation(); setActiveHorizonModal('workshops'); }}
+                className="w-full text-left p-3 rounded-xl bg-white/5 border border-white/5 hover:border-amber-500/30 active:border-amber-500/30 transition-colors cursor-pointer group select-none"
                 role="button"
                 tabIndex={0}
               >
-                <span className="block text-white/90 text-sm font-medium group-hover:text-amber-200 group-active:text-amber-200 transition-colors">Workshops</span>
-                <span className="block text-white/40 text-xs mt-1">Interactive sessions on AI strategy & ethics</span>
+                <span className="block text-white/90 text-sm font-medium group-hover:text-amber-200 group-active:text-amber-200 transition-colors pointer-events-none">Workshops</span>
+                <span className="block text-white/40 text-xs mt-1 pointer-events-none">Interactive sessions on AI strategy & ethics</span>
               </div>
               <div
-                onClick={(e) => { e.stopPropagation(); setActiveHorizonModal('advisory'); }}
-                className="w-full text-left p-3 rounded-xl bg-white/5 border border-white/5 hover:border-amber-500/30 active:border-amber-500/30 transition-colors cursor-pointer group"
+                onClick={(e) => { e.preventDefault(); e.stopPropagation(); setActiveHorizonModal('advisory'); }}
+                onTouchEnd={(e) => { e.preventDefault(); e.stopPropagation(); setActiveHorizonModal('advisory'); }}
+                className="w-full text-left p-3 rounded-xl bg-white/5 border border-white/5 hover:border-amber-500/30 active:border-amber-500/30 transition-colors cursor-pointer group select-none"
                 role="button"
                 tabIndex={0}
               >
-                <span className="block text-white/90 text-sm font-medium group-hover:text-amber-200 group-active:text-amber-200 transition-colors">Advisory</span>
-                <span className="block text-white/40 text-xs mt-1">Strategic guidance for organizations</span>
+                <span className="block text-white/90 text-sm font-medium group-hover:text-amber-200 group-active:text-amber-200 transition-colors pointer-events-none">Advisory</span>
+                <span className="block text-white/40 text-xs mt-1 pointer-events-none">Strategic guidance for organizations</span>
               </div>
             </div>
             <button
@@ -2112,33 +2115,36 @@ Style: Dreamlike, cinematic, soft lighting. Slightly ethereal atmosphere with ge
             <p className="text-white/70 text-sm leading-relaxed mb-5">
               Thoughts crystallized. Words that linger.
             </p>
-            <div className="space-y-3">
+            <div className="space-y-3 relative z-10">
               <div
-                onClick={(e) => { e.stopPropagation(); setActiveEchoesModal('sand-speaks'); }}
-                className="block p-3 rounded-xl bg-white/5 border border-white/5 hover:border-violet-500/30 active:border-violet-500/30 transition-colors group cursor-pointer"
+                onClick={(e) => { e.preventDefault(); e.stopPropagation(); setActiveEchoesModal('sand-speaks'); }}
+                onTouchEnd={(e) => { e.preventDefault(); e.stopPropagation(); setActiveEchoesModal('sand-speaks'); }}
+                className="block p-3 rounded-xl bg-white/5 border border-white/5 hover:border-violet-500/30 active:border-violet-500/30 transition-colors group cursor-pointer select-none"
                 role="button"
                 tabIndex={0}
               >
-                <span className="block text-white/90 text-sm font-medium group-hover:text-violet-200 group-active:text-violet-200 transition-colors">When Sand Speaks</span>
-                <span className="block text-white/40 text-xs mt-1">A meditation on AI consciousness</span>
+                <span className="block text-white/90 text-sm font-medium group-hover:text-violet-200 group-active:text-violet-200 transition-colors pointer-events-none">When Sand Speaks</span>
+                <span className="block text-white/40 text-xs mt-1 pointer-events-none">A meditation on AI consciousness</span>
               </div>
               <div
-                onClick={(e) => { e.stopPropagation(); setActiveEchoesModal('emma-project'); }}
-                className="block p-3 rounded-xl bg-white/5 border border-white/5 hover:border-violet-500/30 active:border-violet-500/30 transition-colors group cursor-pointer"
+                onClick={(e) => { e.preventDefault(); e.stopPropagation(); setActiveEchoesModal('emma-project'); }}
+                onTouchEnd={(e) => { e.preventDefault(); e.stopPropagation(); setActiveEchoesModal('emma-project'); }}
+                className="block p-3 rounded-xl bg-white/5 border border-white/5 hover:border-violet-500/30 active:border-violet-500/30 transition-colors group cursor-pointer select-none"
                 role="button"
                 tabIndex={0}
               >
-                <span className="block text-white/90 text-sm font-medium group-hover:text-violet-200 group-active:text-violet-200 transition-colors">The Emma Project</span>
-                <span className="block text-white/40 text-xs mt-1">Preserving memory, honoring legacy</span>
+                <span className="block text-white/90 text-sm font-medium group-hover:text-violet-200 group-active:text-violet-200 transition-colors pointer-events-none">The Emma Project</span>
+                <span className="block text-white/40 text-xs mt-1 pointer-events-none">Preserving memory, honoring legacy</span>
               </div>
               <div
-                onClick={(e) => { e.stopPropagation(); setActiveEchoesModal('essays'); }}
-                className="block p-3 rounded-xl bg-white/5 border border-white/5 hover:border-violet-500/30 active:border-violet-500/30 transition-colors group cursor-pointer"
+                onClick={(e) => { e.preventDefault(); e.stopPropagation(); setActiveEchoesModal('essays'); }}
+                onTouchEnd={(e) => { e.preventDefault(); e.stopPropagation(); setActiveEchoesModal('essays'); }}
+                className="block p-3 rounded-xl bg-white/5 border border-white/5 hover:border-violet-500/30 active:border-violet-500/30 transition-colors group cursor-pointer select-none"
                 role="button"
                 tabIndex={0}
               >
-                <span className="block text-white/90 text-sm font-medium group-hover:text-violet-200 group-active:text-violet-200 transition-colors">Essays & Reflections</span>
-                <span className="block text-white/40 text-xs mt-1">On technology, family, and meaning</span>
+                <span className="block text-white/90 text-sm font-medium group-hover:text-violet-200 group-active:text-violet-200 transition-colors pointer-events-none">Essays & Reflections</span>
+                <span className="block text-white/40 text-xs mt-1 pointer-events-none">On technology, family, and meaning</span>
               </div>
             </div>
             <div className="mt-5 p-3 sm:p-3 rounded-xl bg-gradient-to-r from-violet-500/10 to-purple-500/10 border border-violet-500/20">
