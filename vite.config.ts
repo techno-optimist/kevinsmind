@@ -18,7 +18,7 @@ function memoryStoragePlugin() {
         req.on('data', (chunk: any) => { body += chunk.toString(); });
         req.on('end', async () => {
           try {
-            const { imageData, label, prompt, timestamp } = JSON.parse(body);
+            const { imageData, label, prompt, comment, userInput, timestamp } = JSON.parse(body);
 
             // Create filename from timestamp and sanitized label
             const sanitizedLabel = (label || 'memory').replace(/[^a-z0-9]/gi, '_').substring(0, 30);
@@ -37,6 +37,8 @@ function memoryStoragePlugin() {
             fs.writeFileSync(metaPath, JSON.stringify({
               label,
               prompt,
+              userInput: userInput || '',
+              comment: comment || '',
               timestamp: timestamp || Date.now(),
               filename
             }, null, 2));

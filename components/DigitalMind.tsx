@@ -116,6 +116,7 @@ interface StateRef {
 interface SavedMemory {
   label: string;
   prompt: string;
+  userInput?: string; // The user's message that started this conversation
   comment?: string; // The AI's response that triggered this memory
   timestamp: number;
   filename: string;
@@ -206,6 +207,7 @@ export default function DigitalMind() {
   const [pendingImages, setPendingImages] = useState<string[]>([]);
   const pendingImagesRef = useRef<string[]>([]);
   const expectedImageCountRef = useRef<number>(0);
+  const lastUserInputRef = useRef<string>(''); // Track last user input for memory context
   const [isImagining, setIsImagining] = useState(false); // Visual memory being generated
   const [imaginingLabel, setImaginingLabel] = useState(''); // The label for the memory being created
 
@@ -307,6 +309,43 @@ export default function DigitalMind() {
       setIsChatCollapsed(false);
     }
   }, [streamingResponse, isNavigatingToImages]);
+
+  // Track collapsed state in ref for event handlers (avoids stale closures)
+  const isChatCollapsedRef = useRef(isChatCollapsed);
+  useEffect(() => {
+    isChatCollapsedRef.current = isChatCollapsed;
+  }, [isChatCollapsed]);
+
+  // Click outside to collapse chat
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent | TouchEvent) => {
+      // Use ref to get current collapsed state (avoids stale closure)
+      if (isChatCollapsedRef.current) return;
+
+      // Don't collapse if there are no messages
+      if (messages.length === 0 && !streamingResponse) return;
+
+      // Check if click is outside the chat panel
+      const target = event.target as Node;
+      if (chatPanelRef.current && !chatPanelRef.current.contains(target)) {
+        // Small delay to ensure expand button click is processed first
+        requestAnimationFrame(() => {
+          if (!isChatCollapsedRef.current) {
+            setIsChatCollapsed(true);
+          }
+        });
+      }
+    };
+
+    // Use mousedown/touchstart for immediate response
+    document.addEventListener('mousedown', handleClickOutside, true);
+    document.addEventListener('touchstart', handleClickOutside, true);
+
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside, true);
+      document.removeEventListener('touchstart', handleClickOutside, true);
+    };
+  }, [messages.length, streamingResponse]);
 
   // Load Kevin's reference images for character-consistent image generation
   useEffect(() => {
@@ -481,7 +520,7 @@ export default function DigitalMind() {
   }, []);
 
   // Save a new memory image to the server
-  const saveMemoryImage = useCallback(async (imageData: string, label: string, prompt: string, comment?: string) => {
+  const saveMemoryImage = useCallback(async (imageData: string, label: string, prompt: string, comment?: string, userInput?: string) => {
     try {
       const response = await fetch('/api/save-memory', {
         method: 'POST',
@@ -491,6 +530,7 @@ export default function DigitalMind() {
           label,
           prompt,
           comment: comment || '',
+          userInput: userInput || '',
           timestamp: Date.now()
         })
       });
@@ -807,8 +847,8 @@ Style: Dreamlike, cinematic photography, soft ethereal lighting with gentle glow
                         // Apply circular vignette mask
                         const vignettedImage = await applyCircularVignette(rawImageData);
 
-                        // Save to memory constellation (non-blocking) - include the AI's comment
-                        saveMemoryImage(vignettedImage, scene.label, scene.prompt, contextText);
+                        // Save to memory constellation (non-blocking) - include the AI's comment and user's input
+                        saveMemoryImage(vignettedImage, scene.label, scene.prompt, contextText, lastUserInputRef.current);
 
                         // Add to pending images for chat display
                         pendingImagesRef.current = [...pendingImagesRef.current, vignettedImage];
@@ -1001,7 +1041,15 @@ Style: Dreamlike, cinematic photography, soft ethereal lighting with gentle glow
                     };
                 }
 
-                // Streaming Text Transcription
+                // Capture user's voice input transcription (if available)
+                const inputTranscript = (message.serverContent as any)?.inputTranscription?.text;
+                if (inputTranscript) {
+                    // Store user's spoken input for memory context
+                    lastUserInputRef.current = inputTranscript;
+                    addMessage('user', inputTranscript);
+                }
+
+                // Streaming Text Transcription (AI's response)
                 const transcriptionText = message.serverContent?.outputTranscription?.text;
                 if (transcriptionText) {
                     streamingResponseRef.current += transcriptionText;
@@ -1066,6 +1114,7 @@ Style: Dreamlike, cinematic photography, soft ethereal lighting with gentle glow
     setInputText('');
     setIsThinking(true);
     addMessage('user', userMessage);
+    lastUserInputRef.current = userMessage; // Store for memory context
 
     // Immediate visual feedback
     stateRef.current.targetZone = classifyTopic(userMessage);
@@ -1738,7 +1787,7 @@ Style: Dreamlike, cinematic photography, soft ethereal lighting with gentle glow
 
       {/* Main Chat Container - Always visible (just collapses to input bar) */}
       {(
-        <div className="absolute top-4 left-1/2 -translate-x-1/2 z-30 pointer-events-none p-4 w-full max-w-2xl">
+        <div className="absolute top-2 sm:top-4 left-1/2 -translate-x-1/2 z-30 pointer-events-none px-3 sm:px-4 pt-[env(safe-area-inset-top)] w-full max-w-2xl">
           <div
             className={`pointer-events-auto w-full transition-all duration-500 ease-out ${
               messages.length > 0 || streamingResponse
@@ -1748,6 +1797,7 @@ Style: Dreamlike, cinematic photography, soft ethereal lighting with gentle glow
           >
             {/* Chat Panel Container */}
             <div
+              ref={chatPanelRef}
               className={`bg-black/40 backdrop-blur-sm rounded-3xl border border-white/10 overflow-hidden shadow-2xl transition-all duration-500 ${
                 messages.length > 0 || streamingResponse
                   ? 'shadow-cyan-500/10'
@@ -1774,19 +1824,19 @@ Style: Dreamlike, cinematic photography, soft ethereal lighting with gentle glow
                 </div>
               )}
 
-              {/* Collapsed Header - Shows expand button when collapsed */}
+              {/* Collapsed Header - Click anywhere to expand */}
               {isChatCollapsed && (messages.length > 0 || streamingResponse) && (
-                <div className="px-4 py-2 border-b border-white/5 flex items-center justify-between">
-                  <button
-                    onClick={() => setIsChatCollapsed(false)}
-                    className="flex items-center gap-2 text-white/40 hover:text-white/70 transition-colors"
-                  >
+                <div
+                  className="px-4 py-2 border-b border-white/5 flex items-center justify-between cursor-pointer hover:bg-white/5 transition-colors"
+                  onClick={() => setIsChatCollapsed(false)}
+                >
+                  <div className="flex items-center gap-2 text-white/40">
                     <div className="w-2 h-2 rounded-full bg-cyan-400/60 animate-pulse" />
                     <span className="text-xs">{messages.length} messages</span>
                     <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                       <path d="M6 9l6 6 6-6"/>
                     </svg>
-                  </button>
+                  </div>
                   {streamingResponse && (
                     <div className="flex gap-0.5">
                       <div className="w-1 h-1 rounded-full bg-cyan-400 animate-bounce" style={{ animationDelay: '0ms' }} />
@@ -1825,6 +1875,7 @@ Style: Dreamlike, cinematic photography, soft ethereal lighting with gentle glow
 
                           setIsThinking(true);
                           addMessage('user', prompt);
+                          lastUserInputRef.current = prompt; // Store for memory context
 
                           // Visual feedback
                           stateRef.current.targetZone = classifyTopic(prompt);
@@ -1858,9 +1909,9 @@ Style: Dreamlike, cinematic photography, soft ethereal lighting with gentle glow
                 </div>
               )}
 
-              {/* Messages Area - Hidden when collapsed */}
+              {/* Messages Area - Hidden when collapsed, expands dynamically up to 70vh */}
               {(messages.length > 0 || streamingResponse) && !isChatCollapsed && (
-                <div className="max-h-[35vh] sm:max-h-[40vh] overflow-y-auto custom-scrollbar p-4 sm:p-5">
+                <div className="max-h-[60vh] sm:max-h-[70vh] overflow-y-auto custom-scrollbar p-3 sm:p-5 overscroll-contain touch-pan-y">
                   <div className="flex flex-col gap-4">
                     {messages.map((msg) => (
                       <div key={msg.id}>
@@ -2017,16 +2068,16 @@ Style: Dreamlike, cinematic photography, soft ethereal lighting with gentle glow
                   />
 
                   <div className="relative flex items-center gap-3">
-                    {/* Voice button */}
+                    {/* Voice button - 44px minimum touch target for accessibility */}
                     {!isConnected ? (
                       <button
                         type="button"
                         onClick={connect}
-                        className="flex-shrink-0 group/mic flex items-center justify-center w-11 h-11 sm:w-12 sm:h-12 rounded-full bg-black/60 backdrop-blur-xl border border-white/15 hover:bg-black/70 hover:border-white/25 transition-all"
+                        className="flex-shrink-0 group/mic flex items-center justify-center w-11 h-11 min-w-[44px] min-h-[44px] rounded-full bg-black/60 backdrop-blur-xl border border-white/15 hover:bg-black/70 hover:border-white/25 active:scale-95 transition-all"
                         style={{ boxShadow: '0 8px 32px rgba(0, 0, 0, 0.4)' }}
                         title="Start Voice"
                       >
-                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-white/50 group-hover/mic:text-white/90 transition-colors sm:w-5 sm:h-5">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-white/50 group-hover/mic:text-white/90 transition-colors">
                           <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/>
                           <path d="M19 10v2a7 7 0 0 1-14 0v-2"/>
                           <line x1="12" y1="19" x2="12" y2="23"/>
@@ -2037,7 +2088,7 @@ Style: Dreamlike, cinematic photography, soft ethereal lighting with gentle glow
                       <button
                         type="button"
                         onClick={disconnect}
-                        className="flex-shrink-0 group/mic relative flex items-center justify-center w-11 h-11 sm:w-12 sm:h-12 rounded-full bg-black/60 backdrop-blur-xl border border-cyan-500/30 hover:bg-black/70 transition-all"
+                        className="flex-shrink-0 group/mic relative flex items-center justify-center w-11 h-11 min-w-[44px] min-h-[44px] rounded-full bg-black/60 backdrop-blur-xl border border-cyan-500/30 hover:bg-black/70 active:scale-95 transition-all"
                         style={{ boxShadow: '0 8px 32px rgba(0, 0, 0, 0.4), 0 0 20px rgba(6, 182, 212, 0.15)' }}
                         title="End Voice"
                       >
@@ -2052,20 +2103,40 @@ Style: Dreamlike, cinematic photography, soft ethereal lighting with gentle glow
                     )}
 
                     {/* Input field */}
-                    <div className="relative flex-1">
+                    <div
+                      className="relative flex-1"
+                      onClick={() => {
+                        // Expand chat when clicking on input area (if collapsed with messages)
+                        if (isChatCollapsed && (messages.length > 0 || streamingResponse)) {
+                          setIsChatCollapsed(false);
+                        }
+                      }}
+                    >
                       <input
                         type="text"
                         value={inputText}
                         onChange={(e) => setInputText(e.target.value)}
+                        onFocus={() => {
+                          // Also expand on focus (keyboard navigation, etc.)
+                          if (isChatCollapsed && (messages.length > 0 || streamingResponse)) {
+                            setIsChatCollapsed(false);
+                          }
+                        }}
                         placeholder={isConnected ? "listening..." : "What's on your mind?"}
-                        className="w-full bg-black/60 backdrop-blur-xl border border-white/15 rounded-full py-3 sm:py-4 pl-4 sm:pl-5 pr-11 sm:pr-12 text-white text-base placeholder-white/40 focus:outline-none focus:bg-black/70 focus:border-white/30 focus:shadow-lg focus:shadow-cyan-500/10 transition-all"
-                        style={{ boxShadow: '0 8px 32px rgba(0, 0, 0, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.05)' }}
+                        className="w-full bg-black/60 backdrop-blur-xl border border-white/15 rounded-full py-3 pl-4 pr-12 text-white text-base placeholder-white/40 focus:outline-none focus:bg-black/70 focus:border-white/30 focus:shadow-lg focus:shadow-cyan-500/10 transition-all"
+                        style={{
+                          boxShadow: '0 8px 32px rgba(0, 0, 0, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.05)',
+                          fontSize: '16px', // Prevents iOS zoom on focus
+                        }}
                         disabled={isThinking}
+                        autoComplete="off"
+                        autoCorrect="off"
+                        spellCheck="false"
                       />
                       <button
                         type="submit"
                         disabled={!inputText.trim() || isThinking}
-                        className="absolute right-1.5 top-1/2 -translate-y-1/2 w-8 h-8 sm:w-10 sm:h-10 rounded-full flex items-center justify-center bg-gradient-to-br from-cyan-500/30 to-blue-600/30 text-white/70 hover:text-white hover:from-cyan-500/50 hover:to-blue-600/50 disabled:opacity-20 disabled:hover:from-cyan-500/30 disabled:hover:to-blue-600/30 transition-all border border-white/10"
+                        className="absolute right-1.5 top-1/2 -translate-y-1/2 w-9 h-9 min-w-[36px] min-h-[36px] rounded-full flex items-center justify-center bg-gradient-to-br from-cyan-500/30 to-blue-600/30 text-white/70 hover:text-white hover:from-cyan-500/50 hover:to-blue-600/50 active:scale-95 disabled:opacity-20 disabled:hover:from-cyan-500/30 disabled:hover:to-blue-600/30 transition-all border border-white/10"
                       >
                         {isThinking ? (
                           <div className="w-4 h-4 sm:w-5 sm:h-5 border-2 border-white/40 border-t-transparent rounded-full animate-spin" />
@@ -2136,54 +2207,54 @@ Style: Dreamlike, cinematic photography, soft ethereal lighting with gentle glow
           !isChatCollapsed && (messages.length > 0 || streamingResponse) ? 'opacity-0 pointer-events-none translate-x-8' : 'opacity-100 translate-x-0'
         }`}
       >
-        {/* The Horizon - Speaking/Ideas */}
+        {/* The Horizon - Speaking/Ideas - 44px touch target */}
         <button
           onClick={() => setActivePanel(activePanel === 'horizon' ? null : 'horizon')}
-          className={`group relative flex items-center justify-center sm:justify-end transition-all duration-500 ${activePanel === 'horizon' ? 'opacity-100' : 'opacity-60 hover:opacity-100 active:opacity-100'}`}
+          className={`group relative flex items-center justify-center sm:justify-end transition-all duration-500 min-w-[44px] min-h-[44px] ${activePanel === 'horizon' ? 'opacity-100' : 'opacity-60 hover:opacity-100 active:opacity-100'}`}
         >
           <span className={`hidden sm:block absolute right-14 text-sm tracking-[0.15em] uppercase text-amber-200/90 whitespace-nowrap transition-all duration-300 font-medium ${activePanel === 'horizon' ? 'opacity-100 translate-x-0' : 'opacity-0 translate-x-4 group-hover:opacity-100 group-hover:translate-x-0'}`}>
             The Horizon
           </span>
-          <div className={`relative w-5 h-5 sm:w-6 sm:h-6 rounded-full transition-all duration-300 ease-out sm:group-hover:scale-150 ${activePanel === 'horizon' ? 'bg-amber-400 shadow-[0_0_30px_rgba(251,191,36,0.7)] scale-125' : 'bg-amber-400/70 sm:group-hover:bg-amber-400 sm:group-hover:shadow-[0_0_25px_rgba(251,191,36,0.5)]'}`}>
+          <div className={`relative w-6 h-6 sm:w-6 sm:h-6 rounded-full transition-all duration-300 ease-out sm:group-hover:scale-150 active:scale-90 ${activePanel === 'horizon' ? 'bg-amber-400 shadow-[0_0_30px_rgba(251,191,36,0.7)] scale-125' : 'bg-amber-400/70 sm:group-hover:bg-amber-400 sm:group-hover:shadow-[0_0_25px_rgba(251,191,36,0.5)]'}`}>
             <div className={`absolute inset-0 rounded-full bg-amber-400/50 ${activePanel === 'horizon' ? 'animate-ping' : 'sm:group-hover:animate-pulse'}`} style={{ animationDuration: '2s' }} />
           </div>
         </button>
 
-        {/* The Bridge - Connection */}
+        {/* The Bridge - Connection - 44px touch target */}
         <button
           onClick={() => setActivePanel(activePanel === 'bridge' ? null : 'bridge')}
-          className={`group relative flex items-center justify-center sm:justify-end transition-all duration-500 ${activePanel === 'bridge' ? 'opacity-100' : 'opacity-60 hover:opacity-100 active:opacity-100'}`}
+          className={`group relative flex items-center justify-center sm:justify-end transition-all duration-500 min-w-[44px] min-h-[44px] ${activePanel === 'bridge' ? 'opacity-100' : 'opacity-60 hover:opacity-100 active:opacity-100'}`}
         >
           <span className={`hidden sm:block absolute right-14 text-sm tracking-[0.15em] uppercase text-cyan-200/90 whitespace-nowrap transition-all duration-300 font-medium ${activePanel === 'bridge' ? 'opacity-100 translate-x-0' : 'opacity-0 translate-x-4 group-hover:opacity-100 group-hover:translate-x-0'}`}>
             The Bridge
           </span>
-          <div className={`relative w-5 h-5 sm:w-6 sm:h-6 rounded-full transition-all duration-300 ease-out sm:group-hover:scale-150 ${activePanel === 'bridge' ? 'bg-cyan-400 shadow-[0_0_30px_rgba(34,211,238,0.7)] scale-125' : 'bg-cyan-400/70 sm:group-hover:bg-cyan-400 sm:group-hover:shadow-[0_0_25px_rgba(34,211,238,0.5)]'}`}>
+          <div className={`relative w-6 h-6 sm:w-6 sm:h-6 rounded-full transition-all duration-300 ease-out sm:group-hover:scale-150 active:scale-90 ${activePanel === 'bridge' ? 'bg-cyan-400 shadow-[0_0_30px_rgba(34,211,238,0.7)] scale-125' : 'bg-cyan-400/70 sm:group-hover:bg-cyan-400 sm:group-hover:shadow-[0_0_25px_rgba(34,211,238,0.5)]'}`}>
             <div className={`absolute inset-0 rounded-full bg-cyan-400/50 ${activePanel === 'bridge' ? 'animate-ping' : 'sm:group-hover:animate-pulse'}`} style={{ animationDuration: '2s' }} />
           </div>
         </button>
 
-        {/* The Echoes - Writings */}
+        {/* The Echoes - Writings - 44px touch target */}
         <button
           onClick={() => setActivePanel(activePanel === 'echoes' ? null : 'echoes')}
-          className={`group relative flex items-center justify-center sm:justify-end transition-all duration-500 ${activePanel === 'echoes' ? 'opacity-100' : 'opacity-60 hover:opacity-100 active:opacity-100'}`}
+          className={`group relative flex items-center justify-center sm:justify-end transition-all duration-500 min-w-[44px] min-h-[44px] ${activePanel === 'echoes' ? 'opacity-100' : 'opacity-60 hover:opacity-100 active:opacity-100'}`}
         >
           <span className={`hidden sm:block absolute right-14 text-sm tracking-[0.15em] uppercase text-violet-200/90 whitespace-nowrap transition-all duration-300 font-medium ${activePanel === 'echoes' ? 'opacity-100 translate-x-0' : 'opacity-0 translate-x-4 group-hover:opacity-100 group-hover:translate-x-0'}`}>
             The Echoes
           </span>
-          <div className={`relative w-5 h-5 sm:w-6 sm:h-6 rounded-full transition-all duration-300 ease-out sm:group-hover:scale-150 ${activePanel === 'echoes' ? 'bg-violet-400 shadow-[0_0_30px_rgba(167,139,250,0.7)] scale-125' : 'bg-violet-400/70 sm:group-hover:bg-violet-400 sm:group-hover:shadow-[0_0_25px_rgba(167,139,250,0.5)]'}`}>
+          <div className={`relative w-6 h-6 sm:w-6 sm:h-6 rounded-full transition-all duration-300 ease-out sm:group-hover:scale-150 active:scale-90 ${activePanel === 'echoes' ? 'bg-violet-400 shadow-[0_0_30px_rgba(167,139,250,0.7)] scale-125' : 'bg-violet-400/70 sm:group-hover:bg-violet-400 sm:group-hover:shadow-[0_0_25px_rgba(167,139,250,0.5)]'}`}>
             <div className={`absolute inset-0 rounded-full bg-violet-400/50 ${activePanel === 'echoes' ? 'animate-ping' : 'sm:group-hover:animate-pulse'}`} style={{ animationDuration: '2s' }} />
           </div>
         </button>
 
-        {/* Memory Gallery Button */}
+        {/* Memory Gallery Button - 44px touch target */}
         <button
           onClick={() => setIsGalleryOpen(true)}
-          className="group relative flex items-center justify-center sm:justify-end transition-all duration-500 opacity-50 hover:opacity-100 mt-4"
+          className="group relative flex items-center justify-center sm:justify-end transition-all duration-500 opacity-50 hover:opacity-100 active:opacity-100 mt-4 min-w-[44px] min-h-[44px]"
         >
           <span className="hidden sm:block absolute right-14 text-xs tracking-[0.12em] uppercase text-white/60 whitespace-nowrap transition-all duration-300 opacity-0 translate-x-4 group-hover:opacity-100 group-hover:translate-x-0">
             {savedMemories.length} Memories
           </span>
-          <div className="relative w-4 h-4 sm:w-5 sm:h-5 rounded-full transition-all duration-300 ease-out sm:group-hover:scale-125 bg-white/30 sm:group-hover:bg-white/50 sm:group-hover:shadow-[0_0_15px_rgba(255,255,255,0.3)] border border-white/20">
+          <div className="relative w-5 h-5 sm:w-5 sm:h-5 rounded-full transition-all duration-300 ease-out sm:group-hover:scale-125 active:scale-90 bg-white/30 sm:group-hover:bg-white/50 sm:group-hover:shadow-[0_0_15px_rgba(255,255,255,0.3)] border border-white/20">
             <svg className="absolute inset-0 w-full h-full p-1 text-white/70" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
               <rect x="3" y="3" width="7" height="7" rx="1" />
               <rect x="14" y="3" width="7" height="7" rx="1" />
@@ -3299,7 +3370,29 @@ Style: Dreamlike, cinematic photography, soft ethereal lighting with gentle glow
                         </p>
                       </div>
 
-                      {/* AI Comment - Featured */}
+                      {/* Conversation Flow: User Input → AI Response → Visual Prompt */}
+
+                      {/* 1. User's Message */}
+                      {selectedMemory.userInput && (
+                        <div className="p-4 rounded-xl bg-gradient-to-br from-blue-500/10 via-transparent to-cyan-500/5 border border-blue-500/20">
+                          <div className="flex items-start gap-3">
+                            <div className="w-6 h-6 rounded-full bg-blue-500/20 flex items-center justify-center flex-shrink-0 mt-0.5">
+                              <svg className="w-3.5 h-3.5 text-blue-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
+                                <circle cx="12" cy="7" r="4" />
+                              </svg>
+                            </div>
+                            <div>
+                              <p className="text-blue-400/50 text-xs mb-1">You asked</p>
+                              <p className="text-white/80 text-sm leading-relaxed">
+                                "{selectedMemory.userInput}"
+                              </p>
+                            </div>
+                          </div>
+                        </div>
+                      )}
+
+                      {/* 2. AI Response */}
                       {selectedMemory.comment && (
                         <div className="p-4 rounded-xl bg-gradient-to-br from-cyan-500/10 via-transparent to-violet-500/5 border border-cyan-500/20">
                           <div className="flex items-start gap-3">
@@ -3309,18 +3402,18 @@ Style: Dreamlike, cinematic photography, soft ethereal lighting with gentle glow
                               </svg>
                             </div>
                             <div>
+                              <p className="text-cyan-400/50 text-xs mb-1">Kevin's Digital Twin responded</p>
                               <p className="text-white/80 text-sm leading-relaxed">
                                 {selectedMemory.comment}
                               </p>
-                              <p className="text-cyan-400/50 text-xs mt-2">— Kevin's Digital Twin</p>
                             </div>
                           </div>
                         </div>
                       )}
 
-                      {/* Image Prompt - Secondary */}
+                      {/* 3. Visual Prompt - What the AI imagined */}
                       <div className="p-3 rounded-lg bg-white/[0.02] border border-white/5">
-                        <p className="text-white/30 text-xs uppercase tracking-wider mb-1.5">Visual Prompt</p>
+                        <p className="text-white/30 text-xs uppercase tracking-wider mb-1.5">Visual Memory Created</p>
                         <p className="text-white/50 text-sm italic leading-relaxed">
                           "{selectedMemory.prompt}"
                         </p>
