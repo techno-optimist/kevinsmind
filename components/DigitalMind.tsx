@@ -197,6 +197,10 @@ export default function DigitalMind() {
   const [pendingImages, setPendingImages] = useState<string[]>([]);
   const pendingImagesRef = useRef<string[]>([]);
   const expectedImageCountRef = useRef<number>(0);
+
+  // Kevin's reference images for character-consistent image generation
+  const kevinReferenceImagesRef = useRef<Array<{ inlineData: { mimeType: string; data: string } }>>([]);
+  const [kevinImagesLoaded, setKevinImagesLoaded] = useState(false);
   const batchQueueStartIndexRef = useRef<number>(0);
 
   // Navigation panels state
@@ -284,6 +288,55 @@ export default function DigitalMind() {
     }
   }, [streamingResponse, isNavigatingToImages]);
 
+  // Load Kevin's reference images for character-consistent image generation
+  useEffect(() => {
+    const loadKevinImages = async () => {
+      // List of Kevin's reference images (up to 5 for human character consistency)
+      const kevinImageFiles = [
+        '/images/IMG_0204.JPG',
+        '/images/IMG_0411.JPG',
+        '/images/IMG_8639.JPG',
+        '/images/IMG_8770.JPG',
+        '/images/IMG_1944.jpeg'
+      ];
+
+      const loadedImages: Array<{ inlineData: { mimeType: string; data: string } }> = [];
+
+      for (const imagePath of kevinImageFiles) {
+        try {
+          const response = await fetch(imagePath);
+          const blob = await response.blob();
+          const base64 = await new Promise<string>((resolve) => {
+            const reader = new FileReader();
+            reader.onloadend = () => {
+              const result = reader.result as string;
+              // Extract base64 data after the comma
+              resolve(result.split(',')[1]);
+            };
+            reader.readAsDataURL(blob);
+          });
+
+          const mimeType = blob.type || 'image/jpeg';
+          loadedImages.push({
+            inlineData: {
+              mimeType,
+              data: base64
+            }
+          });
+          console.log(`Loaded Kevin reference image: ${imagePath}`);
+        } catch (e) {
+          console.warn(`Failed to load Kevin image: ${imagePath}`, e);
+        }
+      }
+
+      kevinReferenceImagesRef.current = loadedImages;
+      setKevinImagesLoaded(true);
+      console.log(`Loaded ${loadedImages.length} Kevin reference images for character-consistent generation`);
+    };
+
+    loadKevinImages();
+  }, []);
+
   // Trigger text formation
   const visualizeThought = useCallback((text: string) => {
     let shortText = text.split(/[.?!]/)[0]; // First sentence
@@ -318,34 +371,39 @@ export default function DigitalMind() {
             }
         });
 
-        // First, ask Gemini to imagine specific visual scenes from Kevin's perspective
+        // First, ask Gemini to imagine specific visual scenes FEATURING Kevin
         const memoryPromptResponse = await ai.models.generateContent({
             model: 'gemini-3-pro-preview',
-            contents: `You are generating visual memories from Kevin's mind - a technologist, father, and consciousness explorer.
+            contents: `You are generating visual scenes featuring Kevin Russell - a technologist, father, and consciousness explorer. These images will show Kevin IN the scene (we have reference photos of him).
 
-Based on this conversation context, create 1-3 vivid first-person memories/visions from Kevin's perspective.
+Based on this conversation context, create 1-3 vivid visual scenes that SHOW Kevin in the frame.
 Choose the number based on how rich the context is:
-- Simple greeting or short question: 1 memory
-- Moderate topic with some depth: 2 memories
-- Rich, complex topic with multiple facets: 3 memories
+- Simple greeting or short question: 1 scene
+- Moderate topic with some depth: 2 scenes
+- Rich, complex topic with multiple facets: 3 scenes
 
 Context: "${contextText}"
 
-For each memory, provide:
+For each scene, provide:
 1. A SHORT LABEL (2-4 poetic words) - like a fragment of thought
-2. A FULL DESCRIPTION (2-3 sentences) - written as if Kevin is describing his own memory/vision in first person
+2. A VISUAL SCENE DESCRIPTION (2-3 sentences) - describe what we SEE, with Kevin visible in the scene
 
 Format each as:
 LABEL: [short poetic label]
-MEMORY: [first-person description starting with "I remember..." or "I see..." or "I imagine..."]
+SCENE: [visual description of the scene with Kevin in it]
+
+IMPORTANT: Describe scenes where Kevin is VISIBLE in the image. Examples:
+- "Kevin standing at the edge of a glowing data stream, his silhouette illuminated by cascading code"
+- "Kevin sitting with his daughter on cosmic steps, galaxies swirling around them"
+- "Kevin walking through a field of floating memories, reaching toward a glowing orb"
 
 Create scenes that are:
-- Personal to Kevin's perspective (his memories, his visions, his imagination)
-- Dreamlike and slightly surreal, but emotionally resonant
-- Rich in atmosphere and mood
-- Connected to the conversation topic through Kevin's lens
+- Visually striking with Kevin as the focal point or prominent figure
+- Dreamlike, cinematic, ethereal - soft lighting, dark moody backgrounds
+- Emotionally resonant and connected to the conversation topic
+- Rich in atmosphere: cosmic, technological, familial, or contemplative
 
-Return 1-3 memories based on context richness, each with LABEL: and MEMORY: on separate lines.`
+Return 1-3 scenes based on context richness, each with LABEL: and SCENE: on separate lines.`
         });
 
         // Parse the response into structured scenes
@@ -363,10 +421,10 @@ Return 1-3 memories based on context richness, each with LABEL: and MEMORY: on s
         for (const line of lines) {
             if (line.startsWith('LABEL:')) {
                 currentLabel = line.replace('LABEL:', '').trim();
-            } else if (line.startsWith('MEMORY:') && currentLabel) {
+            } else if ((line.startsWith('SCENE:') || line.startsWith('MEMORY:')) && currentLabel) {
                 memoryScenes.push({
                     label: currentLabel,
-                    prompt: line.replace('MEMORY:', '').trim()
+                    prompt: line.replace('SCENE:', '').replace('MEMORY:', '').trim()
                 });
                 currentLabel = '';
             }
@@ -541,14 +599,23 @@ Return 1-3 memories based on context richness, each with LABEL: and MEMORY: on s
             if (sceneIndex >= memoryScenes.length) return;
 
             const scene = memoryScenes[sceneIndex];
-            const fullPrompt = `${scene.prompt}
+            const fullPrompt = `Generate an image of this scene featuring the person shown in the reference photos (Kevin):
 
-Style: Dreamlike, cinematic, soft lighting. Slightly ethereal atmosphere with gentle glow. Dark moody background. No text or labels.`;
+${scene.prompt}
+
+Style: Dreamlike, cinematic photography, soft ethereal lighting with gentle glow. Dark moody background. Atmospheric and emotionally resonant. No text or labels. The person (Kevin) should be clearly visible and recognizable from the reference photos.`;
+
+            // Build contents array with Kevin's reference images + the scene prompt
+            const kevinImages = kevinReferenceImagesRef.current;
+            const contentsArray: Array<{ inlineData: { mimeType: string; data: string } } | { text: string }> = [
+                ...kevinImages, // Up to 5 reference images of Kevin
+                { text: fullPrompt }
+            ];
 
             try {
                 const imgResponse = await ai.models.generateContent({
                     model: 'gemini-3-pro-image-preview',
-                    contents: fullPrompt,
+                    contents: contentsArray,
                     config: { responseModalities: ['TEXT', 'IMAGE'] }
                 });
 
