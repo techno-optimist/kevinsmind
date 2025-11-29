@@ -1,6 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import * as THREE from 'three';
-import { CSS2DRenderer, CSS2DObject } from 'three/examples/jsm/renderers/CSS2DRenderer.js';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { GoogleGenAI, LiveServerMessage, Modality } from "@google/genai";
 import { pcmToBase64, base64ToAudioBuffer } from '../utils/audioUtils';
@@ -80,13 +79,11 @@ interface ConstellationNode {
   id: number;
   shortLabel?: string;      // Brief poetic label (2-4 words)
   fullPrompt?: string;      // Full first-person memory prompt
-  labelObject?: CSS2DObject; // 3D-anchored label
 }
 
 interface StateRef {
   scene: THREE.Scene | null;
   renderer: THREE.WebGLRenderer | null;
-  labelRenderer: CSS2DRenderer | null;
   camera: THREE.PerspectiveCamera | null;
   controls: OrbitControls | null;
   particles: THREE.Points | null;
@@ -158,8 +155,9 @@ const generateTextPoints = (text: string): THREE.Vector3[] => {
          const scale = 0.2;
          const px = (x - width/2) * scale;
          const py = -(y - height/2) * scale;
-         const pz = (Math.random() - 0.5) * 1;
-         points.push(new THREE.Vector3(px, py + 15, pz));
+         const pz = (Math.random() - 0.5) * 0.5;
+         // Position text in front of camera, slightly below center
+         points.push(new THREE.Vector3(px, py + 5, pz + 20));
       }
     }
   }
@@ -169,7 +167,7 @@ const generateTextPoints = (text: string): THREE.Vector3[] => {
 export default function DigitalMind() {
   const containerRef = useRef<HTMLDivElement>(null);
   const stateRef = useRef<StateRef>({
-    scene: null, renderer: null, labelRenderer: null, camera: null, controls: null,
+    scene: null, renderer: null, camera: null, controls: null,
     particles: null, particleData: [], connections: null,
     ground: null, mainLight: null, rimLight: null,
     constellationGroup: null, constellationNodes: [], constellationLines: null,
@@ -298,7 +296,7 @@ export default function DigitalMind() {
 
     setTimeout(() => {
         stateRef.current.isFormingText = false;
-    }, 5000);
+    }, 10000); // Extended for longer text visibility
   }, []);
 
   // Generate mind's eye memory images - the visual constellation of thoughts
@@ -320,7 +318,11 @@ export default function DigitalMind() {
             model: 'gemini-2.5-flash',
             contents: `You are generating visual memories from Kevin's mind - a technologist, father, and consciousness explorer.
 
-Based on this conversation context, create 3 vivid first-person memories/visions from Kevin's perspective.
+Based on this conversation context, create 1-3 vivid first-person memories/visions from Kevin's perspective.
+Choose the number based on how rich the context is:
+- Simple greeting or short question: 1 memory
+- Moderate topic with some depth: 2 memories
+- Rich, complex topic with multiple facets: 3 memories
 
 Context: "${contextText}"
 
@@ -338,7 +340,7 @@ Create scenes that are:
 - Rich in atmosphere and mood
 - Connected to the conversation topic through Kevin's lens
 
-Return exactly 3 memories, each with LABEL: and MEMORY: on separate lines.`
+Return 1-3 memories based on context richness, each with LABEL: and MEMORY: on separate lines.`
         });
 
         // Parse the response into structured scenes
@@ -365,14 +367,11 @@ Return exactly 3 memories, each with LABEL: and MEMORY: on separate lines.`
             }
         }
 
-        // Fallback if parsing failed - create generic labels
+        // Fallback if parsing failed - create single generic memory
         if (memoryScenes.length === 0) {
-            const fallbackPrompts = rawText.split('\n').filter(s => s.length > 20).slice(0, 3);
-            fallbackPrompts.forEach((prompt, i) => {
-                memoryScenes.push({
-                    label: ['A fleeting thought', 'Distant echoes', 'Fragments'][i] || 'Memory',
-                    prompt: prompt
-                });
+            memoryScenes.push({
+                label: 'A fleeting thought',
+                prompt: rawText.substring(0, 200) || contextText.substring(0, 200)
             });
         }
 
@@ -499,34 +498,6 @@ Return exactly 3 memories, each with LABEL: and MEMORY: on separate lines.`
 
             const scene = memoryScenes[i];
 
-            // Create CSS2D label element
-            const labelDiv = document.createElement('div');
-            labelDiv.className = 'constellation-label';
-            labelDiv.innerHTML = `
-              <div class="label-content" style="
-                text-align: center;
-                pointer-events: auto;
-                cursor: pointer;
-                padding: 8px 12px;
-                transform: translateY(-20px);
-              ">
-                <p class="short-label" style="
-                  color: rgba(255,255,255,0.7);
-                  font-size: 11px;
-                  letter-spacing: 0.15em;
-                  text-transform: uppercase;
-                  font-weight: 300;
-                  text-shadow: 0 2px 10px rgba(0,0,0,0.8), 0 0 30px rgba(0,0,0,0.5);
-                  margin: 0;
-                  white-space: nowrap;
-                ">${scene?.label || 'Memory'}</p>
-              </div>
-            `;
-
-            const labelObject = new CSS2DObject(labelDiv);
-            labelObject.position.set(0, 12, 0); // Position above the sprite
-            sprite.add(labelObject);
-
             const node: ConstellationNode = {
                 mesh: sprite,
                 velocity: new THREE.Vector3(
@@ -537,8 +508,7 @@ Return exactly 3 memories, each with LABEL: and MEMORY: on separate lines.`
                 targetScale: 15,
                 id: Math.random(),
                 shortLabel: scene?.label || 'Memory',
-                fullPrompt: scene?.prompt || '',
-                labelObject: labelObject
+                fullPrompt: scene?.prompt || ''
             };
 
             S.constellationNodes.push(node);
@@ -911,15 +881,6 @@ Style: Dreamlike, cinematic, soft lighting. Slightly ethereal atmosphere with ge
     S.renderer.domElement.style.width = '100%';
     S.renderer.domElement.style.height = '100%';
     containerRef.current.appendChild(S.renderer.domElement);
-
-    // CSS2D Renderer for labels anchored to 3D objects
-    S.labelRenderer = new CSS2DRenderer();
-    S.labelRenderer.setSize(w, h);
-    S.labelRenderer.domElement.style.position = 'absolute';
-    S.labelRenderer.domElement.style.top = '0';
-    S.labelRenderer.domElement.style.left = '0';
-    S.labelRenderer.domElement.style.pointerEvents = 'none';
-    containerRef.current.appendChild(S.labelRenderer.domElement);
 
     // Lighter fog to see more of the expanded field
     S.scene.fog = new THREE.FogExp2(0x020206, 0.003);
@@ -1359,10 +1320,6 @@ Style: Dreamlike, cinematic, soft lighting. Slightly ethereal atmosphere with ge
 
       if(S.renderer && S.scene && S.camera) {
         S.renderer.render(S.scene, S.camera);
-        // Render CSS2D labels (anchored to 3D objects)
-        if (S.labelRenderer) {
-          S.labelRenderer.render(S.scene, S.camera);
-        }
       }
     };
 
@@ -1373,7 +1330,6 @@ Style: Dreamlike, cinematic, soft lighting. Slightly ethereal atmosphere with ge
       const h = containerRef.current?.clientHeight || window.innerHeight;
       if(S.camera) { S.camera.aspect = w / h; S.camera.updateProjectionMatrix(); }
       if(S.renderer) S.renderer.setSize(w, h);
-      if(S.labelRenderer) S.labelRenderer.setSize(w, h);
     };
     window.addEventListener('resize', handleResize);
     return () => {
@@ -1438,24 +1394,24 @@ Style: Dreamlike, cinematic, soft lighting. Slightly ethereal atmosphere with ge
         </div>
       )}
 
-      {/* Main Chat Container - Centered on screen */}
+      {/* Main Chat Container - Positioned at top to leave room for particle text */}
       {!isChatMinimized && (
-        <div className="absolute inset-0 z-30 pointer-events-none flex items-center justify-center p-4">
+        <div className="absolute top-4 left-1/2 -translate-x-1/2 z-30 pointer-events-none p-4 w-full max-w-2xl">
           <div
             className={`pointer-events-auto w-full transition-all duration-500 ease-out ${
               messages.length > 0 || streamingResponse
                 ? 'max-w-2xl'
-                : 'max-w-lg'
+                : 'max-w-lg mx-auto'
             }`}
           >
             {/* Chat Panel Container */}
             <div
-              className={`bg-black/70 backdrop-blur-xl rounded-3xl border border-white/10 overflow-hidden shadow-2xl transition-all duration-500 ${
+              className={`bg-black/40 backdrop-blur-sm rounded-3xl border border-white/10 overflow-hidden shadow-2xl transition-all duration-500 ${
                 messages.length > 0 || streamingResponse
                   ? 'shadow-cyan-500/10'
                   : 'shadow-black/50'
               }`}
-              style={{ boxShadow: '0 25px 80px rgba(0, 0, 0, 0.6)' }}
+              style={{ boxShadow: '0 25px 80px rgba(0, 0, 0, 0.3)' }}
             >
               {/* Header - Only shown when there are messages */}
               {(messages.length > 0 || streamingResponse) && (
@@ -1476,17 +1432,36 @@ Style: Dreamlike, cinematic, soft lighting. Slightly ethereal atmosphere with ge
                 </div>
               )}
 
-              {/* Welcome Title - Only when no messages */}
+              {/* Welcome Title & Starter Prompts - Only when no messages */}
               {messages.length === 0 && !streamingResponse && (
-                <div className="text-center py-8 px-6">
+                <div className="text-center py-6 px-6">
                   <p className="text-white/25 text-2xl sm:text-3xl tracking-[0.2em] sm:tracking-[0.3em] uppercase font-light">Mind of Kevin</p>
-                  <p className="text-white/15 text-xs sm:text-sm mt-3 tracking-widest">Speak or type to begin</p>
+                  <p className="text-white/15 text-xs sm:text-sm mt-2 tracking-widest">Speak or type to begin</p>
+
+                  {/* Starter prompts */}
+                  <div className="flex flex-wrap justify-center gap-2 mt-5">
+                    {[
+                      "Who is Kevin?",
+                      "Thoughts on AI",
+                      "Latest thoughts"
+                    ].map((prompt) => (
+                      <button
+                        key={prompt}
+                        onClick={() => {
+                          setInputText(prompt);
+                        }}
+                        className="px-3 py-1.5 text-xs text-white/40 hover:text-white/70 border border-white/10 hover:border-white/25 rounded-full transition-all hover:bg-white/5"
+                      >
+                        {prompt}
+                      </button>
+                    ))}
+                  </div>
                 </div>
               )}
 
               {/* Messages Area */}
               {(messages.length > 0 || streamingResponse) && (
-                <div className="max-h-[40vh] sm:max-h-[50vh] overflow-y-auto custom-scrollbar p-4 sm:p-5">
+                <div className="max-h-[35vh] sm:max-h-[40vh] overflow-y-auto custom-scrollbar p-4 sm:p-5">
                   <div className="flex flex-col gap-4">
                     {messages.map((msg) => (
                       <div key={msg.id}>
