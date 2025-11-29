@@ -208,6 +208,9 @@ export default function DigitalMind() {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const chatPanelRef = useRef<HTMLDivElement>(null);
 
+  // Label position update callback (called from animation loop)
+  const updateLabelsRef = useRef<() => void>(() => {});
+
   // Gemini Live Logic
   const audioContextRef = useRef<AudioContext | null>(null);
   const inputAudioContextRef = useRef<AudioContext | null>(null);
@@ -1317,7 +1320,11 @@ Style: Dreamlike, cinematic, soft lighting. Slightly ethereal atmosphere with ge
           }
       }
 
-      if(S.renderer && S.scene && S.camera) S.renderer.render(S.scene, S.camera);
+      if(S.renderer && S.scene && S.camera) {
+        S.renderer.render(S.scene, S.camera);
+        // Update floating label positions after render
+        updateLabelsRef.current();
+      }
     };
 
     animate();
@@ -1349,57 +1356,40 @@ Style: Dreamlike, cinematic, soft lighting. Slightly ethereal atmosphere with ge
     ambient: ''
   };
 
-  // Project 3D position to 2D screen coordinates
-  const projectToScreen = useCallback((position: THREE.Vector3): { x: number; y: number; visible: boolean } | null => {
-    const S = stateRef.current;
-    if (!S.camera || !S.renderer) return null;
-
-    const vector = position.clone();
-    vector.project(S.camera);
-
-    const widthHalf = S.renderer.domElement.clientWidth / 2;
-    const heightHalf = S.renderer.domElement.clientHeight / 2;
-
-    return {
-      x: (vector.x * widthHalf) + widthHalf,
-      y: -(vector.y * heightHalf) + heightHalf,
-      visible: vector.z < 1 && vector.z > -1 // Check if in front of camera
-    };
-  }, []);
-
-  // State to track label positions (updated by animation frame)
+  // State to track label positions (updated every frame via ref callback)
   const [labelPositions, setLabelPositions] = useState<Map<number, { x: number; y: number; visible: boolean }>>(new Map());
 
-  // Update label positions every frame
+  // Set up the label update function (updateLabelsRef is defined earlier with other refs)
   useEffect(() => {
-    let animationId: number;
-    const updateLabels = () => {
+    updateLabelsRef.current = () => {
       const S = stateRef.current;
-      if (S.camera && S.renderer && S.cameraFocusNodes.length > 0) {
-        const newPositions = new Map<number, { x: number; y: number; visible: boolean }>();
+      if (!S.camera || !S.renderer || S.cameraFocusNodes.length === 0) return;
 
-        S.cameraFocusNodes.forEach((node) => {
-          if (node.mesh && node.shortLabel) {
-            const worldPos = new THREE.Vector3();
-            node.mesh.getWorldPosition(worldPos);
-            // Offset label slightly above the image
-            worldPos.y += node.mesh.scale.y * 0.6;
+      const newPositions = new Map<number, { x: number; y: number; visible: boolean }>();
+      const widthHalf = S.renderer.domElement.clientWidth / 2;
+      const heightHalf = S.renderer.domElement.clientHeight / 2;
 
-            const screenPos = projectToScreen(worldPos);
-            if (screenPos) {
-              newPositions.set(node.id, screenPos);
-            }
-          }
-        });
+      S.cameraFocusNodes.forEach((node) => {
+        if (node.mesh && node.shortLabel) {
+          const worldPos = new THREE.Vector3();
+          node.mesh.getWorldPosition(worldPos);
+          // Offset label slightly above the image
+          worldPos.y += node.mesh.scale.y * 0.6;
 
-        setLabelPositions(newPositions);
-      }
-      animationId = requestAnimationFrame(updateLabels);
+          const vector = worldPos.clone();
+          vector.project(S.camera!);
+
+          const x = (vector.x * widthHalf) + widthHalf;
+          const y = -(vector.y * heightHalf) + heightHalf;
+          const visible = vector.z < 1 && vector.z > -1;
+
+          newPositions.set(node.id, { x, y, visible });
+        }
+      });
+
+      setLabelPositions(newPositions);
     };
-
-    updateLabels();
-    return () => cancelAnimationFrame(animationId);
-  }, [projectToScreen]);
+  }, []);
 
   return (
     <div className="relative w-full h-screen overflow-hidden bg-black font-sans">
