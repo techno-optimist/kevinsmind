@@ -77,6 +77,8 @@ interface ConstellationNode {
   velocity: THREE.Vector3;
   targetScale: number;
   id: number;
+  shortLabel?: string;      // Brief poetic label (2-4 words)
+  fullPrompt?: string;      // Full first-person memory prompt
 }
 
 interface StateRef {
@@ -195,6 +197,9 @@ export default function DigitalMind() {
   // Navigation panels state
   const [activePanel, setActivePanel] = useState<'horizon' | 'bridge' | 'echoes' | null>(null);
 
+  // Expanded label state - tracks which image node's label is expanded
+  const [expandedLabelId, setExpandedLabelId] = useState<number | null>(null);
+
   // Draggable chat position
   const [chatPosition, setChatPosition] = useState({ x: 0, y: 0 });
   const [isDragging, setIsDragging] = useState(false);
@@ -260,10 +265,11 @@ export default function DigitalMind() {
     };
   }, [isDragging]);
 
-  // Auto-minimize chat when user takes manual control of constellation
+  // Auto-minimize chat and close labels when user takes manual control of constellation
   useEffect(() => {
     if (manualControl) {
       setIsChatMinimized(true);
+      setExpandedLabelId(null);
     }
   }, [manualControl]);
 
@@ -308,26 +314,66 @@ export default function DigitalMind() {
             }
         });
 
-        // First, ask Gemini to imagine specific visual scenes based on conversation
+        // First, ask Gemini to imagine specific visual scenes from Kevin's perspective
         const memoryPromptResponse = await ai.models.generateContent({
             model: 'gemini-2.5-flash',
-            contents: `Based on this conversation context, describe 3 vivid visual scenes that would appear as mental imagery or memories.
+            contents: `You are generating visual memories from Kevin's mind - a technologist, father, and consciousness explorer.
+
+Based on this conversation context, create 3 vivid first-person memories/visions from Kevin's perspective.
 
 Context: "${contextText}"
 
-Create scenes that are:
-- Directly related to what's being discussed (if about family, show family moments; if about AI, show technology; if about nature, show landscapes)
-- Dreamlike and slightly surreal, but recognizable
-- Rich in atmosphere and mood
-- Beautiful and contemplative
+For each memory, provide:
+1. A SHORT LABEL (2-4 poetic words) - like a fragment of thought
+2. A FULL DESCRIPTION (2-3 sentences) - written as if Kevin is describing his own memory/vision in first person
 
-Return ONLY 3 image descriptions, one per line. Each should be a complete visual scene (2-3 sentences) that an AI image generator could create. Be specific about what's in the scene.`
+Format each as:
+LABEL: [short poetic label]
+MEMORY: [first-person description starting with "I remember..." or "I see..." or "I imagine..."]
+
+Create scenes that are:
+- Personal to Kevin's perspective (his memories, his visions, his imagination)
+- Dreamlike and slightly surreal, but emotionally resonant
+- Rich in atmosphere and mood
+- Connected to the conversation topic through Kevin's lens
+
+Return exactly 3 memories, each with LABEL: and MEMORY: on separate lines.`
         });
 
-        const memoryScenes = memoryPromptResponse.text?.split('\n')
-            .map(s => s.trim())
-            .filter(s => s.length > 10)
-            .slice(0, 3) || [];
+        // Parse the response into structured scenes
+        interface MemoryScene {
+            label: string;
+            prompt: string;
+        }
+
+        const rawText = memoryPromptResponse.text || '';
+        const memoryScenes: MemoryScene[] = [];
+
+        const lines = rawText.split('\n').map(s => s.trim()).filter(s => s.length > 0);
+        let currentLabel = '';
+
+        for (const line of lines) {
+            if (line.startsWith('LABEL:')) {
+                currentLabel = line.replace('LABEL:', '').trim();
+            } else if (line.startsWith('MEMORY:') && currentLabel) {
+                memoryScenes.push({
+                    label: currentLabel,
+                    prompt: line.replace('MEMORY:', '').trim()
+                });
+                currentLabel = '';
+            }
+        }
+
+        // Fallback if parsing failed - create generic labels
+        if (memoryScenes.length === 0) {
+            const fallbackPrompts = rawText.split('\n').filter(s => s.length > 20).slice(0, 3);
+            fallbackPrompts.forEach((prompt, i) => {
+                memoryScenes.push({
+                    label: ['A fleeting thought', 'Distant echoes', 'Fragments'][i] || 'Memory',
+                    prompt: prompt
+                });
+            });
+        }
 
         console.log("Mind's Eye scenes to visualize:", memoryScenes);
 
@@ -450,6 +496,7 @@ Return ONLY 3 image descriptions, one per line. Each should be a complete visual
             const { sprite } = createPlaceholderSprite(pos, currentPalette);
             S.constellationGroup?.add(sprite);
 
+            const scene = memoryScenes[i];
             const node: ConstellationNode = {
                 mesh: sprite,
                 velocity: new THREE.Vector3(
@@ -458,7 +505,9 @@ Return ONLY 3 image descriptions, one per line. Each should be a complete visual
                     (Math.random() - 0.5) * 0.001
                 ),
                 targetScale: 15,
-                id: Math.random()
+                id: Math.random(),
+                shortLabel: scene?.label || 'Memory',
+                fullPrompt: scene?.prompt || ''
             };
 
             S.constellationNodes.push(node);
@@ -483,7 +532,7 @@ Return ONLY 3 image descriptions, one per line. Each should be a complete visual
             if (sceneIndex >= memoryScenes.length) return;
 
             const scene = memoryScenes[sceneIndex];
-            const fullPrompt = `${scene}
+            const fullPrompt = `${scene.prompt}
 
 Style: Dreamlike, cinematic, soft lighting. Slightly ethereal atmosphere with gentle glow. Dark moody background. No text or labels.`;
 
@@ -1300,9 +1349,116 @@ Style: Dreamlike, cinematic, soft lighting. Slightly ethereal atmosphere with ge
     ambient: ''
   };
 
+  // Project 3D position to 2D screen coordinates
+  const projectToScreen = useCallback((position: THREE.Vector3): { x: number; y: number; visible: boolean } | null => {
+    const S = stateRef.current;
+    if (!S.camera || !S.renderer) return null;
+
+    const vector = position.clone();
+    vector.project(S.camera);
+
+    const widthHalf = S.renderer.domElement.clientWidth / 2;
+    const heightHalf = S.renderer.domElement.clientHeight / 2;
+
+    return {
+      x: (vector.x * widthHalf) + widthHalf,
+      y: -(vector.y * heightHalf) + heightHalf,
+      visible: vector.z < 1 && vector.z > -1 // Check if in front of camera
+    };
+  }, []);
+
+  // State to track label positions (updated by animation frame)
+  const [labelPositions, setLabelPositions] = useState<Map<number, { x: number; y: number; visible: boolean }>>(new Map());
+
+  // Update label positions every frame
+  useEffect(() => {
+    let animationId: number;
+    const updateLabels = () => {
+      const S = stateRef.current;
+      if (S.camera && S.renderer && S.cameraFocusNodes.length > 0) {
+        const newPositions = new Map<number, { x: number; y: number; visible: boolean }>();
+
+        S.cameraFocusNodes.forEach((node) => {
+          if (node.mesh && node.shortLabel) {
+            const worldPos = new THREE.Vector3();
+            node.mesh.getWorldPosition(worldPos);
+            // Offset label slightly above the image
+            worldPos.y += node.mesh.scale.y * 0.6;
+
+            const screenPos = projectToScreen(worldPos);
+            if (screenPos) {
+              newPositions.set(node.id, screenPos);
+            }
+          }
+        });
+
+        setLabelPositions(newPositions);
+      }
+      animationId = requestAnimationFrame(updateLabels);
+    };
+
+    updateLabels();
+    return () => cancelAnimationFrame(animationId);
+  }, [projectToScreen]);
+
   return (
     <div className="relative w-full h-screen overflow-hidden bg-black font-sans">
       <div ref={containerRef} className="absolute inset-0 z-0" />
+
+      {/* Floating Labels for Constellation Images */}
+      {isChatMinimized && stateRef.current.cameraFocusNodes.map((node) => {
+        const pos = labelPositions.get(node.id);
+        if (!pos || !pos.visible || !node.shortLabel) return null;
+
+        const isExpanded = expandedLabelId === node.id;
+
+        return (
+          <div
+            key={node.id}
+            className="absolute z-10 pointer-events-auto transition-all duration-300 ease-out"
+            style={{
+              left: pos.x,
+              top: pos.y,
+              transform: 'translate(-50%, -100%)',
+              opacity: pos.visible ? 1 : 0,
+            }}
+          >
+            <button
+              onClick={() => setExpandedLabelId(isExpanded ? null : node.id)}
+              className={`group text-center transition-all duration-300 ${
+                isExpanded ? 'max-w-xs sm:max-w-sm' : 'max-w-[200px]'
+              }`}
+            >
+              {/* Short label - always visible */}
+              <p
+                className={`text-white/70 text-xs sm:text-sm tracking-[0.15em] uppercase font-light transition-all duration-300 ${
+                  isExpanded ? 'text-cyan-300/90 mb-2' : 'group-hover:text-white/90'
+                }`}
+                style={{
+                  textShadow: '0 2px 10px rgba(0,0,0,0.8), 0 0 30px rgba(0,0,0,0.5)'
+                }}
+              >
+                {node.shortLabel}
+              </p>
+
+              {/* Expanded prompt - shown on click */}
+              {isExpanded && node.fullPrompt && (
+                <div
+                  className="animate-fade-in bg-black/80 backdrop-blur-xl rounded-2xl border border-white/10 p-4 mt-2"
+                  style={{ boxShadow: '0 10px 40px rgba(0,0,0,0.6)' }}
+                >
+                  <p className="text-white/80 text-xs sm:text-sm leading-relaxed italic text-left">
+                    "{node.fullPrompt}"
+                  </p>
+                  <p className="text-white/30 text-[10px] mt-2 tracking-wider uppercase">
+                    tap to close
+                  </p>
+                </div>
+              )}
+            </button>
+          </div>
+        );
+      })}
 
       {/* ============================================
           UNIFIED CHAT INTERFACE
