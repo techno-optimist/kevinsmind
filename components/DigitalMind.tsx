@@ -116,6 +116,7 @@ interface StateRef {
 interface SavedMemory {
   label: string;
   prompt: string;
+  comment?: string; // The AI's response that triggered this memory
   timestamp: number;
   filename: string;
   imagePath: string;
@@ -480,7 +481,7 @@ export default function DigitalMind() {
   }, []);
 
   // Save a new memory image to the server
-  const saveMemoryImage = useCallback(async (imageData: string, label: string, prompt: string) => {
+  const saveMemoryImage = useCallback(async (imageData: string, label: string, prompt: string, comment?: string) => {
     try {
       const response = await fetch('/api/save-memory', {
         method: 'POST',
@@ -489,6 +490,7 @@ export default function DigitalMind() {
           imageData,
           label,
           prompt,
+          comment: comment || '',
           timestamp: Date.now()
         })
       });
@@ -805,8 +807,8 @@ Style: Dreamlike, cinematic photography, soft ethereal lighting with gentle glow
                         // Apply circular vignette mask
                         const vignettedImage = await applyCircularVignette(rawImageData);
 
-                        // Save to memory constellation (non-blocking)
-                        saveMemoryImage(vignettedImage, scene.label, scene.prompt);
+                        // Save to memory constellation (non-blocking) - include the AI's comment
+                        saveMemoryImage(vignettedImage, scene.label, scene.prompt, contextText);
 
                         // Add to pending images for chat display
                         pendingImagesRef.current = [...pendingImagesRef.current, vignettedImage];
@@ -3282,10 +3284,10 @@ Style: Dreamlike, cinematic photography, soft ethereal lighting with gentle glow
                     </div>
 
                     {/* Details */}
-                    <div className="space-y-6">
+                    <div className="space-y-5">
                       <div>
-                        <h3 className="text-3xl font-light text-white mb-2">{selectedMemory.label}</h3>
-                        <p className="text-white/40 text-sm">
+                        <h3 className="text-2xl font-light text-white mb-2">{selectedMemory.label}</h3>
+                        <p className="text-white/40 text-xs">
                           {new Date(selectedMemory.timestamp).toLocaleDateString('en-US', {
                             weekday: 'long',
                             year: 'numeric',
@@ -3297,8 +3299,29 @@ Style: Dreamlike, cinematic photography, soft ethereal lighting with gentle glow
                         </p>
                       </div>
 
-                      <div className="p-4 rounded-xl bg-white/[0.02] border border-white/5">
-                        <p className="text-white/60 text-sm italic leading-relaxed">
+                      {/* AI Comment - Featured */}
+                      {selectedMemory.comment && (
+                        <div className="p-4 rounded-xl bg-gradient-to-br from-cyan-500/10 via-transparent to-violet-500/5 border border-cyan-500/20">
+                          <div className="flex items-start gap-3">
+                            <div className="w-6 h-6 rounded-full bg-cyan-500/20 flex items-center justify-center flex-shrink-0 mt-0.5">
+                              <svg className="w-3.5 h-3.5 text-cyan-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+                              </svg>
+                            </div>
+                            <div>
+                              <p className="text-white/80 text-sm leading-relaxed">
+                                {selectedMemory.comment}
+                              </p>
+                              <p className="text-cyan-400/50 text-xs mt-2">— Kevin's Digital Twin</p>
+                            </div>
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Image Prompt - Secondary */}
+                      <div className="p-3 rounded-lg bg-white/[0.02] border border-white/5">
+                        <p className="text-white/30 text-xs uppercase tracking-wider mb-1.5">Visual Prompt</p>
+                        <p className="text-white/50 text-sm italic leading-relaxed">
                           "{selectedMemory.prompt}"
                         </p>
                       </div>

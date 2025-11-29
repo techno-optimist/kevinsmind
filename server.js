@@ -22,7 +22,7 @@ if (!fs.existsSync(mindDir)) {
 // API: Save memory image
 app.post('/api/save-memory', async (req, res) => {
   try {
-    const { imageData, label, prompt, timestamp } = req.body;
+    const { imageData, label, prompt, comment, timestamp } = req.body;
 
     // Create filename from timestamp and sanitized label
     const sanitizedLabel = (label || 'memory').replace(/[^a-z0-9]/gi, '_').substring(0, 30);
@@ -41,6 +41,7 @@ app.post('/api/save-memory', async (req, res) => {
     fs.writeFileSync(metaPath, JSON.stringify({
       label,
       prompt,
+      comment: comment || '',
       timestamp: timestamp || Date.now(),
       filename
     }, null, 2));
