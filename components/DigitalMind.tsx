@@ -371,6 +371,126 @@ export default function DigitalMind() {
     }, 10000); // Extended for longer text visibility
   }, []);
 
+  // Load and spawn memory constellation - all saved memories as background stars
+  const spawnMemoryConstellation = useCallback(async (memories: SavedMemory[]) => {
+    const S = stateRef.current;
+    if (!S.constellationGroup || memories.length === 0) return;
+
+    console.log("Spawning memory constellation:", memories.length, "memories");
+
+    // Create a spherical distribution for the memory constellation
+    // Using fibonacci sphere for even distribution
+    const goldenRatio = (1 + Math.sqrt(5)) / 2;
+
+    memories.forEach((memory, i) => {
+      // Fibonacci sphere distribution for beautiful even spacing
+      const theta = 2 * Math.PI * i / goldenRatio;
+      const phi = Math.acos(1 - 2 * (i + 0.5) / memories.length);
+
+      // Larger radius for background constellation (60-120 units out)
+      const radius = 70 + (i % 5) * 12 + Math.random() * 10;
+
+      const position = new THREE.Vector3(
+        radius * Math.sin(phi) * Math.cos(theta),
+        radius * Math.cos(phi) * 0.6 + 5, // Flatten slightly, keep above ground
+        radius * Math.sin(phi) * Math.sin(theta) - 30
+      );
+
+      // Load texture from saved memory image
+      const loader = new THREE.TextureLoader();
+      loader.load(memory.imagePath, (texture) => {
+        // Create sprite material with the memory image
+        const spriteMat = new THREE.SpriteMaterial({
+          map: texture,
+          transparent: true,
+          opacity: 0.7, // Slightly faded for background feel
+          blending: THREE.AdditiveBlending // Ethereal glow effect
+        });
+
+        const sprite = new THREE.Sprite(spriteMat);
+        sprite.position.copy(position);
+
+        // Smaller scale for background stars (5-9 units)
+        const baseScale = 5 + Math.random() * 4;
+        sprite.scale.set(baseScale, baseScale, 1);
+
+        S.constellationGroup!.add(sprite);
+
+        const node: ConstellationNode = {
+          mesh: sprite,
+          velocity: new THREE.Vector3(
+            (Math.random() - 0.5) * 0.0003,
+            (Math.random() - 0.5) * 0.0003,
+            (Math.random() - 0.5) * 0.0002
+          ),
+          targetScale: baseScale,
+          id: memory.timestamp,
+          shortLabel: memory.label,
+          fullPrompt: memory.prompt
+        };
+
+        S.constellationNodes.push(node);
+
+        // Store memory reference for click interactions
+        sprite.userData.memory = memory;
+        sprite.userData.isMemoryNode = true;
+      }, undefined, (err) => {
+        console.warn(`Failed to load memory image: ${memory.imagePath}`, err);
+      });
+    });
+  }, []);
+
+  // Fetch saved memories from API
+  const loadSavedMemories = useCallback(async () => {
+    try {
+      const response = await fetch('/api/memories');
+      if (response.ok) {
+        const memories: SavedMemory[] = await response.json();
+        setSavedMemories(memories);
+        console.log(`Loaded ${memories.length} saved memories`);
+        return memories;
+      }
+    } catch (error) {
+      console.warn('Failed to load saved memories:', error);
+    }
+    return [];
+  }, []);
+
+  // Save a new memory image to the server
+  const saveMemoryImage = useCallback(async (imageData: string, label: string, prompt: string) => {
+    try {
+      const response = await fetch('/api/save-memory', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          imageData,
+          label,
+          prompt,
+          timestamp: Date.now()
+        })
+      });
+
+      if (response.ok) {
+        const result = await response.json();
+        console.log(`Saved memory: ${result.filename}`);
+
+        // Refresh the memories list
+        const updatedMemories = await loadSavedMemories();
+
+        // Add the new memory as a small background star
+        const newMemory = updatedMemories.find(m => m.filename === result.filename);
+        if (newMemory) {
+          spawnMemoryConstellation([newMemory]);
+        }
+
+        return result;
+      }
+    } catch (error) {
+      console.warn('Failed to save memory:', error);
+    }
+    return null;
+  }, [loadSavedMemories, spawnMemoryConstellation]);
+
   // Generate mind's eye memory images - the visual constellation of thoughts
   const spawnConstellationImages = useCallback(async (contextText: string, zone: string) => {
     try {
@@ -694,126 +814,6 @@ Style: Dreamlike, cinematic photography, soft ethereal lighting with gentle glow
         console.error("Mind's eye visualization failed:", error);
     }
   }, [saveMemoryImage]);
-
-  // Load and spawn memory constellation - all saved memories as background stars
-  const spawnMemoryConstellation = useCallback(async (memories: SavedMemory[]) => {
-    const S = stateRef.current;
-    if (!S.constellationGroup || memories.length === 0) return;
-
-    console.log("Spawning memory constellation:", memories.length, "memories");
-
-    // Create a spherical distribution for the memory constellation
-    // Using fibonacci sphere for even distribution
-    const goldenRatio = (1 + Math.sqrt(5)) / 2;
-
-    memories.forEach((memory, i) => {
-      // Fibonacci sphere distribution for beautiful even spacing
-      const theta = 2 * Math.PI * i / goldenRatio;
-      const phi = Math.acos(1 - 2 * (i + 0.5) / memories.length);
-
-      // Larger radius for background constellation (60-120 units out)
-      const radius = 70 + (i % 5) * 12 + Math.random() * 10;
-
-      const position = new THREE.Vector3(
-        radius * Math.sin(phi) * Math.cos(theta),
-        radius * Math.cos(phi) * 0.6 + 5, // Flatten slightly, keep above ground
-        radius * Math.sin(phi) * Math.sin(theta) - 30
-      );
-
-      // Load texture from saved memory image
-      const loader = new THREE.TextureLoader();
-      loader.load(memory.imagePath, (texture) => {
-        // Create sprite material with the memory image
-        const spriteMat = new THREE.SpriteMaterial({
-          map: texture,
-          transparent: true,
-          opacity: 0.7, // Slightly faded for background feel
-          blending: THREE.AdditiveBlending // Ethereal glow effect
-        });
-
-        const sprite = new THREE.Sprite(spriteMat);
-        sprite.position.copy(position);
-
-        // Smaller scale for background stars (5-9 units)
-        const baseScale = 5 + Math.random() * 4;
-        sprite.scale.set(baseScale, baseScale, 1);
-
-        S.constellationGroup!.add(sprite);
-
-        const node: ConstellationNode = {
-          mesh: sprite,
-          velocity: new THREE.Vector3(
-            (Math.random() - 0.5) * 0.0003,
-            (Math.random() - 0.5) * 0.0003,
-            (Math.random() - 0.5) * 0.0002
-          ),
-          targetScale: baseScale,
-          id: memory.timestamp,
-          shortLabel: memory.label,
-          fullPrompt: memory.prompt
-        };
-
-        S.constellationNodes.push(node);
-
-        // Store memory reference for click interactions
-        sprite.userData.memory = memory;
-        sprite.userData.isMemoryNode = true;
-      }, undefined, (err) => {
-        console.warn(`Failed to load memory image: ${memory.imagePath}`, err);
-      });
-    });
-  }, []);
-
-  // Fetch saved memories from API
-  const loadSavedMemories = useCallback(async () => {
-    try {
-      const response = await fetch('/api/memories');
-      if (response.ok) {
-        const memories: SavedMemory[] = await response.json();
-        setSavedMemories(memories);
-        console.log(`Loaded ${memories.length} saved memories`);
-        return memories;
-      }
-    } catch (error) {
-      console.warn('Failed to load saved memories:', error);
-    }
-    return [];
-  }, []);
-
-  // Save a new memory image to the server
-  const saveMemoryImage = useCallback(async (imageData: string, label: string, prompt: string) => {
-    try {
-      const response = await fetch('/api/save-memory', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          imageData,
-          label,
-          prompt,
-          timestamp: Date.now()
-        })
-      });
-
-      if (response.ok) {
-        const result = await response.json();
-        console.log(`Saved memory: ${result.filename}`);
-
-        // Refresh the memories list
-        const updatedMemories = await loadSavedMemories();
-
-        // Add the new memory as a small background star
-        const newMemory = updatedMemories.find(m => m.filename === result.filename);
-        if (newMemory) {
-          spawnMemoryConstellation([newMemory]);
-        }
-
-        return result;
-      }
-    } catch (error) {
-      console.warn('Failed to save memory:', error);
-    }
-    return null;
-  }, [loadSavedMemories, spawnMemoryConstellation]);
 
   const addMessage = useCallback((role: 'user' | 'assistant', content: string) => {
     setMessages(prev => [...prev, { id: Date.now().toString() + Math.random(), role, content }]);
