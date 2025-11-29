@@ -2880,7 +2880,7 @@ Style: Dreamlike, cinematic, soft lighting. Slightly ethereal atmosphere with ge
                 {
                   title: 'Letters to an Unborn AI',
                   date: 'January 2024',
-                  excerpt: 'A series of letters to the minds that will come after us. What we hope you'll understand.',
+                  excerpt: "A series of letters to the minds that will come after us. What we hope you'll understand.",
                   readTime: '20 min read',
                   tags: ['Future', 'AI']
                 }
