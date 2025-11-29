@@ -1701,10 +1701,43 @@ Style: Dreamlike, cinematic, soft lighting. Slightly ethereal atmosphere with ge
                     ].map((prompt) => (
                       <button
                         key={prompt}
-                        onClick={() => {
-                          setInputText(prompt);
+                        onClick={async () => {
+                          // Auto-send the prompt immediately
+                          if (isThinking) return;
+
+                          setIsThinking(true);
+                          addMessage('user', prompt);
+
+                          // Check for "Who is Kevin" to spawn video memories
+                          const lowerMessage = prompt.toLowerCase();
+                          if (lowerMessage.includes('who is kevin')) {
+                            spawnVideoMemories();
+                          }
+
+                          // Visual feedback
+                          stateRef.current.targetZone = classifyTopic(prompt);
+                          setCurrentZone(stateRef.current.targetZone);
+                          stateRef.current.isManual = false;
+                          setManualControl(false);
+
+                          try {
+                            const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+                            const response = await ai.models.generateContent({
+                              model: 'gemini-2.5-flash',
+                              contents: [{ role: 'user', parts: [{ text: prompt }] }],
+                              config: { systemInstruction: SYSTEM_INSTRUCTION }
+                            });
+                            const text = response.text || "Thinking...";
+                            handleResponse(text);
+                          } catch (err) {
+                            console.error(err);
+                            addMessage('assistant', "Thought stream interrupted.");
+                          } finally {
+                            setIsThinking(false);
+                          }
                         }}
-                        className="px-3 py-1.5 text-xs text-white/40 hover:text-white/70 border border-white/10 hover:border-white/25 rounded-full transition-all hover:bg-white/5"
+                        disabled={isThinking}
+                        className="px-3 py-1.5 text-xs text-white/40 hover:text-white/70 border border-white/10 hover:border-white/25 rounded-full transition-all hover:bg-white/5 disabled:opacity-30 disabled:cursor-not-allowed"
                       >
                         {prompt}
                       </button>
