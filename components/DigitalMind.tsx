@@ -184,8 +184,8 @@ export default function DigitalMind() {
   const [inputText, setInputText] = useState('');
   const [isThinking, setIsThinking] = useState(false);
   const [manualControl, setManualControl] = useState(false);
-  const [isChatExpanded, setIsChatExpanded] = useState(true);
   const [isChatMinimized, setIsChatMinimized] = useState(false);
+  const [isNavigatingToImages, setIsNavigatingToImages] = useState(false);
   const [streamingResponse, setStreamingResponse] = useState('');
   const streamingResponseRef = useRef('');
   const [pendingImages, setPendingImages] = useState<string[]>([]);
@@ -213,7 +213,7 @@ export default function DigitalMind() {
   // Scroll to bottom of chat
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [messages, streamingResponse, isChatExpanded, pendingImages]);
+  }, [messages, streamingResponse, isChatMinimized, pendingImages]);
 
   // Drag handlers for chat panel
   const handleDragStart = useCallback((e: React.MouseEvent | React.TouchEvent) => {
@@ -267,12 +267,12 @@ export default function DigitalMind() {
     }
   }, [manualControl]);
 
-  // Expand chat when new message arrives
+  // Expand chat when new streaming response starts (but not during image navigation)
   useEffect(() => {
-    if (streamingResponse || messages.length > 0) {
+    if (streamingResponse && !isNavigatingToImages) {
       setIsChatMinimized(false);
     }
-  }, [streamingResponse]);
+  }, [streamingResponse, isNavigatingToImages]);
 
   // Trigger text formation
   const visualizeThought = useCallback((text: string) => {
@@ -468,10 +468,12 @@ Return ONLY 3 image descriptions, one per line. Each should be a complete visual
             S.cameraFocusQueue.push(pos.clone());
             S.cameraFocusNodes.push(node);
 
-            // Set first as immediate focus
+            // Set first as immediate focus and auto-minimize chat to reveal mindscape
             if (i === 0 && !S.isManual) {
                 S.cameraFocusTarget = pos.clone();
                 S.cameraOrbitPhase = 0;
+                setIsNavigatingToImages(true);
+                setIsChatMinimized(true);
             }
         });
 
@@ -1302,493 +1304,283 @@ Style: Dreamlike, cinematic, soft lighting. Slightly ethereal atmosphere with ge
     <div className="relative w-full h-screen overflow-hidden bg-black font-sans">
       <div ref={containerRef} className="absolute inset-0 z-0" />
 
-      {/* Chat Panel - Desktop only (hidden on mobile, we have unified input+chat on mobile) */}
-      {(messages.length > 0 || streamingResponse) && (
-        <div
-          ref={chatPanelRef}
-          className={`hidden sm:block absolute z-20 pointer-events-auto ${
-            isChatMinimized
-              ? 'top-4 right-4 left-auto w-auto'
-              : 'sm:inset-auto'
-          }`}
-          style={!isChatMinimized ? {
-            ...(typeof window !== 'undefined' && window.innerWidth >= 640 ? {
-              top: `${16 + chatPosition.y}px`,
-              left: `${16 + chatPosition.x}px`,
-              right: 'auto',
-            } : {}),
-            maxWidth: 'min(600px, calc(100vw - 16px))',
-            transition: isDragging ? 'none' : 'all 0.3s ease-out'
-          } : undefined}
-        >
-          {/* Minimized State - Small pill button */}
-          {isChatMinimized ? (
-            <button
-              onClick={() => setIsChatMinimized(false)}
-              className="group flex items-center gap-2 px-4 py-2.5 rounded-full bg-black/70 backdrop-blur-xl border border-white/15 hover:bg-black/80 hover:border-white/25 transition-all animate-fade-in"
-              style={{ boxShadow: '0 8px 32px rgba(0, 0, 0, 0.5)' }}
+      {/* ============================================
+          UNIFIED CHAT INTERFACE
+          One component for all screens with 3 states:
+          1. Welcome: Centered input with title (no messages)
+          2. Active: Centered expanded chat panel (during conversation)
+          3. Minimized: Small pill at top (during image navigation)
+          ============================================ */}
+
+      {/* Minimized state - pill at top when navigating or manually minimized */}
+      {isChatMinimized && (messages.length > 0 || streamingResponse) && (
+        <div className="absolute top-4 left-1/2 -translate-x-1/2 z-40 pointer-events-auto animate-fade-in">
+          <button
+            onClick={() => {
+              setIsChatMinimized(false);
+              setIsNavigatingToImages(false);
+            }}
+            className="group flex items-center gap-3 px-5 py-3 rounded-full bg-black/70 backdrop-blur-xl border border-white/15 hover:bg-black/80 hover:border-white/25 transition-all"
+            style={{ boxShadow: '0 8px 32px rgba(0, 0, 0, 0.5)' }}
+          >
+            <div className="w-2 h-2 rounded-full bg-cyan-400/80 animate-pulse" />
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-white/60 group-hover:text-white/90">
+              <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+            </svg>
+            <span className="text-sm text-white/60 group-hover:text-white/90 font-medium">{messages.length}</span>
+            {streamingResponse && (
+              <div className="flex gap-0.5 ml-1">
+                <div className="w-1 h-1 rounded-full bg-cyan-400 animate-bounce" style={{ animationDelay: '0ms' }} />
+                <div className="w-1 h-1 rounded-full bg-cyan-400 animate-bounce" style={{ animationDelay: '150ms' }} />
+                <div className="w-1 h-1 rounded-full bg-cyan-400 animate-bounce" style={{ animationDelay: '300ms' }} />
+              </div>
+            )}
+            <span className="text-xs text-white/40 ml-1">tap to expand</span>
+          </button>
+        </div>
+      )}
+
+      {/* Main Chat Container - Centered on screen */}
+      {!isChatMinimized && (
+        <div className="absolute inset-0 z-30 pointer-events-none flex items-center justify-center p-4">
+          <div
+            className={`pointer-events-auto w-full transition-all duration-500 ease-out ${
+              messages.length > 0 || streamingResponse
+                ? 'max-w-2xl'
+                : 'max-w-lg'
+            }`}
+          >
+            {/* Chat Panel Container */}
+            <div
+              className={`bg-black/70 backdrop-blur-xl rounded-3xl border border-white/10 overflow-hidden shadow-2xl transition-all duration-500 ${
+                messages.length > 0 || streamingResponse
+                  ? 'shadow-cyan-500/10'
+                  : 'shadow-black/50'
+              }`}
+              style={{ boxShadow: '0 25px 80px rgba(0, 0, 0, 0.6)' }}
             >
-              <div className="w-2 h-2 rounded-full bg-cyan-400/80 animate-pulse" />
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-white/60 group-hover:text-white/90">
-                <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
-              </svg>
-              <span className="text-sm text-white/60 group-hover:text-white/90 font-medium">{messages.length}</span>
-              {streamingResponse && (
-                <div className="flex gap-0.5 ml-1">
-                  <div className="w-1 h-1 rounded-full bg-cyan-400 animate-bounce" style={{ animationDelay: '0ms' }} />
-                  <div className="w-1 h-1 rounded-full bg-cyan-400 animate-bounce" style={{ animationDelay: '150ms' }} />
-                  <div className="w-1 h-1 rounded-full bg-cyan-400 animate-bounce" style={{ animationDelay: '300ms' }} />
-                </div>
-              )}
-            </button>
-          ) : (
-            /* Expanded State - Full chat panel */
-            <div className="bg-black/70 backdrop-blur-xl rounded-3xl border border-white/10 overflow-hidden shadow-2xl shadow-black/50 animate-slide-down">
-              {/* Header - Draggable */}
-              <div
-                className="px-5 py-3 border-b border-white/5 flex items-center justify-between cursor-grab active:cursor-grabbing select-none"
-                onMouseDown={handleDragStart}
-                onTouchStart={handleDragStart}
-              >
-                <div className="flex items-center gap-3">
-                  <div className="w-2 h-2 rounded-full bg-cyan-400/60 animate-pulse" />
-                  <span className="text-xs uppercase tracking-[0.15em] text-white/40">Mind of Kevin</span>
-                  {/* Drag indicator */}
-                  <div className="flex gap-0.5 ml-2 opacity-30">
-                    <div className="w-1 h-1 rounded-full bg-white/50" />
-                    <div className="w-1 h-1 rounded-full bg-white/50" />
-                    <div className="w-1 h-1 rounded-full bg-white/50" />
+              {/* Header - Only shown when there are messages */}
+              {(messages.length > 0 || streamingResponse) && (
+                <div className="px-5 py-3 border-b border-white/5 flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className="w-2 h-2 rounded-full bg-cyan-400/60 animate-pulse" />
+                    <span className="text-xs uppercase tracking-[0.15em] text-white/40">Mind of Kevin</span>
                   </div>
-                </div>
-                <div className="flex items-center gap-1">
-                  {/* Minimize button */}
                   <button
                     onClick={() => setIsChatMinimized(true)}
-                    className="text-white/30 hover:text-white/60 transition-colors p-1.5 hover:bg-white/5 rounded-lg"
-                    title="Minimize"
+                    className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-white/5 hover:bg-white/10 border border-white/10 transition-all text-white/40 hover:text-white/60"
                   >
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                      <path d="M8 3v3a2 2 0 0 1-2 2H3m18 0h-3a2 2 0 0 1-2-2V3m0 18v-3a2 2 0 0 1 2-2h3M3 16h3a2 2 0 0 1 2 2v3"/>
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <path d="M18 15l-6-6-6 6"/>
                     </svg>
-                  </button>
-                  {/* Close button */}
-                  <button
-                    onClick={() => setIsChatExpanded(false)}
-                    className="text-white/30 hover:text-white/60 transition-colors p-1.5 hover:bg-white/5 rounded-lg"
-                    title="Close"
-                  >
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                      <path d="M18 6L6 18M6 6l12 12"/>
-                    </svg>
+                    <span className="text-xs">Minimize</span>
                   </button>
                 </div>
-              </div>
-              {/* Messages */}
-              <div className="max-h-[50vh] sm:max-h-[70vh] overflow-y-auto custom-scrollbar p-4 sm:p-5">
-                <div className="flex flex-col gap-4">
-                  {messages.map((msg) => (
-                    <div key={msg.id}>
-                      {/* Image message */}
-                      {msg.role === 'images' && msg.images && (
-                        <div className="flex justify-center">
-                          <div className="flex gap-2 p-3 rounded-2xl bg-white/[0.04] border border-white/5">
-                            {msg.images.map((img, idx) => {
-                              // Calculate the actual queue index for this image
-                              const queueIndex = (msg.queueStartIndex ?? 0) + idx;
-                              return (
-                              <div
-                                key={idx}
-                                className="relative group cursor-pointer"
-                                onClick={() => {
-                                  // Focus camera on this image's constellation node
-                                  const S = stateRef.current;
-                                  const node = S.cameraFocusNodes[queueIndex];
-                                  if (node && node.mesh) {
-                                    // Get the node's current world position (accounts for group rotation/movement)
-                                    const worldPos = new THREE.Vector3();
-                                    node.mesh.getWorldPosition(worldPos);
-                                    S.cameraFocusTarget = worldPos;
-                                    S.cameraFocusNodeIndex = queueIndex; // Set which node we're focusing on
-                                    S.cameraOrbitPhase = 0;
-                                    S.isManual = false;
-                                    setManualControl(false);
-                                    setIsChatMinimized(true);
-                                  }
-                                }}
-                              >
-                                <img
-                                  src={img}
-                                  alt={`Generated scene ${idx + 1}`}
-                                  className="w-20 h-20 sm:w-24 sm:h-24 rounded-xl object-cover opacity-90 group-hover:opacity-100 transition-all group-hover:scale-105 group-hover:shadow-lg group-hover:shadow-cyan-500/20"
-                                />
-                                <div className="absolute inset-0 rounded-xl bg-gradient-to-t from-black/40 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
-                              </div>
-                            );})}
-                          </div>
-                        </div>
-                      )}
-                      {/* Text messages */}
-                      {msg.role !== 'images' && (
-                        <div className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
-                          <div
-                            className={`max-w-[80%] px-5 py-3 rounded-2xl text-base leading-relaxed
-                            ${msg.role === 'user'
-                              ? 'bg-gradient-to-br from-cyan-500/25 to-blue-600/25 text-white border border-cyan-500/20 rounded-br-md'
-                              : 'bg-white/[0.08] text-white/90 border border-white/5 rounded-bl-md'
-                            }`}
-                            style={{
-                              boxShadow: msg.role === 'user'
-                                ? '0 4px 20px rgba(6, 182, 212, 0.15)'
-                                : '0 4px 20px rgba(0, 0, 0, 0.3)'
-                            }}
-                          >
-                            {msg.content}
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                  ))}
-                  {/* Pending images - show loading state */}
-                  {pendingImages.length > 0 && pendingImages.length < 3 && (
-                    <div className="flex justify-center">
-                      <div className="flex gap-2 p-2 sm:p-3 rounded-2xl bg-white/[0.04] border border-white/5">
-                        {pendingImages.map((img, idx) => (
-                          <img
-                            key={idx}
-                            src={img}
-                            alt={`Loading ${idx + 1}`}
-                            className="w-16 h-16 sm:w-20 sm:h-20 rounded-xl object-cover opacity-70"
-                          />
-                        ))}
-                        {/* Placeholder for loading images */}
-                        {Array.from({ length: 3 - pendingImages.length }).map((_, idx) => (
-                          <div
-                            key={`loading-${idx}`}
-                            className="w-16 h-16 sm:w-20 sm:h-20 rounded-xl bg-white/5 flex items-center justify-center"
-                          >
-                            <div className="w-5 h-5 sm:w-6 sm:h-6 border-2 border-cyan-400/30 border-t-cyan-400 rounded-full animate-spin" />
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-                  {/* Streaming response - shows as typing indicator + live text */}
-                  {streamingResponse && (
-                    <div className="flex justify-start">
-                      <div
-                        className="max-w-[80%] px-5 py-3 rounded-2xl rounded-bl-md text-base leading-relaxed bg-white/[0.08] text-white/90 border border-white/5"
-                        style={{ boxShadow: '0 4px 20px rgba(0, 0, 0, 0.3)' }}
-                      >
-                        {streamingResponse}
-                        <span className="inline-block w-0.5 h-4 ml-1 align-middle bg-cyan-400 animate-blink" />
-                      </div>
-                    </div>
-                  )}
-                  <div ref={messagesEndRef} />
+              )}
+
+              {/* Welcome Title - Only when no messages */}
+              {messages.length === 0 && !streamingResponse && (
+                <div className="text-center py-8 px-6">
+                  <p className="text-white/25 text-2xl sm:text-3xl tracking-[0.2em] sm:tracking-[0.3em] uppercase font-light">Mind of Kevin</p>
+                  <p className="text-white/15 text-xs sm:text-sm mt-3 tracking-widest">Speak or type to begin</p>
                 </div>
-              </div>
-            </div>
-          )}
-        </div>
-      )}
+              )}
 
-      {/* Welcome message when empty */}
-      {messages.length === 0 && !isConnected && !streamingResponse && (
-        <div className="absolute top-1/2 sm:top-1/3 left-1/2 -translate-x-1/2 -translate-y-1/2 text-center pointer-events-none z-10 px-4 w-full max-w-lg">
-          <p className="text-white/20 text-xl sm:text-2xl tracking-[0.2em] sm:tracking-[0.3em] uppercase font-light">Mind of Kevin</p>
-          <p className="text-white/10 text-xs sm:text-sm mt-2 sm:mt-3 tracking-widest">Speak or type to begin</p>
-        </div>
-      )}
-
-      {/* Manual Control Reset - subtle floating pill, repositioned on mobile */}
-      {manualControl && (
-          <div className="absolute top-24 left-4 sm:top-6 sm:left-6 z-30 pointer-events-auto animate-fade-in">
-              <button
-                  onClick={handleResetView}
-                  className="px-3 py-1.5 bg-black/30 hover:bg-black/50 border border-white/10 rounded-full text-[10px] uppercase tracking-widest text-white/40 hover:text-white/70 backdrop-blur-sm transition-all flex items-center gap-2"
-              >
-                  <span className="w-1.5 h-1.5 rounded-full bg-cyan-400/60 animate-pulse" />
-                  <span>free roam</span>
-                  <span className="text-white/20">×</span>
-              </button>
-          </div>
-      )}
-
-      {/* --- INPUT UI LAYOUT --- */}
-
-      {/* Mobile: Unified Chat Panel with Input - expands when there are messages */}
-      <div
-        className={`sm:hidden absolute left-0 right-0 z-30 pointer-events-auto transition-all duration-300 ${
-          (messages.length > 0 || streamingResponse) && !isChatMinimized
-            ? 'top-0 bottom-0 bg-black/80 backdrop-blur-xl'
-            : 'top-0'
-        }`}
-        style={{ paddingTop: 'max(0.75rem, env(safe-area-inset-top, 0px))' }}
-      >
-        {/* Collapse button - shown when expanded with messages */}
-        {(messages.length > 0 || streamingResponse) && !isChatMinimized && (
-          <div className="flex items-center justify-between px-4 py-2 border-b border-white/10">
-            <div className="flex items-center gap-2">
-              <div className="w-2 h-2 rounded-full bg-cyan-400/60 animate-pulse" />
-              <span className="text-xs uppercase tracking-[0.15em] text-white/40">Mind of Kevin</span>
-            </div>
-            <button
-              onClick={() => setIsChatMinimized(true)}
-              className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-white/5 hover:bg-white/10 border border-white/10 transition-all"
-            >
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-white/50">
-                <path d="M18 15l-6-6-6 6"/>
-              </svg>
-              <span className="text-xs text-white/50">Minimize</span>
-            </button>
-          </div>
-        )}
-
-        {/* Messages area - shown when expanded */}
-        {(messages.length > 0 || streamingResponse) && !isChatMinimized && (
-          <div className="flex-1 overflow-y-auto px-4 py-3" style={{ maxHeight: 'calc(100vh - 160px)' }}>
-            <div className="flex flex-col gap-3">
-              {messages.map((msg) => (
-                <div key={msg.id}>
-                  {/* Image message */}
-                  {msg.role === 'images' && msg.images && (
-                    <div className="flex justify-center">
-                      <div className="flex gap-2 p-2 rounded-2xl bg-white/[0.04] border border-white/5">
-                        {msg.images.map((img, idx) => {
-                          const queueIndex = (msg.queueStartIndex ?? 0) + idx;
-                          return (
+              {/* Messages Area */}
+              {(messages.length > 0 || streamingResponse) && (
+                <div className="max-h-[40vh] sm:max-h-[50vh] overflow-y-auto custom-scrollbar p-4 sm:p-5">
+                  <div className="flex flex-col gap-4">
+                    {messages.map((msg) => (
+                      <div key={msg.id}>
+                        {/* Image message */}
+                        {msg.role === 'images' && msg.images && (
+                          <div className="flex justify-center">
+                            <div className="flex gap-2 p-3 rounded-2xl bg-white/[0.04] border border-white/5">
+                              {msg.images.map((img, idx) => {
+                                const queueIndex = (msg.queueStartIndex ?? 0) + idx;
+                                return (
+                                  <div
+                                    key={idx}
+                                    className="relative group cursor-pointer"
+                                    onClick={() => {
+                                      const S = stateRef.current;
+                                      const node = S.cameraFocusNodes[queueIndex];
+                                      if (node && node.mesh) {
+                                        const worldPos = new THREE.Vector3();
+                                        node.mesh.getWorldPosition(worldPos);
+                                        S.cameraFocusTarget = worldPos;
+                                        S.cameraFocusNodeIndex = queueIndex;
+                                        S.cameraOrbitPhase = 0;
+                                        S.isManual = false;
+                                        setManualControl(false);
+                                        setIsChatMinimized(true);
+                                        setIsNavigatingToImages(true);
+                                      }
+                                    }}
+                                  >
+                                    <img
+                                      src={img}
+                                      alt={`Generated scene ${idx + 1}`}
+                                      className="w-16 h-16 sm:w-20 sm:h-20 rounded-xl object-cover opacity-90 group-hover:opacity-100 transition-all group-hover:scale-105 group-hover:shadow-lg group-hover:shadow-cyan-500/20"
+                                    />
+                                    <div className="absolute inset-0 rounded-xl bg-gradient-to-t from-black/40 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          </div>
+                        )}
+                        {/* Text messages */}
+                        {msg.role !== 'images' && (
+                          <div className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
                             <div
-                              key={idx}
-                              className="relative group cursor-pointer"
-                              onClick={() => {
-                                const S = stateRef.current;
-                                const node = S.cameraFocusNodes[queueIndex];
-                                if (node && node.mesh) {
-                                  const worldPos = new THREE.Vector3();
-                                  node.mesh.getWorldPosition(worldPos);
-                                  S.cameraFocusTarget = worldPos;
-                                  S.cameraFocusNodeIndex = queueIndex;
-                                  S.cameraOrbitPhase = 0;
-                                  S.isManual = false;
-                                  setManualControl(false);
-                                  setIsChatMinimized(true);
-                                }
+                              className={`max-w-[85%] px-4 py-3 rounded-2xl text-sm sm:text-base leading-relaxed
+                              ${msg.role === 'user'
+                                ? 'bg-gradient-to-br from-cyan-500/25 to-blue-600/25 text-white border border-cyan-500/20 rounded-br-md'
+                                : 'bg-white/[0.08] text-white/90 border border-white/5 rounded-bl-md'
+                              }`}
+                              style={{
+                                boxShadow: msg.role === 'user'
+                                  ? '0 4px 20px rgba(6, 182, 212, 0.15)'
+                                  : '0 4px 20px rgba(0, 0, 0, 0.3)'
                               }}
                             >
-                              <img
-                                src={img}
-                                alt={`Generated scene ${idx + 1}`}
-                                className="w-16 h-16 rounded-xl object-cover opacity-90 group-hover:opacity-100 transition-all"
-                              />
+                              {msg.content}
                             </div>
-                          );
-                        })}
+                          </div>
+                        )}
                       </div>
-                    </div>
-                  )}
-                  {/* Text messages */}
-                  {msg.role !== 'images' && (
-                    <div className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
-                      <div
-                        className={`max-w-[85%] px-4 py-2.5 rounded-2xl text-sm leading-relaxed
-                        ${msg.role === 'user'
-                          ? 'bg-gradient-to-br from-cyan-500/25 to-blue-600/25 text-white border border-cyan-500/20 rounded-br-md'
-                          : 'bg-white/[0.08] text-white/90 border border-white/5 rounded-bl-md'
-                        }`}
+                    ))}
+                    {/* Pending images - show loading state */}
+                    {pendingImages.length > 0 && pendingImages.length < 3 && (
+                      <div className="flex justify-center">
+                        <div className="flex gap-2 p-2 sm:p-3 rounded-2xl bg-white/[0.04] border border-white/5">
+                          {pendingImages.map((img, idx) => (
+                            <img
+                              key={idx}
+                              src={img}
+                              alt={`Loading ${idx + 1}`}
+                              className="w-14 h-14 sm:w-16 sm:h-16 rounded-xl object-cover opacity-70"
+                            />
+                          ))}
+                          {Array.from({ length: 3 - pendingImages.length }).map((_, idx) => (
+                            <div
+                              key={`loading-${idx}`}
+                              className="w-14 h-14 sm:w-16 sm:h-16 rounded-xl bg-white/5 flex items-center justify-center"
+                            >
+                              <div className="w-5 h-5 border-2 border-cyan-400/30 border-t-cyan-400 rounded-full animate-spin" />
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                    {/* Streaming response */}
+                    {streamingResponse && (
+                      <div className="flex justify-start">
+                        <div
+                          className="max-w-[85%] px-4 py-3 rounded-2xl rounded-bl-md text-sm sm:text-base leading-relaxed bg-white/[0.08] text-white/90 border border-white/5"
+                          style={{ boxShadow: '0 4px 20px rgba(0, 0, 0, 0.3)' }}
+                        >
+                          {streamingResponse}
+                          <span className="inline-block w-0.5 h-4 ml-1 align-middle bg-cyan-400 animate-blink" />
+                        </div>
+                      </div>
+                    )}
+                    <div ref={messagesEndRef} />
+                  </div>
+                </div>
+              )}
+
+              {/* Input Area - Always visible */}
+              <div className={`p-4 ${messages.length > 0 || streamingResponse ? 'border-t border-white/5' : ''}`}>
+                <form onSubmit={handleChatSubmit} className="relative group w-full">
+                  {/* Ambient glow behind input */}
+                  <div
+                    className="absolute -inset-1 rounded-full bg-gradient-to-r from-cyan-500/20 via-purple-500/10 to-cyan-500/20 blur-xl opacity-50 group-focus-within:opacity-80 transition-opacity duration-500"
+                    style={{ filter: 'blur(20px)' }}
+                  />
+
+                  <div className="relative flex items-center gap-3">
+                    {/* Voice button */}
+                    {!isConnected ? (
+                      <button
+                        type="button"
+                        onClick={connect}
+                        className="flex-shrink-0 group/mic flex items-center justify-center w-11 h-11 sm:w-12 sm:h-12 rounded-full bg-black/60 backdrop-blur-xl border border-white/15 hover:bg-black/70 hover:border-white/25 transition-all"
+                        style={{ boxShadow: '0 8px 32px rgba(0, 0, 0, 0.4)' }}
+                        title="Start Voice"
                       >
-                        {msg.content}
-                      </div>
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-white/50 group-hover/mic:text-white/90 transition-colors sm:w-5 sm:h-5">
+                          <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/>
+                          <path d="M19 10v2a7 7 0 0 1-14 0v-2"/>
+                          <line x1="12" y1="19" x2="12" y2="23"/>
+                          <line x1="8" y1="23" x2="16" y2="23"/>
+                        </svg>
+                      </button>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={disconnect}
+                        className="flex-shrink-0 group/mic relative flex items-center justify-center w-11 h-11 sm:w-12 sm:h-12 rounded-full bg-black/60 backdrop-blur-xl border border-cyan-500/30 hover:bg-black/70 transition-all"
+                        style={{ boxShadow: '0 8px 32px rgba(0, 0, 0, 0.4), 0 0 20px rgba(6, 182, 212, 0.15)' }}
+                        title="End Voice"
+                      >
+                        {isSpeaking && (
+                          <>
+                            <div className="absolute inset-0 rounded-full border-2 border-cyan-400/40 animate-ping" />
+                            <div className="absolute inset-1 rounded-full border border-cyan-400/20 animate-pulse" />
+                          </>
+                        )}
+                        <div className="w-3 h-3 bg-cyan-400 rounded-full shadow-[0_0_15px_rgba(34,211,238,0.6)]" />
+                      </button>
+                    )}
+
+                    {/* Input field */}
+                    <div className="relative flex-1">
+                      <input
+                        type="text"
+                        value={inputText}
+                        onChange={(e) => setInputText(e.target.value)}
+                        placeholder={isConnected ? "listening..." : "What's on your mind?"}
+                        className="w-full bg-black/60 backdrop-blur-xl border border-white/15 rounded-full py-3 sm:py-4 pl-4 sm:pl-5 pr-11 sm:pr-12 text-white text-base placeholder-white/40 focus:outline-none focus:bg-black/70 focus:border-white/30 focus:shadow-lg focus:shadow-cyan-500/10 transition-all"
+                        style={{ boxShadow: '0 8px 32px rgba(0, 0, 0, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.05)' }}
+                        disabled={isThinking}
+                      />
+                      <button
+                        type="submit"
+                        disabled={!inputText.trim() || isThinking}
+                        className="absolute right-1.5 top-1/2 -translate-y-1/2 w-8 h-8 sm:w-10 sm:h-10 rounded-full flex items-center justify-center bg-gradient-to-br from-cyan-500/30 to-blue-600/30 text-white/70 hover:text-white hover:from-cyan-500/50 hover:to-blue-600/50 disabled:opacity-20 disabled:hover:from-cyan-500/30 disabled:hover:to-blue-600/30 transition-all border border-white/10"
+                      >
+                        {isThinking ? (
+                          <div className="w-4 h-4 sm:w-5 sm:h-5 border-2 border-white/40 border-t-transparent rounded-full animate-spin" />
+                        ) : (
+                          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className="sm:w-[18px] sm:h-[18px]">
+                            <path d="M5 12h14M12 5l7 7-7 7"/>
+                          </svg>
+                        )}
+                      </button>
                     </div>
-                  )}
-                </div>
-              ))}
-              {/* Pending images */}
-              {pendingImages.length > 0 && pendingImages.length < 3 && (
-                <div className="flex justify-center">
-                  <div className="flex gap-2 p-2 rounded-2xl bg-white/[0.04] border border-white/5">
-                    {pendingImages.map((img, idx) => (
-                      <img key={idx} src={img} alt={`Loading ${idx + 1}`} className="w-14 h-14 rounded-xl object-cover opacity-70" />
-                    ))}
-                    {Array.from({ length: 3 - pendingImages.length }).map((_, idx) => (
-                      <div key={`loading-${idx}`} className="w-14 h-14 rounded-xl bg-white/5 flex items-center justify-center">
-                        <div className="w-5 h-5 border-2 border-cyan-400/30 border-t-cyan-400 rounded-full animate-spin" />
-                      </div>
-                    ))}
                   </div>
-                </div>
-              )}
-              {/* Streaming response */}
-              {streamingResponse && (
-                <div className="flex justify-start">
-                  <div className="max-w-[85%] px-4 py-2.5 rounded-2xl rounded-bl-md text-sm leading-relaxed bg-white/[0.08] text-white/90 border border-white/5">
-                    {streamingResponse}
-                    <span className="inline-block w-0.5 h-3 ml-1 align-middle bg-cyan-400 animate-blink" />
-                  </div>
-                </div>
-              )}
-              <div ref={messagesEndRef} />
-            </div>
-          </div>
-        )}
-
-        {/* Mobile Input Bar - always at bottom of mobile chat panel */}
-        <div className={`px-3 py-3 ${(messages.length > 0 || streamingResponse) && !isChatMinimized ? 'border-t border-white/10' : ''}`}>
-          {/* Show expand button when minimized and has messages */}
-          {(messages.length > 0 || streamingResponse) && isChatMinimized && (
-            <button
-              onClick={() => setIsChatMinimized(false)}
-              className="absolute top-2 right-3 flex items-center gap-2 px-3 py-1.5 rounded-full bg-black/60 backdrop-blur-xl border border-white/15 hover:bg-black/70 transition-all z-10"
-            >
-              <div className="w-2 h-2 rounded-full bg-cyan-400/80 animate-pulse" />
-              <span className="text-xs text-white/60">{messages.length}</span>
-              {streamingResponse && (
-                <div className="flex gap-0.5">
-                  <div className="w-1 h-1 rounded-full bg-cyan-400 animate-bounce" style={{ animationDelay: '0ms' }} />
-                  <div className="w-1 h-1 rounded-full bg-cyan-400 animate-bounce" style={{ animationDelay: '150ms' }} />
-                  <div className="w-1 h-1 rounded-full bg-cyan-400 animate-bounce" style={{ animationDelay: '300ms' }} />
-                </div>
-              )}
-            </button>
-          )}
-
-          <form onSubmit={handleChatSubmit} className="relative group w-full">
-            <div className="absolute -inset-1 rounded-full bg-gradient-to-r from-cyan-500/20 via-purple-500/10 to-cyan-500/20 blur-xl opacity-50 group-focus-within:opacity-80 transition-opacity duration-500" style={{ filter: 'blur(20px)' }} />
-            <div className="relative flex items-center gap-3">
-              {/* Voice button */}
-              {!isConnected ? (
-                <button
-                  type="button"
-                  onClick={connect}
-                  className="flex-shrink-0 group/mic flex items-center justify-center w-11 h-11 rounded-full bg-black/60 backdrop-blur-xl border border-white/15 hover:bg-black/70 hover:border-white/25 transition-all"
-                  style={{ boxShadow: '0 8px 32px rgba(0, 0, 0, 0.4)' }}
-                  title="Start Voice"
-                >
-                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-white/50 group-hover/mic:text-white/90 transition-colors">
-                    <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/>
-                    <path d="M19 10v2a7 7 0 0 1-14 0v-2"/>
-                    <line x1="12" y1="19" x2="12" y2="23"/>
-                    <line x1="8" y1="23" x2="16" y2="23"/>
-                  </svg>
-                </button>
-              ) : (
-                <button
-                  type="button"
-                  onClick={disconnect}
-                  className="flex-shrink-0 group/mic relative flex items-center justify-center w-11 h-11 rounded-full bg-black/60 backdrop-blur-xl border border-cyan-500/30 hover:bg-black/70 transition-all"
-                  style={{ boxShadow: '0 8px 32px rgba(0, 0, 0, 0.4), 0 0 20px rgba(6, 182, 212, 0.15)' }}
-                  title="End Voice"
-                >
-                  {isSpeaking && (
-                    <>
-                      <div className="absolute inset-0 rounded-full border-2 border-cyan-400/40 animate-ping" />
-                      <div className="absolute inset-1 rounded-full border border-cyan-400/20 animate-pulse" />
-                    </>
-                  )}
-                  <div className="w-3 h-3 bg-cyan-400 rounded-full shadow-[0_0_15px_rgba(34,211,238,0.6)]" />
-                </button>
-              )}
-              {/* Input field */}
-              <div className="relative flex-1">
-                <input
-                  type="text"
-                  value={inputText}
-                  onChange={(e) => setInputText(e.target.value)}
-                  placeholder={isConnected ? "listening..." : "What's on your mind?"}
-                  className="w-full bg-black/60 backdrop-blur-xl border border-white/15 rounded-full py-3 pl-4 pr-11 text-white text-base placeholder-white/40 focus:outline-none focus:bg-black/70 focus:border-white/30 transition-all"
-                  style={{ boxShadow: '0 8px 32px rgba(0, 0, 0, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.05)' }}
-                  disabled={isThinking}
-                />
-                <button
-                  type="submit"
-                  disabled={!inputText.trim() || isThinking}
-                  className="absolute right-1.5 top-1/2 -translate-y-1/2 w-8 h-8 rounded-full flex items-center justify-center bg-gradient-to-br from-cyan-500/30 to-blue-600/30 text-white/70 hover:text-white hover:from-cyan-500/50 hover:to-blue-600/50 disabled:opacity-20 transition-all border border-white/10"
-                >
-                  {isThinking ? (
-                    <div className="w-4 h-4 border-2 border-white/40 border-t-transparent rounded-full animate-spin" />
-                  ) : (
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-                      <path d="M5 12h14M12 5l7 7-7 7"/>
-                    </svg>
-                  )}
-                </button>
+                </form>
               </div>
             </div>
-          </form>
-        </div>
-      </div>
-
-      {/* Desktop: Input bar at bottom center */}
-      <div className="hidden sm:block absolute z-30 pointer-events-auto bottom-6 left-1/2 -translate-x-1/2 w-full max-w-xl px-4">
-        <form onSubmit={handleChatSubmit} className="relative group w-full">
-          {/* Ambient glow behind input */}
-          <div
-            className="absolute -inset-1 rounded-full bg-gradient-to-r from-cyan-500/20 via-purple-500/10 to-cyan-500/20 blur-xl opacity-50 group-focus-within:opacity-80 transition-opacity duration-500"
-            style={{ filter: 'blur(20px)' }}
-          />
-
-          <div className="relative flex items-center gap-3">
-            {/* Voice button */}
-            {!isConnected ? (
-              <button
-                type="button"
-                onClick={connect}
-                className="flex-shrink-0 group/mic flex items-center justify-center w-12 h-12 rounded-full bg-black/60 backdrop-blur-xl border border-white/15 hover:bg-black/70 hover:border-white/25 transition-all"
-                style={{ boxShadow: '0 8px 32px rgba(0, 0, 0, 0.4)' }}
-                title="Start Voice"
-              >
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-white/50 group-hover/mic:text-white/90 transition-colors">
-                  <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/>
-                  <path d="M19 10v2a7 7 0 0 1-14 0v-2"/>
-                  <line x1="12" y1="19" x2="12" y2="23"/>
-                  <line x1="8" y1="23" x2="16" y2="23"/>
-                </svg>
-              </button>
-            ) : (
-              <button
-                type="button"
-                onClick={disconnect}
-                className="flex-shrink-0 group/mic relative flex items-center justify-center w-12 h-12 rounded-full bg-black/60 backdrop-blur-xl border border-cyan-500/30 hover:bg-black/70 transition-all"
-                style={{ boxShadow: '0 8px 32px rgba(0, 0, 0, 0.4), 0 0 20px rgba(6, 182, 212, 0.15)' }}
-                title="End Voice"
-              >
-                {isSpeaking && (
-                  <>
-                    <div className="absolute inset-0 rounded-full border-2 border-cyan-400/40 animate-ping" />
-                    <div className="absolute inset-1 rounded-full border border-cyan-400/20 animate-pulse" />
-                  </>
-                )}
-                <div className="w-3 h-3 bg-cyan-400 rounded-full shadow-[0_0_15px_rgba(34,211,238,0.6)]" />
-              </button>
-            )}
-
-            {/* Input field */}
-            <div className="relative flex-1">
-              <input
-                type="text"
-                value={inputText}
-                onChange={(e) => setInputText(e.target.value)}
-                placeholder={isConnected ? "listening..." : "What's on your mind?"}
-                className="w-full bg-black/60 backdrop-blur-xl border border-white/15 rounded-full py-4 pl-5 pr-12 text-white text-base placeholder-white/40 focus:outline-none focus:bg-black/70 focus:border-white/30 focus:shadow-lg focus:shadow-cyan-500/10 transition-all"
-                style={{ boxShadow: '0 8px 32px rgba(0, 0, 0, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.05)' }}
-                disabled={isThinking}
-              />
-              <button
-                type="submit"
-                disabled={!inputText.trim() || isThinking}
-                className="absolute right-1.5 top-1/2 -translate-y-1/2 w-10 h-10 rounded-full flex items-center justify-center bg-gradient-to-br from-cyan-500/30 to-blue-600/30 text-white/70 hover:text-white hover:from-cyan-500/50 hover:to-blue-600/50 disabled:opacity-20 disabled:hover:from-cyan-500/30 disabled:hover:to-blue-600/30 transition-all border border-white/10"
-              >
-                {isThinking ? (
-                  <div className="w-5 h-5 border-2 border-white/40 border-t-transparent rounded-full animate-spin" />
-                ) : (
-                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-                    <path d="M5 12h14M12 5l7 7-7 7"/>
-                  </svg>
-                )}
-              </button>
-            </div>
           </div>
-        </form>
-      </div>
+        </div>
+      )}
+
+      {/* Manual Control Reset */}
+      {manualControl && (
+        <div className="absolute top-4 left-4 sm:top-6 sm:left-6 z-30 pointer-events-auto animate-fade-in">
+          <button
+            onClick={handleResetView}
+            className="px-3 py-1.5 bg-black/30 hover:bg-black/50 border border-white/10 rounded-full text-[10px] uppercase tracking-widest text-white/40 hover:text-white/70 backdrop-blur-sm transition-all flex items-center gap-2"
+          >
+            <span className="w-1.5 h-1.5 rounded-full bg-cyan-400/60 animate-pulse" />
+            <span>free roam</span>
+            <span className="text-white/20">×</span>
+          </button>
+        </div>
+      )}
 
       {/* Navigation Arrows - Hidden on mobile, shown on larger screens */}
       <div className="hidden md:grid absolute bottom-8 right-6 z-30 pointer-events-auto grid-cols-3 gap-0.5 opacity-30 hover:opacity-60 transition-opacity">
@@ -1822,10 +1614,10 @@ Style: Dreamlike, cinematic, soft lighting. Slightly ethereal atmosphere with ge
         </div>
       )}
 
-      {/* Floating Navigation Thought Seeds - hidden when chat expanded on mobile, visible otherwise */}
+      {/* Floating Navigation Thought Seeds - only visible when chat is minimized or no conversation */}
       <div
-        className={`absolute z-20 pointer-events-auto left-1/2 -translate-x-1/2 flex flex-row gap-6 top-20 sm:top-1/2 sm:left-auto sm:right-8 sm:-translate-y-1/2 sm:translate-x-0 sm:flex-col sm:gap-8 transition-opacity duration-300 ${
-          (messages.length > 0 || streamingResponse) && !isChatMinimized ? 'opacity-0 pointer-events-none sm:opacity-100 sm:pointer-events-auto' : 'opacity-100'
+        className={`absolute z-20 pointer-events-auto right-4 sm:right-8 top-1/2 -translate-y-1/2 flex flex-col gap-6 sm:gap-8 transition-all duration-500 ${
+          !isChatMinimized && (messages.length > 0 || streamingResponse) ? 'opacity-0 pointer-events-none translate-x-8' : 'opacity-100 translate-x-0'
         }`}
       >
         {/* The Horizon - Speaking/Ideas */}
