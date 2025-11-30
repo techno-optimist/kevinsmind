@@ -3479,7 +3479,7 @@ Style: Dreamlike, cinematic photography, soft ethereal lighting with gentle glow
             {/* Header */}
             <div className="p-6 border-b border-white/5 flex items-center justify-between">
               <div>
-                <h2 className="text-2xl font-light text-white">Welcome to MindScape</h2>
+                <h2 className="text-2xl font-light text-white">About This Experiment</h2>
               </div>
               <button
                 onClick={() => setIsAboutOpen(false)}
