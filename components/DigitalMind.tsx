@@ -774,7 +774,13 @@ export default function DigitalMind() {
           targetScale: baseScale,
           id: memory.timestamp,
           shortLabel: memory.label,
-          fullPrompt: memory.prompt
+          fullPrompt: memory.prompt,
+          // Enable Thought Portal for saved memories
+          imageUrl: memory.imagePath,
+          contextText: memory.comment || '',
+          userInput: memory.userInput || '',
+          timestamp: memory.timestamp,
+          zone: 'ambient' // Default zone for saved memories
         };
 
         S.constellationNodes.push(node);
@@ -2372,72 +2378,73 @@ STYLE: Dreamlike, ethereal, soft lighting with gentle glow. Dark moody backgroun
       {/* ============================================
           THOUGHT PORTAL - Immersive Memory Experience
           Full-screen view with parallax, blur, cinematic typography
+          Optimized for all screen sizes
           ============================================ */}
       {thoughtPortal && thoughtPortal.isOpen && (
         <div
-          className="fixed inset-0 z-50 animate-fade-in"
+          className="fixed inset-0 z-50 animate-fade-in overflow-y-auto"
           onClick={() => setThoughtPortal(null)}
         >
           {/* Blurred background - the 3D scene continues behind */}
-          <div className="absolute inset-0 bg-black/80 backdrop-blur-xl" />
+          <div className="fixed inset-0 bg-black/85 backdrop-blur-xl" />
 
-          {/* Parallax container with depth effect */}
-          <div className="absolute inset-0 flex items-center justify-center overflow-hidden">
+          {/* Safe area padding for notched devices */}
+          <div className="relative min-h-screen flex items-center justify-center py-4 sm:py-8 px-3 sm:px-6 pt-[max(1rem,env(safe-area-inset-top))] pb-[max(1rem,env(safe-area-inset-bottom))]">
             {/* Background glow layer - furthest back */}
             <div
-              className="absolute inset-0 opacity-30"
+              className="fixed inset-0 opacity-30 pointer-events-none"
               style={{
                 background: `radial-gradient(ellipse at center, ${
-                  thoughtPortal.node.zone === 'family' ? 'rgba(255, 179, 71, 0.3)' :
-                  thoughtPortal.node.zone === 'technology' ? 'rgba(77, 208, 225, 0.3)' :
-                  thoughtPortal.node.zone === 'consciousness' ? 'rgba(107, 76, 154, 0.3)' :
+                  thoughtPortal.node.zone === 'family' ? 'rgba(255, 179, 71, 0.4)' :
+                  thoughtPortal.node.zone === 'technology' ? 'rgba(77, 208, 225, 0.4)' :
+                  thoughtPortal.node.zone === 'consciousness' ? 'rgba(107, 76, 154, 0.4)' :
                   'rgba(100, 100, 150, 0.3)'
-                } 0%, transparent 70%)`
+                } 0%, transparent 60%)`
               }}
             />
 
-            {/* Floating particles effect */}
-            <div className="absolute inset-0 overflow-hidden pointer-events-none">
-              {[...Array(20)].map((_, i) => (
+            {/* Floating particles effect - fewer on mobile for performance */}
+            <div className="fixed inset-0 overflow-hidden pointer-events-none">
+              {[...Array(12)].map((_, i) => (
                 <div
                   key={i}
                   className="absolute w-1 h-1 rounded-full bg-white/20 animate-float"
                   style={{
-                    left: `${Math.random() * 100}%`,
-                    top: `${Math.random() * 100}%`,
-                    animationDelay: `${Math.random() * 5}s`,
-                    animationDuration: `${8 + Math.random() * 4}s`
+                    left: `${10 + (i * 7) % 80}%`,
+                    top: `${5 + (i * 11) % 90}%`,
+                    animationDelay: `${i * 0.4}s`,
+                    animationDuration: `${8 + (i % 4)}s`
                   }}
                 />
               ))}
             </div>
 
-            {/* Main image container with parallax hover effect */}
+            {/* Main content container - responsive sizing */}
             <div
-              className="relative z-10 max-w-4xl mx-4 animate-scale-in"
+              className="relative z-10 w-full max-w-xs sm:max-w-lg md:max-w-2xl lg:max-w-4xl animate-scale-in"
               onClick={(e) => e.stopPropagation()}
             >
               {/* The memory image */}
-              <div className="relative group">
-                {/* Outer glow */}
-                <div className="absolute -inset-4 bg-gradient-to-br from-white/10 via-transparent to-white/5 rounded-3xl blur-xl opacity-50" />
+              <div className="relative">
+                {/* Outer glow - subtle on mobile */}
+                <div className="absolute -inset-2 sm:-inset-4 bg-gradient-to-br from-white/10 via-transparent to-white/5 rounded-2xl sm:rounded-3xl blur-lg sm:blur-xl opacity-50" />
 
                 {/* Image frame */}
-                <div className="relative overflow-hidden rounded-2xl border border-white/20 shadow-2xl shadow-black/50">
+                <div className="relative overflow-hidden rounded-xl sm:rounded-2xl border border-white/20 shadow-2xl shadow-black/50">
                   <img
                     src={thoughtPortal.imageUrl}
                     alt={thoughtPortal.node.shortLabel}
-                    className="w-full max-h-[60vh] object-contain"
+                    className="w-full max-h-[45vh] sm:max-h-[55vh] md:max-h-[60vh] object-contain bg-black/50"
                   />
 
                   {/* Subtle overlay gradient */}
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-transparent pointer-events-none" />
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-transparent to-transparent pointer-events-none" />
                 </div>
 
-                {/* Panel type badge */}
+                {/* Panel type badge - responsive positioning */}
                 {thoughtPortal.node.panelType && (
-                  <div className="absolute top-4 left-4 px-3 py-1 rounded-full bg-black/50 backdrop-blur-sm border border-white/20">
-                    <span className="text-xs uppercase tracking-widest text-white/70">
+                  <div className="absolute top-2 left-2 sm:top-4 sm:left-4 px-2 py-0.5 sm:px-3 sm:py-1 rounded-full bg-black/60 backdrop-blur-sm border border-white/20">
+                    <span className="text-[10px] sm:text-xs uppercase tracking-widest text-white/80">
                       {thoughtPortal.node.panelType === 'moment' ? '◉ The Moment' :
                        thoughtPortal.node.panelType === 'feeling' ? '♡ The Feeling' :
                        '∞ The Echo'}
@@ -2446,30 +2453,32 @@ STYLE: Dreamlike, ethereal, soft lighting with gentle glow. Dark moody backgroun
                 )}
               </div>
 
-              {/* Cinematic typography below image */}
-              <div className="mt-8 text-center space-y-4 px-4">
+              {/* Cinematic typography below image - responsive spacing */}
+              <div className="mt-4 sm:mt-6 md:mt-8 text-center space-y-2 sm:space-y-4 px-2 sm:px-4">
                 {/* Memory label */}
-                <h2 className="text-2xl sm:text-3xl font-light tracking-wide text-white/90 uppercase">
+                <h2 className="text-lg sm:text-2xl md:text-3xl font-light tracking-wide text-white/90 uppercase leading-tight">
                   {thoughtPortal.node.shortLabel}
                 </h2>
 
-                {/* The scene description */}
-                <p className="text-white/60 text-sm sm:text-base leading-relaxed max-w-2xl mx-auto italic">
-                  "{thoughtPortal.node.fullPrompt}"
-                </p>
+                {/* The scene description - truncated on mobile if too long */}
+                {thoughtPortal.node.fullPrompt && (
+                  <p className="text-white/60 text-xs sm:text-sm md:text-base leading-relaxed max-w-2xl mx-auto italic line-clamp-4 sm:line-clamp-none">
+                    "{thoughtPortal.node.fullPrompt}"
+                  </p>
+                )}
 
                 {/* Context: what the user asked */}
                 {thoughtPortal.node.userInput && (
-                  <div className="pt-4 border-t border-white/10 mt-6">
-                    <p className="text-white/30 text-xs uppercase tracking-widest mb-2">In response to</p>
-                    <p className="text-white/50 text-sm">"{thoughtPortal.node.userInput}"</p>
+                  <div className="pt-3 sm:pt-4 border-t border-white/10 mt-3 sm:mt-6">
+                    <p className="text-white/30 text-[10px] sm:text-xs uppercase tracking-widest mb-1 sm:mb-2">In response to</p>
+                    <p className="text-white/50 text-xs sm:text-sm line-clamp-2 sm:line-clamp-none">"{thoughtPortal.node.userInput}"</p>
                   </div>
                 )}
 
-                {/* Zone indicator */}
+                {/* Zone indicator - responsive */}
                 {thoughtPortal.node.zone && thoughtPortal.node.zone !== 'ambient' && (
-                  <div className="flex justify-center gap-2 mt-4">
-                    <span className={`px-3 py-1 rounded-full text-xs uppercase tracking-wider border ${
+                  <div className="flex flex-wrap justify-center gap-1.5 sm:gap-2 mt-3 sm:mt-4">
+                    <span className={`px-2 sm:px-3 py-0.5 sm:py-1 rounded-full text-[10px] sm:text-xs uppercase tracking-wider border ${
                       thoughtPortal.node.zone === 'family' ? 'text-orange-300/80 border-orange-400/30 bg-orange-500/10' :
                       thoughtPortal.node.zone === 'technology' ? 'text-cyan-300/80 border-cyan-400/30 bg-cyan-500/10' :
                       thoughtPortal.node.zone === 'consciousness' ? 'text-purple-300/80 border-purple-400/30 bg-purple-500/10' :
@@ -2481,7 +2490,7 @@ STYLE: Dreamlike, ethereal, soft lighting with gentle glow. Dark moody backgroun
                        '◆ Projects'}
                     </span>
                     {thoughtPortal.node.aspectRatio && (
-                      <span className="px-3 py-1 rounded-full text-xs text-white/40 border border-white/10">
+                      <span className="px-2 sm:px-3 py-0.5 sm:py-1 rounded-full text-[10px] sm:text-xs text-white/40 border border-white/10">
                         {thoughtPortal.node.aspectRatio}
                       </span>
                     )}
@@ -2489,21 +2498,22 @@ STYLE: Dreamlike, ethereal, soft lighting with gentle glow. Dark moody backgroun
                 )}
               </div>
 
-              {/* Close hint */}
-              <div className="mt-8 text-center">
-                <p className="text-white/20 text-xs uppercase tracking-widest">
+              {/* Close hint - responsive */}
+              <div className="mt-4 sm:mt-6 md:mt-8 text-center">
+                <p className="text-white/20 text-[10px] sm:text-xs uppercase tracking-widest">
                   Tap anywhere to close
                 </p>
               </div>
             </div>
           </div>
 
-          {/* Close button */}
+          {/* Close button - responsive positioning for safe area */}
           <button
             onClick={() => setThoughtPortal(null)}
-            className="absolute top-6 right-6 p-3 rounded-full bg-black/40 backdrop-blur-sm border border-white/20 text-white/60 hover:text-white hover:bg-black/60 transition-all z-20"
+            className="fixed top-3 right-3 sm:top-6 sm:right-6 p-2 sm:p-3 rounded-full bg-black/60 backdrop-blur-sm border border-white/20 text-white/70 hover:text-white hover:bg-black/80 transition-all z-20"
+            style={{ marginTop: 'env(safe-area-inset-top)' }}
           >
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+            <svg className="w-5 h-5 sm:w-6 sm:h-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
               <path d="M18 6L6 18M6 6l12 12"/>
             </svg>
           </button>
