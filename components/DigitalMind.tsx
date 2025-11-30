@@ -333,6 +333,7 @@ export default function DigitalMind() {
   const [chatPosition, setChatPosition] = useState({ x: 0, y: 0 });
   const [isDragging, setIsDragging] = useState(false);
   const dragStartRef = useRef({ x: 0, y: 0, chatX: 0, chatY: 0 });
+  const wasDragRef = useRef(false); // Track if movement exceeded tap threshold
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const chatPanelRef = useRef<HTMLDivElement>(null);
@@ -354,6 +355,7 @@ export default function DigitalMind() {
   const handleDragStart = useCallback((e: React.MouseEvent | React.TouchEvent) => {
     e.preventDefault();
     setIsDragging(true);
+    wasDragRef.current = false; // Reset on start
     const clientX = 'touches' in e ? e.touches[0].clientX : e.clientX;
     const clientY = 'touches' in e ? e.touches[0].clientY : e.clientY;
     dragStartRef.current = {
@@ -372,6 +374,12 @@ export default function DigitalMind() {
       const clientY = 'touches' in e ? e.touches[0].clientY : e.clientY;
       const deltaX = clientX - dragStartRef.current.x;
       const deltaY = clientY - dragStartRef.current.y;
+
+      // Mark as drag if moved more than 10px
+      if (Math.abs(deltaX) > 10 || Math.abs(deltaY) > 10) {
+        wasDragRef.current = true;
+      }
+
       setChatPosition({
         x: dragStartRef.current.chatX + deltaX,
         y: dragStartRef.current.chatY + deltaY
@@ -394,6 +402,14 @@ export default function DigitalMind() {
       window.removeEventListener('touchend', handleEnd);
     };
   }, [isDragging]);
+
+  // Handle tap to expand collapsed chat (only if not dragged)
+  const handleChatPanelTap = useCallback(() => {
+    if (!wasDragRef.current && isChatCollapsed && (messages.length > 0 || streamingResponse)) {
+      setIsChatCollapsed(false);
+    }
+    wasDragRef.current = false;
+  }, [isChatCollapsed, messages.length, streamingResponse]);
 
   // Auto-collapse chat when user takes manual control of constellation
   useEffect(() => {
@@ -1928,9 +1944,15 @@ Style: Dreamlike, cinematic photography, soft ethereal lighting with gentle glow
           3. Collapsed: Input bar only with expand option
           ============================================ */}
 
-      {/* Main Chat Container - Always visible (just collapses to input bar) */}
+      {/* Main Chat Container - Draggable and collapsible */}
       {(
-        <div className="absolute top-4 sm:top-4 left-1/2 -translate-x-1/2 z-30 pointer-events-none px-3 sm:px-4 pt-[env(safe-area-inset-top)] w-full max-w-2xl">
+        <div
+          className="absolute top-4 sm:top-4 left-1/2 z-30 pointer-events-none px-3 sm:px-4 pt-[env(safe-area-inset-top)] w-full max-w-2xl"
+          style={{
+            transform: `translate(calc(-50% + ${chatPosition.x}px), ${chatPosition.y}px)`,
+            transition: isDragging ? 'none' : 'transform 0.1s ease-out'
+          }}
+        >
           <div
             className={`pointer-events-auto w-full transition-all duration-500 ease-out ${
               messages.length > 0 || streamingResponse
@@ -1938,15 +1960,19 @@ Style: Dreamlike, cinematic photography, soft ethereal lighting with gentle glow
                 : 'max-w-lg mx-auto'
             }`}
           >
-            {/* Chat Panel Container */}
+            {/* Chat Panel Container - Draggable when collapsed, tap to expand */}
             <div
               ref={chatPanelRef}
+              onMouseDown={isChatCollapsed && (messages.length > 0 || streamingResponse) ? handleDragStart : undefined}
+              onMouseUp={handleChatPanelTap}
+              onTouchStart={isChatCollapsed && (messages.length > 0 || streamingResponse) ? handleDragStart : undefined}
+              onTouchEnd={handleChatPanelTap}
               className={`relative bg-black/40 backdrop-blur-sm rounded-3xl border border-white/10 overflow-hidden shadow-2xl transition-all duration-500 ${
                 messages.length > 0 || streamingResponse
                   ? 'shadow-cyan-500/10'
                   : 'shadow-black/50'
-              } ${isChatCollapsed && (messages.length > 0 || streamingResponse) ? 'hover:bg-black/50 hover:border-white/20' : ''}`}
-              style={{ boxShadow: '0 25px 80px rgba(0, 0, 0, 0.3)' }}
+              } ${isChatCollapsed && (messages.length > 0 || streamingResponse) ? 'cursor-grab active:cursor-grabbing hover:bg-black/50 hover:border-white/20' : ''}`}
+              style={{ boxShadow: '0 25px 80px rgba(0, 0, 0, 0.3)', userSelect: isDragging ? 'none' : 'auto' }}
             >
               {/* Header - Only shown when there are messages and not collapsed */}
               {(messages.length > 0 || streamingResponse) && !isChatCollapsed && (
@@ -1967,32 +1993,20 @@ Style: Dreamlike, cinematic photography, soft ethereal lighting with gentle glow
                 </div>
               )}
 
-              {/* Collapsed State - Full clickable overlay to expand */}
+              {/* Collapsed State Header */}
               {isChatCollapsed && (messages.length > 0 || streamingResponse) && (
-                <>
-                  {/* Clickable overlay that covers entire collapsed panel */}
-                  <div
-                    className="absolute inset-0 z-50 cursor-pointer"
-                    onClick={(e) => {
-                      e.preventDefault();
-                      e.stopPropagation();
-                      setIsChatCollapsed(false);
-                    }}
-                  />
-                  {/* Collapsed header content */}
-                  <div className="px-4 py-3 flex items-center justify-between pointer-events-none">
-                    <div className="flex items-center gap-2 text-white/50">
-                      <div className="w-2 h-2 rounded-full bg-cyan-400/60 animate-pulse" />
-                      <span className="text-sm font-medium">{messages.length} messages</span>
-                    </div>
-                    <div className="flex items-center gap-2 text-white/40">
-                      <span className="text-xs">Tap to expand</span>
-                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                        <path d="M6 9l6 6 6-6"/>
-                      </svg>
-                    </div>
+                <div className="px-4 py-3 flex items-center justify-between select-none">
+                  <div className="flex items-center gap-2 text-white/50">
+                    <div className="w-2 h-2 rounded-full bg-cyan-400/60 animate-pulse" />
+                    <span className="text-sm font-medium">{messages.length} messages</span>
                   </div>
-                </>
+                  <div className="flex items-center gap-2 text-white/40">
+                    <span className="text-xs">Tap to expand • Drag to move</span>
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <path d="M6 9l6 6 6-6"/>
+                    </svg>
+                  </div>
+                </div>
               )}
 
               {/* Welcome Title & Starter Prompts - Only when no messages and not collapsed */}
