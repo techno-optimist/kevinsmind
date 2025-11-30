@@ -1944,9 +1944,15 @@ Style: Dreamlike, cinematic photography, soft ethereal lighting with gentle glow
           3. Collapsed: Input bar only with expand option
           ============================================ */}
 
-      {/* Main Chat Container */}
+      {/* Main Chat Container - Draggable */}
       {(
-        <div className="absolute top-4 sm:top-4 left-1/2 -translate-x-1/2 z-30 pointer-events-none px-3 sm:px-4 pt-[env(safe-area-inset-top)] w-full max-w-2xl">
+        <div
+          className="absolute top-4 sm:top-4 left-1/2 z-30 pointer-events-none px-3 sm:px-4 pt-[env(safe-area-inset-top)] w-full max-w-2xl"
+          style={{
+            transform: `translate(calc(-50% + ${chatPosition.x}px), ${chatPosition.y}px)`,
+            transition: isDragging ? 'none' : 'transform 0.15s ease-out'
+          }}
+        >
           <div
             className={`pointer-events-auto w-full transition-all duration-500 ease-out ${
               messages.length > 0 || streamingResponse
@@ -1964,9 +1970,43 @@ Style: Dreamlike, cinematic photography, soft ethereal lighting with gentle glow
               }`}
               style={{ boxShadow: '0 25px 80px rgba(0, 0, 0, 0.3)' }}
             >
+              {/* Drag Handle - Always visible, drag to move, click to expand if collapsed */}
+              <div
+                className="flex justify-center py-2 cursor-grab active:cursor-grabbing select-none"
+                onMouseDown={(e) => {
+                  e.preventDefault();
+                  setIsDragging(true);
+                  wasDragRef.current = false;
+                  dragStartRef.current = {
+                    x: e.clientX,
+                    y: e.clientY,
+                    chatX: chatPosition.x,
+                    chatY: chatPosition.y
+                  };
+                }}
+                onTouchStart={(e) => {
+                  setIsDragging(true);
+                  wasDragRef.current = false;
+                  dragStartRef.current = {
+                    x: e.touches[0].clientX,
+                    y: e.touches[0].clientY,
+                    chatX: chatPosition.x,
+                    chatY: chatPosition.y
+                  };
+                }}
+                onClick={() => {
+                  // Only expand if it wasn't a drag
+                  if (!wasDragRef.current && isChatCollapsed && (messages.length > 0 || streamingResponse)) {
+                    setIsChatCollapsed(false);
+                  }
+                }}
+              >
+                <div className="w-12 h-1 rounded-full bg-white/20 hover:bg-white/40 transition-colors" />
+              </div>
+
               {/* Header - Only shown when there are messages and not collapsed */}
               {(messages.length > 0 || streamingResponse) && !isChatCollapsed && (
-                <div className="px-5 py-3 border-b border-white/5 flex items-center justify-between">
+                <div className="px-5 py-2 border-b border-white/5 flex items-center justify-between">
                   <div className="flex items-center gap-3">
                     <div className="w-2 h-2 rounded-full bg-cyan-400/60 animate-pulse" />
                     <span className="text-xs uppercase tracking-[0.15em] text-white/40">Mind of Kevin • Digital Twin</span>
@@ -1986,11 +2026,11 @@ Style: Dreamlike, cinematic photography, soft ethereal lighting with gentle glow
               {/* Collapsed State - Show message count indicator */}
               {isChatCollapsed && (messages.length > 0 || streamingResponse) && (
                 <div
-                  className="px-4 py-2 flex items-center justify-center gap-2 text-white/50 cursor-pointer hover:text-white/70 transition-colors"
+                  className="px-4 py-1 flex items-center justify-center gap-2 text-white/50 cursor-pointer hover:text-white/70 transition-colors"
                   onClick={() => setIsChatCollapsed(false)}
                 >
                   <div className="w-2 h-2 rounded-full bg-cyan-400 animate-pulse" />
-                  <span className="text-xs">{messages.length} messages</span>
+                  <span className="text-xs">{messages.length} messages — tap to expand</span>
                   <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                     <path d="M6 9l6 6 6-6"/>
                   </svg>
