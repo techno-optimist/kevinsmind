@@ -1938,20 +1938,14 @@ Style: Dreamlike, cinematic photography, soft ethereal lighting with gentle glow
                 : 'max-w-lg mx-auto'
             }`}
           >
-            {/* Chat Panel Container - Clickable when collapsed */}
+            {/* Chat Panel Container */}
             <div
               ref={chatPanelRef}
-              onClick={() => {
-                // Only expand if collapsed and has messages
-                if (isChatCollapsed && (messages.length > 0 || streamingResponse)) {
-                  setIsChatCollapsed(false);
-                }
-              }}
-              className={`bg-black/40 backdrop-blur-sm rounded-3xl border border-white/10 overflow-hidden shadow-2xl transition-all duration-500 ${
+              className={`relative bg-black/40 backdrop-blur-sm rounded-3xl border border-white/10 overflow-hidden shadow-2xl transition-all duration-500 ${
                 messages.length > 0 || streamingResponse
                   ? 'shadow-cyan-500/10'
                   : 'shadow-black/50'
-              } ${isChatCollapsed && (messages.length > 0 || streamingResponse) ? 'cursor-pointer hover:bg-black/50 hover:border-white/20' : ''}`}
+              } ${isChatCollapsed && (messages.length > 0 || streamingResponse) ? 'hover:bg-black/50 hover:border-white/20' : ''}`}
               style={{ boxShadow: '0 25px 80px rgba(0, 0, 0, 0.3)' }}
             >
               {/* Header - Only shown when there are messages and not collapsed */}
@@ -1973,20 +1967,32 @@ Style: Dreamlike, cinematic photography, soft ethereal lighting with gentle glow
                 </div>
               )}
 
-              {/* Collapsed Header - Tap anywhere on panel to expand */}
+              {/* Collapsed State - Full clickable overlay to expand */}
               {isChatCollapsed && (messages.length > 0 || streamingResponse) && (
-                <div className="px-4 py-3 flex items-center justify-between">
-                  <div className="flex items-center gap-2 text-white/50">
-                    <div className="w-2 h-2 rounded-full bg-cyan-400/60 animate-pulse" />
-                    <span className="text-sm font-medium">{messages.length} messages</span>
+                <>
+                  {/* Clickable overlay that covers entire collapsed panel */}
+                  <div
+                    className="absolute inset-0 z-50 cursor-pointer"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      setIsChatCollapsed(false);
+                    }}
+                  />
+                  {/* Collapsed header content */}
+                  <div className="px-4 py-3 flex items-center justify-between pointer-events-none">
+                    <div className="flex items-center gap-2 text-white/50">
+                      <div className="w-2 h-2 rounded-full bg-cyan-400/60 animate-pulse" />
+                      <span className="text-sm font-medium">{messages.length} messages</span>
+                    </div>
+                    <div className="flex items-center gap-2 text-white/40">
+                      <span className="text-xs">Tap to expand</span>
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                        <path d="M6 9l6 6 6-6"/>
+                      </svg>
+                    </div>
                   </div>
-                  <div className="flex items-center gap-2 text-white/40">
-                    <span className="text-xs">Tap to expand</span>
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                      <path d="M6 9l6 6 6-6"/>
-                    </svg>
-                  </div>
-                </div>
+                </>
               )}
 
               {/* Welcome Title & Starter Prompts - Only when no messages and not collapsed */}
