@@ -1019,12 +1019,12 @@ Return exactly ONE scene with LABEL: and SCENE: on separate lines.`
             S.cameraFocusQueue.push(pos.clone());
             S.cameraFocusNodes.push(node);
 
-            // Set first as immediate focus and auto-collapse chat to reveal mindscape
+            // Set first as immediate focus (but keep chat open so user sees progress)
             if (i === 0 && !S.isManual) {
                 S.cameraFocusTarget = pos.clone();
                 S.cameraOrbitPhase = 0;
                 setIsNavigatingToImages(true);
-                setIsChatCollapsed(true);
+                // Don't auto-collapse chat - let user see the "Creating image" indicator
             }
         });
 
@@ -1056,6 +1056,7 @@ Return exactly ONE scene with LABEL: and SCENE: on separate lines.`
                     console.error('Please check that /images/IMG_0204.JPG and other reference images exist and are accessible.');
                     setIsImagining(false);
                     setImaginingLabel('');
+                    setIsNavigatingToImages(false);
                     return; // Don't generate images without Kevin's reference
                 }
             }
@@ -1107,9 +1108,10 @@ Style: Dreamlike, cinematic photography, soft ethereal lighting with gentle glow
                                 images: [...pendingImagesRef.current],
                                 queueStartIndex: batchQueueStartIndexRef.current
                             }]);
-                            // Stop imagining indicator
+                            // Stop imagining indicator and navigation mode
                             setIsImagining(false);
                             setImaginingLabel('');
+                            setIsNavigatingToImages(false);
                         }
 
                         // Replace placeholder with real image
@@ -1134,9 +1136,10 @@ Style: Dreamlike, cinematic photography, soft ethereal lighting with gentle glow
                 }
             } catch (e) {
                 console.warn(`Failed to generate image ${sceneIndex}:`, e);
-                // Stop imagining on error
+                // Stop imagining on error and reset navigation mode
                 setIsImagining(false);
                 setImaginingLabel('');
+                setIsNavigatingToImages(false);
             }
 
             // Continue to next image
@@ -1172,6 +1175,11 @@ Style: Dreamlike, cinematic photography, soft ethereal lighting with gentle glow
 
     // Trigger effects
     visualizeThought(text);
+
+    // Start imagining indicator IMMEDIATELY so user sees it in chat
+    // Don't wait for the scene prompt API call
+    setIsImagining(true);
+    setImaginingLabel('Creating a visual memory...');
 
     // Trigger mind's eye visualizations based on zone
     spawnConstellationImages(text, topic);
@@ -2076,7 +2084,7 @@ Style: Dreamlike, cinematic photography, soft ethereal lighting with gentle glow
       {/* Main Chat Container - Draggable */}
       {(
         <div
-          className="absolute top-4 sm:top-4 left-1/2 z-30 pointer-events-none px-3 sm:px-4 pt-[env(safe-area-inset-top)] w-full max-w-2xl"
+          className="absolute top-12 sm:top-4 left-1/2 z-30 pointer-events-none px-3 sm:px-4 pt-[env(safe-area-inset-top)] w-full max-w-2xl"
           style={{
             transform: `translate(calc(-50% + ${chatPosition.x}px), ${chatPosition.y}px)`,
             transition: isDragging ? 'none' : 'transform 0.15s ease-out'
@@ -2093,9 +2101,18 @@ Style: Dreamlike, cinematic photography, soft ethereal lighting with gentle glow
             <div
               ref={chatPanelRef}
               onClick={() => {
-                if (isChatCollapsed && (messages.length > 0 || streamingResponse)) {
+                // Expand on click if collapsed (and wasn't a drag)
+                if (!wasDragRef.current && isChatCollapsed && (messages.length > 0 || streamingResponse)) {
                   setIsChatCollapsed(false);
                 }
+                wasDragRef.current = false;
+              }}
+              onTouchEnd={() => {
+                // Handle touch tap to expand (mobile)
+                if (!wasDragRef.current && isChatCollapsed && (messages.length > 0 || streamingResponse)) {
+                  setIsChatCollapsed(false);
+                }
+                wasDragRef.current = false;
               }}
               className={`relative bg-black/40 backdrop-blur-sm rounded-3xl border border-white/10 overflow-hidden shadow-2xl transition-all duration-500 ${
                 messages.length > 0 || streamingResponse
@@ -2441,13 +2458,22 @@ Style: Dreamlike, cinematic photography, soft ethereal lighting with gentle glow
                         value={inputText}
                         onChange={(e) => setInputText(e.target.value)}
                         onClick={() => {
-                          // Expand on click
+                          // Expand on click (reset drag state first)
+                          wasDragRef.current = false;
+                          if (isChatCollapsed && (messages.length > 0 || streamingResponse)) {
+                            setIsChatCollapsed(false);
+                          }
+                        }}
+                        onTouchEnd={() => {
+                          // Handle touch tap on input (mobile)
+                          wasDragRef.current = false;
                           if (isChatCollapsed && (messages.length > 0 || streamingResponse)) {
                             setIsChatCollapsed(false);
                           }
                         }}
                         onFocus={() => {
                           // Also expand on focus (keyboard navigation, etc.)
+                          wasDragRef.current = false;
                           if (isChatCollapsed && (messages.length > 0 || streamingResponse)) {
                             setIsChatCollapsed(false);
                           }
