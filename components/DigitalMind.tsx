@@ -535,7 +535,7 @@ export default function DigitalMind() {
   // Load Kevin's reference images for character-consistent image generation
   // ROBUST IMPLEMENTATION: Caching, retries, compression, and error handling
   useEffect(() => {
-    const CACHE_KEY = 'kevin_reference_images_v3'; // Bumped version for new optimized images
+    const CACHE_KEY = 'kevin_reference_images_v4'; // Bumped version to force reload
     const MAX_IMAGE_DIMENSION = 1024; // Resize large images to max 1024px for faster loading
     const MAX_RETRIES = 3;
     const RETRY_DELAY = 1000; // 1 second base delay
@@ -1159,33 +1159,41 @@ SCENE: [your scene description]`
             }
 
             console.log(`Generating single visual memory - Aspect: ${aspectConfig.ratio}`);
+            console.log(`Reference images available: ${kevinReferenceImagesRef.current.length}`);
 
             // Include previous image reference for VISUAL ECHOES (conversation threading)
             const echoContext = lastGeneratedImageRef.current
                 ? `\n\nVISUAL CONTINUITY: This image should echo visual elements from the conversation's previous imagery - similar color palette, lighting mood, or symbolic motifs to create a visual thread.`
                 : '';
 
-            const fullPrompt = `Generate a ${aspectConfig.ratio} aspect ratio image of this scene featuring the person shown in the reference photos (Kevin Russell):
+            const fullPrompt = `I am providing ${kevinReferenceImagesRef.current.length} reference photos of Kevin Russell. Generate an image featuring THIS EXACT PERSON from the reference photos.
 
-SCENE: ${memoryScene.prompt}
+REFERENCE PHOTOS: The ${kevinReferenceImagesRef.current.length} images above show Kevin Russell - a man in his 40s with short dark hair. Study his face, features, and build carefully.
 
-CRITICAL CHARACTER CONSISTENCY: The person in this image MUST be the same person shown in the ${kevinReferenceImagesRef.current.length} reference photos provided. Study Kevin's face, hair, build, and appearance in the reference photos and match them exactly.${echoContext}
+SCENE TO GENERATE: ${memoryScene.prompt}
 
-COMPOSITION: ${aspectConfig.ratio} aspect ratio. Balanced, narrative framing with Kevin as the clear subject in a dreamlike scene.
+CRITICAL REQUIREMENTS:
+1. The person in the generated image MUST be Kevin Russell - the SAME person shown in ALL the reference photos above
+2. Match Kevin's face, hair color, facial features, and build EXACTLY as shown in the reference photos
+3. Do NOT generate a different person or a generic man - use Kevin's actual appearance from the photos
+${echoContext}
 
-STYLE: Dreamlike, ethereal, soft lighting with gentle glow. Dark moody background. Rich atmosphere. No text or labels. High quality, 4K resolution.`;
+STYLE: Dreamlike, ethereal, soft lighting with gentle glow. Dark moody background. Rich cinematic atmosphere. No text or labels. High quality.`;
 
-            // Build contents array with Kevin's reference images + optional echo image + the scene prompt
+            // Build contents array: reference images FIRST, then prompt
             const contentsArray: Array<{ inlineData: { mimeType: string; data: string } } | { text: string }> = [
-                ...kevinReferenceImagesRef.current, // Up to 5 reference images of Kevin
+                ...kevinReferenceImagesRef.current, // Kevin's reference photos MUST come first
             ];
 
-            // Add last generated image for visual echo (if available)
+            // Add last generated image for visual echo (if available) - but AFTER Kevin's references
             if (lastGeneratedImageRef.current) {
                 contentsArray.push(lastGeneratedImageRef.current);
             }
 
+            // Add the text prompt LAST
             contentsArray.push({ text: fullPrompt });
+
+            console.log(`Sending ${contentsArray.length} items to image generation (${kevinReferenceImagesRef.current.length} ref images + ${lastGeneratedImageRef.current ? '1 echo + ' : ''}1 prompt)`);
 
             try {
                 const imgResponse = await ai.models.generateContent({
