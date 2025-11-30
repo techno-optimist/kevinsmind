@@ -934,16 +934,45 @@ Return exactly ONE scene with LABEL: and SCENE: on separate lines.`
             if (sceneIndex >= memoryScenes.length) return;
 
             const scene = memoryScenes[sceneIndex];
-            const fullPrompt = `Generate an image of this scene featuring the person shown in the reference photos (Kevin):
+
+            // CRITICAL: Ensure Kevin's reference images are loaded before generating
+            const kevinImages = kevinReferenceImagesRef.current;
+
+            if (kevinImages.length === 0) {
+                console.error('CRITICAL: No Kevin reference images available! Cannot generate character-consistent images.');
+                console.error('This will result in random people appearing in generated images.');
+
+                // Try to wait for images to load (max 5 seconds)
+                let waitAttempts = 0;
+                while (kevinReferenceImagesRef.current.length === 0 && waitAttempts < 10) {
+                    await new Promise(resolve => setTimeout(resolve, 500));
+                    waitAttempts++;
+                    console.log(`Waiting for Kevin reference images... attempt ${waitAttempts}/10`);
+                }
+
+                // Check again after waiting
+                if (kevinReferenceImagesRef.current.length === 0) {
+                    console.error('ABORTING image generation: Kevin reference images failed to load after waiting.');
+                    console.error('Please check that /images/IMG_0204.JPG and other reference images exist and are accessible.');
+                    setIsImagining(false);
+                    setImaginingLabel('');
+                    return; // Don't generate images without Kevin's reference
+                }
+            }
+
+            console.log(`Generating image ${sceneIndex + 1}/${memoryScenes.length} with ${kevinReferenceImagesRef.current.length} Kevin reference images`);
+
+            const fullPrompt = `Generate an image of this scene featuring the person shown in the reference photos (Kevin Russell, a middle-aged man with short dark hair):
 
 ${scene.prompt}
 
-Style: Dreamlike, cinematic photography, soft ethereal lighting with gentle glow. Dark moody background. Atmospheric and emotionally resonant. No text or labels. The person (Kevin) should be clearly visible and recognizable from the reference photos.`;
+CRITICAL: The person in this image MUST be the same person shown in the ${kevinReferenceImagesRef.current.length} reference photos provided. Study the reference photos carefully - match his face, hair, build, and overall appearance exactly. Do NOT use a different person.
+
+Style: Dreamlike, cinematic photography, soft ethereal lighting with gentle glow. Dark moody background. Atmospheric and emotionally resonant. No text or labels. Kevin should be clearly visible and recognizable as the same person from the reference photos.`;
 
             // Build contents array with Kevin's reference images + the scene prompt
-            const kevinImages = kevinReferenceImagesRef.current;
             const contentsArray: Array<{ inlineData: { mimeType: string; data: string } } | { text: string }> = [
-                ...kevinImages, // Up to 5 reference images of Kevin
+                ...kevinReferenceImagesRef.current, // Up to 5 reference images of Kevin - use current ref value
                 { text: fullPrompt }
             ];
 
