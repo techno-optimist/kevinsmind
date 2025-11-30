@@ -2683,29 +2683,15 @@ STYLE: Dreamlike, ethereal, soft lighting with gentle glow. Dark moody backgroun
                             </div>
 
                             <div className="flex-1 min-w-0">
-                              <p className="text-violet-200/80 text-sm font-medium">Creating visual triptych...</p>
+                              <p className="text-violet-200/80 text-sm font-medium">Creating visual memory...</p>
                               <p className="text-white/40 text-xs mt-0.5 truncate italic">{imaginingLabel}</p>
-                              <p className="text-white/30 text-[10px] mt-1">
-                                {pendingImages.length === 0 ? 'The Moment' :
-                                 pendingImages.length === 1 ? 'The Feeling' :
-                                 pendingImages.length === 2 ? 'The Echo' : 'Finalizing...'}
-                                {' '}• {pendingImages.length}/3
-                              </p>
                             </div>
                           </div>
 
-                          {/* Progress bar showing triptych completion */}
+                          {/* Shimmer loading bar */}
                           <div className="mt-3 h-1 rounded-full bg-white/5 overflow-hidden">
                             <div
-                              className="h-full rounded-full bg-gradient-to-r from-violet-400/50 via-cyan-400/50 to-violet-400/50 transition-all duration-500"
-                              style={{
-                                width: `${((pendingImages.length + 1) / 3) * 100}%`,
-                              }}
-                            />
-                          </div>
-                          <div className="mt-1 h-0.5 rounded-full bg-white/5 overflow-hidden">
-                            <div
-                              className="h-full w-1/3 rounded-full bg-gradient-to-r from-transparent via-violet-400/30 to-transparent animate-shimmer"
+                              className="h-full w-1/3 rounded-full bg-gradient-to-r from-transparent via-violet-400/50 to-transparent"
                               style={{
                                 animation: 'shimmer 2s ease-in-out infinite',
                               }}
@@ -2715,29 +2701,6 @@ STYLE: Dreamlike, ethereal, soft lighting with gentle glow. Dark moody backgroun
                       </div>
                     )}
 
-                    {/* Pending images - show loading state */}
-                    {pendingImages.length > 0 && pendingImages.length < expectedImageCountRef.current && (
-                      <div className="flex justify-center">
-                        <div className="flex gap-2 p-2 sm:p-3 rounded-2xl bg-white/[0.04] border border-white/5">
-                          {pendingImages.map((img, idx) => (
-                            <img
-                              key={idx}
-                              src={img}
-                              alt={`Loading ${idx + 1}`}
-                              className="w-14 h-14 sm:w-16 sm:h-16 rounded-xl object-cover opacity-70"
-                            />
-                          ))}
-                          {Array.from({ length: expectedImageCountRef.current - pendingImages.length }).map((_, idx) => (
-                            <div
-                              key={`loading-${idx}`}
-                              className="w-14 h-14 sm:w-16 sm:h-16 rounded-xl bg-white/5 flex items-center justify-center"
-                            >
-                              <div className="w-5 h-5 border-2 border-cyan-400/30 border-t-cyan-400 rounded-full animate-spin" />
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    )}
                     {/* Streaming response */}
                     {streamingResponse && (
                       <div className="flex justify-start">
