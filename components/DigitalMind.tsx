@@ -1289,7 +1289,7 @@ STYLE: Dreamlike, ethereal, soft lighting with gentle glow. Dark moody backgroun
 
             try {
                 const imgResponse = await ai.models.generateContent({
-                    model: 'gemini-2.0-flash-preview-image-generation',
+                    model: 'gemini-2.0-flash-exp-image-generation',
                     contents: contentsArray,
                     config: {
                         responseModalities: ['TEXT', 'IMAGE'],
