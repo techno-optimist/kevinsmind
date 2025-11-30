@@ -1960,14 +1960,19 @@ Style: Dreamlike, cinematic photography, soft ethereal lighting with gentle glow
                 : 'max-w-lg mx-auto'
             }`}
           >
-            {/* Chat Panel Container */}
+            {/* Chat Panel Container - Click anywhere to expand when collapsed */}
             <div
               ref={chatPanelRef}
+              onClick={() => {
+                if (isChatCollapsed && (messages.length > 0 || streamingResponse)) {
+                  setIsChatCollapsed(false);
+                }
+              }}
               className={`relative bg-black/40 backdrop-blur-sm rounded-3xl border border-white/10 overflow-hidden shadow-2xl transition-all duration-500 ${
                 messages.length > 0 || streamingResponse
                   ? 'shadow-cyan-500/10'
                   : 'shadow-black/50'
-              }`}
+              } ${isChatCollapsed && (messages.length > 0 || streamingResponse) ? 'cursor-pointer' : ''}`}
               style={{ boxShadow: '0 25px 80px rgba(0, 0, 0, 0.3)' }}
             >
               {/* Drag Handle - Always visible, drag to move, click to expand if collapsed */}
@@ -2306,6 +2311,12 @@ Style: Dreamlike, cinematic photography, soft ethereal lighting with gentle glow
                         type="text"
                         value={inputText}
                         onChange={(e) => setInputText(e.target.value)}
+                        onClick={() => {
+                          // Expand on click
+                          if (isChatCollapsed && (messages.length > 0 || streamingResponse)) {
+                            setIsChatCollapsed(false);
+                          }
+                        }}
                         onFocus={() => {
                           // Also expand on focus (keyboard navigation, etc.)
                           if (isChatCollapsed && (messages.length > 0 || streamingResponse)) {
