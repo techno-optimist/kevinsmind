@@ -482,8 +482,10 @@ export default function DigitalMind() {
   }, [isChatCollapsed, messages.length, streamingResponse]);
 
   // Auto-collapse chat when user takes manual control of constellation
+  // But NOT if they're interacting with the chat panel itself
+  const isInteractingWithChatRef = useRef(false);
   useEffect(() => {
-    if (manualControl) {
+    if (manualControl && !isInteractingWithChatRef.current) {
       setIsChatCollapsed(true);
     }
   }, [manualControl]);
@@ -2450,12 +2452,22 @@ STYLE: Dreamlike, ethereal, soft lighting with gentle glow. Dark moody backgroun
             {/* Chat Panel Container - Click anywhere to expand when collapsed */}
             <div
               ref={chatPanelRef}
+              onMouseDown={() => {
+                // Mark that we're interacting with chat to prevent auto-collapse
+                isInteractingWithChatRef.current = true;
+              }}
+              onTouchStart={() => {
+                // Mark that we're interacting with chat to prevent auto-collapse
+                isInteractingWithChatRef.current = true;
+              }}
               onClick={() => {
                 // Expand on click if collapsed (and wasn't a drag)
                 if (!wasDragRef.current && isChatCollapsed && (messages.length > 0 || streamingResponse)) {
                   setIsChatCollapsed(false);
                 }
                 wasDragRef.current = false;
+                // Reset interaction flag after a short delay
+                setTimeout(() => { isInteractingWithChatRef.current = false; }, 100);
               }}
               onTouchEnd={() => {
                 // Handle touch tap to expand (mobile)
@@ -2463,6 +2475,8 @@ STYLE: Dreamlike, ethereal, soft lighting with gentle glow. Dark moody backgroun
                   setIsChatCollapsed(false);
                 }
                 wasDragRef.current = false;
+                // Reset interaction flag after a short delay
+                setTimeout(() => { isInteractingWithChatRef.current = false; }, 100);
               }}
               className={`relative bg-black/40 backdrop-blur-sm rounded-3xl border border-white/10 overflow-hidden shadow-2xl transition-all duration-500 ${
                 messages.length > 0 || streamingResponse
