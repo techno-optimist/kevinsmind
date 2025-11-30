@@ -869,7 +869,7 @@ export default function DigitalMind() {
   }, [loadSavedMemories]);
 
   // Generate mind's eye memory images - the visual constellation of thoughts
-  // Now generates TRIPTYCH sequences: The Moment, The Feeling, The Echo
+  // Generates ONE high-quality image per response, with visual echoes from conversation
   const spawnConstellationImages = useCallback(async (contextText: string, zone: string) => {
     try {
         const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
@@ -878,126 +878,77 @@ export default function DigitalMind() {
 
         // Gently fade old memories (but keep recent ones for continuity)
         S.constellationNodes.forEach((node, idx) => {
-            if (idx < S.constellationNodes.length - 6) { // Keep more recent with triptychs
+            if (idx < S.constellationNodes.length - 4) {
                 node.targetScale = node.targetScale * 0.7; // Fade older memories
             }
         });
 
-        // Generate TRIPTYCH: Three interconnected visual interpretations
+        // Generate ONE vivid visual scene featuring Kevin
         const memoryPromptResponse = await ai.models.generateContent({
             model: 'gemini-3-pro-preview',
-            contents: `You are generating a TRIPTYCH of visual scenes for Kevin Russell's digital mind - three interconnected images that tell a complete visual story.
+            contents: `You are generating a visual scene for Kevin Russell's digital mind - a single powerful image that captures the essence of this moment.
 
 Kevin Russell is a technologist, father (to 11-year-old Sophia), engaged to Jillian, with deep connections to consciousness exploration and memory preservation. His mother has dementia, his father passed 8 years ago.
 
 Context: "${contextText}"
 
-Create THREE distinct but thematically connected scenes:
+Create ONE vivid visual scene that captures the heart of this conversation:
+- LABEL: [2-4 poetic words - like a fragment of thought]
+- SCENE: [2-3 sentence visual description with Kevin visible in the scene]
 
-1. THE MOMENT (literal scene) - What's actually happening, Kevin visible in the frame
-2. THE FEELING (emotional interpretation) - Abstract emotional essence, intimate perspective
-3. THE ECHO (cosmic resonance) - Philosophical/universal meaning, expansive and cosmic
+IMPORTANT: Kevin should be VISIBLE in the image. Examples:
+- "Kevin standing at the edge of a glowing data stream, his silhouette illuminated by cascading code"
+- "Kevin sitting with his daughter on cosmic steps, galaxies swirling around them"
+- "Kevin walking through a field of floating memories, reaching toward a glowing orb"
 
-For each, provide:
-- LABEL: [2-4 poetic words]
-- SCENE: [2-3 sentence visual description with Kevin visible]
+The scene should be:
+- Visually striking with Kevin as a focal point
+- Dreamlike, cinematic, ethereal - soft lighting, dark moody backgrounds
+- Emotionally resonant and connected to the conversation topic
+- Rich in atmosphere: cosmic, technological, familial, or contemplative
 
-Format exactly as:
----MOMENT---
-LABEL: [label]
-SCENE: [description]
-
----FEELING---
-LABEL: [label]
-SCENE: [description]
-
----ECHO---
-LABEL: [label]
-SCENE: [description]
-
-Style notes:
-- MOMENT: Cinematic, narrative, grounded yet dreamlike
-- FEELING: Intimate, emotional, close perspective, warm or melancholic
-- ECHO: Epic, cosmic, expansive, philosophical, awe-inspiring
-
-All should feature Kevin visibly in the scene, be dreamlike with soft ethereal lighting, dark moody backgrounds, and emotionally resonant.`
+Return exactly:
+LABEL: [your label]
+SCENE: [your scene description]`
         });
 
-        // Parse the triptych response
-        interface TriptychScene {
+        // Parse the response
+        interface MemoryScene {
             label: string;
             prompt: string;
-            panelType: 'moment' | 'feeling' | 'echo';
         }
 
         const rawText = memoryPromptResponse.text || '';
-        const triptychScenes: TriptychScene[] = [];
+        let memoryScene: MemoryScene = {
+            label: 'A fleeting thought',
+            prompt: contextText.substring(0, 200)
+        };
 
-        // Parse by section markers
-        const sections = rawText.split(/---(\w+)---/i).filter(s => s.trim());
-        let currentPanelType: 'moment' | 'feeling' | 'echo' = 'moment';
+        const lines = rawText.split('\n').map(s => s.trim()).filter(s => s.length > 0);
+        let currentLabel = '';
 
-        for (let i = 0; i < sections.length; i++) {
-            const section = sections[i].trim().toUpperCase();
-            if (section === 'MOMENT') {
-                currentPanelType = 'moment';
-            } else if (section === 'FEELING') {
-                currentPanelType = 'feeling';
-            } else if (section === 'ECHO') {
-                currentPanelType = 'echo';
-            } else {
-                // This is content, parse it
-                const lines = sections[i].split('\n').map(s => s.trim()).filter(s => s.length > 0);
-                let currentLabel = '';
-
-                for (const line of lines) {
-                    if (line.startsWith('LABEL:')) {
-                        currentLabel = line.replace('LABEL:', '').trim();
-                    } else if ((line.startsWith('SCENE:') || line.startsWith('MEMORY:')) && currentLabel) {
-                        triptychScenes.push({
-                            label: currentLabel,
-                            prompt: line.replace('SCENE:', '').replace('MEMORY:', '').trim(),
-                            panelType: currentPanelType
-                        });
-                        currentLabel = '';
-                    }
-                }
+        for (const line of lines) {
+            if (line.startsWith('LABEL:')) {
+                currentLabel = line.replace('LABEL:', '').trim();
+            } else if ((line.startsWith('SCENE:') || line.startsWith('MEMORY:')) && currentLabel) {
+                memoryScene = {
+                    label: currentLabel,
+                    prompt: line.replace('SCENE:', '').replace('MEMORY:', '').trim()
+                };
+                break;
             }
         }
 
-        // Fallback if parsing failed - create single generic memory
-        if (triptychScenes.length === 0) {
-            triptychScenes.push({
-                label: 'A fleeting thought',
-                prompt: rawText.substring(0, 200) || contextText.substring(0, 200),
-                panelType: 'moment'
-            });
-        }
-
-        // Ensure we have all three panels (fill gaps with variations if needed)
-        const panelTypes: Array<'moment' | 'feeling' | 'echo'> = ['moment', 'feeling', 'echo'];
-        for (const pType of panelTypes) {
-            if (!triptychScenes.find(s => s.panelType === pType) && triptychScenes.length > 0) {
-                // Clone the first scene with modified type
-                triptychScenes.push({
-                    ...triptychScenes[0],
-                    panelType: pType,
-                    label: pType === 'echo' ? 'Cosmic resonance' : pType === 'feeling' ? 'Inner light' : triptychScenes[0].label
-                });
-            }
-        }
-
-        console.log("Mind's Eye TRIPTYCH to visualize:", triptychScenes);
+        console.log("Mind's Eye scene to visualize:", memoryScene);
 
         // Clear pending images for new batch and set expected count
         pendingImagesRef.current = [];
         setPendingImages([]);
-        expectedImageCountRef.current = triptychScenes.length;
+        expectedImageCountRef.current = 1; // Just ONE image
 
-        // Start imagining indicator with triptych info
+        // Start imagining indicator
         setIsImagining(true);
-        const momentScene = triptychScenes.find(s => s.panelType === 'moment');
-        setImaginingLabel(momentScene?.label || triptychScenes[0]?.label || 'A visual memory');
+        setImaginingLabel(memoryScene.label);
 
         // Store the starting index in the queue for this batch
         batchQueueStartIndexRef.current = S.cameraFocusQueue.length;
@@ -1130,99 +1081,65 @@ All should feature Kevin visibly in the scene, be dreamlike with soft ethereal l
         };
         const currentPalette = zonePalettes[zone] || zonePalettes.ambient;
 
-        // Pre-calculate positions for TRIPTYCH - cluster them together as a visual group
-        const baseAngle = stateRef.current.time * 0.1;
-        const baseRadius = 30;
-        const baseHeight = 12;
+        // Calculate position for the single memory orb
+        const goldenAngle = Math.PI * (3 - Math.sqrt(5));
+        const nodeIndex = S.constellationNodes.length;
+        const angle = nodeIndex * goldenAngle * 2 + stateRef.current.time * 0.1;
+        const radius = 25 + (nodeIndex % 5) * 8;
+        const height = 12 + Math.sin(nodeIndex * 1.5) * 8;
 
-        const positions: THREE.Vector3[] = triptychScenes.map((scene, i) => {
-            // Arrange triptych in a slight arc - moment center, feeling left, echo right
-            const panelOffsets: Record<string, { angle: number; radius: number; height: number }> = {
-                'moment': { angle: 0, radius: 0, height: 0 },           // Center
-                'feeling': { angle: -0.3, radius: 8, height: -2 },      // Left, slightly lower
-                'echo': { angle: 0.3, radius: 8, height: 4 }            // Right, slightly higher (cosmic)
-            };
-            const offset = panelOffsets[scene.panelType] || { angle: i * 0.2, radius: i * 5, height: 0 };
+        const position = new THREE.Vector3(
+            Math.cos(angle) * radius,
+            height,
+            Math.sin(angle) * radius - 35
+        );
 
-            const angle = baseAngle + offset.angle;
-            const radius = baseRadius + offset.radius;
-            const height = baseHeight + offset.height + Math.sin(i * 1.5) * 3;
+        // Create placeholder sprite
+        const { sprite } = createPlaceholderSprite(position, currentPalette);
+        S.constellationGroup?.add(sprite);
 
-            return new THREE.Vector3(
-                Math.cos(angle) * radius,
-                height,
-                Math.sin(angle) * radius - 35
-            );
-        });
+        // Use square aspect ratio for cleaner orbs
+        const aspectConfig = ASPECT_RATIOS.square;
+        const targetScale = 18; // Slightly larger for single image
 
-        // Create placeholders immediately and queue them for camera focus
-        const placeholders: { sprite: THREE.Sprite; node: ConstellationNode; position: THREE.Vector3; aspectConfig: AspectRatioConfig }[] = [];
+        const node: ConstellationNode = {
+            mesh: sprite,
+            velocity: new THREE.Vector3(
+                (Math.random() - 0.5) * 0.002,
+                (Math.random() - 0.5) * 0.002,
+                (Math.random() - 0.5) * 0.001
+            ),
+            targetScale,
+            id: Math.random(),
+            shortLabel: memoryScene.label,
+            fullPrompt: memoryScene.prompt,
+            aspectRatio: aspectConfig.ratio,
+            contextText: contextText,
+            userInput: lastUserInputRef.current,
+            timestamp: Date.now(),
+            zone: zone
+        };
 
-        positions.forEach((pos, i) => {
-            const { sprite } = createPlaceholderSprite(pos, currentPalette);
-            S.constellationGroup?.add(sprite);
+        S.constellationNodes.push(node);
 
-            const scene = triptychScenes[i];
-            const aspectConfig = getAspectRatioForContext(zone, scene.panelType);
+        // Add to camera focus queue
+        S.cameraFocusQueue.push(position.clone());
+        S.cameraFocusNodes.push(node);
 
-            // Adjust scale based on aspect ratio for proper display
-            const baseScale = 15;
-            const aspectScale = aspectConfig.width > aspectConfig.height ? 1.3 :
-                               aspectConfig.height > aspectConfig.width ? 0.8 : 1;
-            const targetScale = baseScale * aspectScale;
+        // Set as immediate focus
+        if (!S.isManual) {
+            S.cameraFocusTarget = position.clone();
+            S.cameraOrbitPhase = 0;
+            setIsNavigatingToImages(true);
+        }
 
-            const labelText = scene?.label || 'Memory';
-
-            const node: ConstellationNode = {
-                mesh: sprite,
-                velocity: new THREE.Vector3(
-                    (Math.random() - 0.5) * 0.001, // Slower velocity for triptych cohesion
-                    (Math.random() - 0.5) * 0.001,
-                    (Math.random() - 0.5) * 0.0005
-                ),
-                targetScale,
-                id: Math.random(),
-                shortLabel: labelText,
-                fullPrompt: scene?.prompt || '',
-                aspectRatio: aspectConfig.ratio,
-                panelType: scene.panelType,
-                contextText: contextText,          // AI response that spawned this
-                userInput: lastUserInputRef.current, // User's question
-                timestamp: Date.now(),
-                zone: zone
-            };
-
-            S.constellationNodes.push(node);
-            placeholders.push({ sprite, node, position: pos, aspectConfig });
-
-            // Add to camera focus queue (position) and nodes array (for live position tracking)
-            S.cameraFocusQueue.push(pos.clone());
-            S.cameraFocusNodes.push(node);
-
-            // Set first (MOMENT) as immediate focus (but keep chat open so user sees progress)
-            if (scene.panelType === 'moment' && !S.isManual) {
-                S.cameraFocusTarget = pos.clone();
-                S.cameraOrbitPhase = 0;
-                setIsNavigatingToImages(true);
-                // Don't auto-collapse chat - let user see the "Creating image" indicator
-            }
-        });
-
-        // Generate images ONE AT A TIME sequentially (not in parallel)
-        // This allows the first image to appear quickly while others load in background
-        const generateImageSequentially = async (sceneIndex: number) => {
-            if (sceneIndex >= triptychScenes.length) return;
-
-            const scene = triptychScenes[sceneIndex];
-            const placeholder = placeholders[sceneIndex];
-            const aspectConfig = placeholder?.aspectConfig || ASPECT_RATIOS.square;
-
+        // Generate the single image
+        const generateImage = async () => {
             // CRITICAL: Ensure Kevin's reference images are loaded before generating
             const kevinImages = kevinReferenceImagesRef.current;
 
             if (kevinImages.length === 0) {
-                console.error('CRITICAL: No Kevin reference images available! Cannot generate character-consistent images.');
-                console.error('This will result in random people appearing in generated images.');
+                console.error('CRITICAL: No Kevin reference images available!');
 
                 // Try to wait for images to load (max 5 seconds)
                 let waitAttempts = 0;
@@ -1232,33 +1149,16 @@ All should feature Kevin visibly in the scene, be dreamlike with soft ethereal l
                     console.log(`Waiting for Kevin reference images... attempt ${waitAttempts}/10`);
                 }
 
-                // Check again after waiting
                 if (kevinReferenceImagesRef.current.length === 0) {
-                    console.error('ABORTING image generation: Kevin reference images failed to load after waiting.');
-                    console.error('Please check that /images/kev1.jpg and other reference images exist and are accessible.');
+                    console.error('ABORTING: Kevin reference images failed to load.');
                     setIsImagining(false);
                     setImaginingLabel('');
                     setIsNavigatingToImages(false);
-                    return; // Don't generate images without Kevin's reference
+                    return;
                 }
             }
 
-            // Update imagining label based on panel type
-            const panelLabels: Record<string, string> = {
-                'moment': 'Capturing the moment...',
-                'feeling': 'Sensing the emotion...',
-                'echo': 'Finding cosmic resonance...'
-            };
-            setImaginingLabel(panelLabels[scene.panelType] || scene.label);
-
-            console.log(`Generating TRIPTYCH ${scene.panelType.toUpperCase()} (${sceneIndex + 1}/${triptychScenes.length}) - Aspect: ${aspectConfig.ratio}`);
-
-            // Build style description based on panel type
-            const styleDescriptions: Record<string, string> = {
-                'moment': 'Cinematic, narrative, grounded yet dreamlike. 16:9 widescreen composition.',
-                'feeling': 'Intimate, emotional, close perspective. Portrait orientation, warm or melancholic tones.',
-                'echo': 'Epic, cosmic, expansive, awe-inspiring. Ultra-wide 21:9 composition showing vast scale.'
-            };
+            console.log(`Generating single visual memory - Aspect: ${aspectConfig.ratio}`);
 
             // Include previous image reference for VISUAL ECHOES (conversation threading)
             const echoContext = lastGeneratedImageRef.current
@@ -1267,17 +1167,11 @@ All should feature Kevin visibly in the scene, be dreamlike with soft ethereal l
 
             const fullPrompt = `Generate a ${aspectConfig.ratio} aspect ratio image of this scene featuring the person shown in the reference photos (Kevin Russell):
 
-PANEL TYPE: ${scene.panelType.toUpperCase()} - ${styleDescriptions[scene.panelType]}
-
-SCENE: ${scene.prompt}
+SCENE: ${memoryScene.prompt}
 
 CRITICAL CHARACTER CONSISTENCY: The person in this image MUST be the same person shown in the ${kevinReferenceImagesRef.current.length} reference photos provided. Study Kevin's face, hair, build, and appearance in the reference photos and match them exactly.${echoContext}
 
-COMPOSITION: ${aspectConfig.ratio} aspect ratio (${aspectConfig.style}). ${
-    scene.panelType === 'echo' ? 'Wide, expansive framing showing Kevin small against vast cosmic/philosophical backdrop.' :
-    scene.panelType === 'feeling' ? 'Intimate, close framing focusing on emotional resonance and Kevin\'s expression.' :
-    'Balanced, narrative framing with Kevin as the clear subject in a dreamlike scene.'
-}
+COMPOSITION: ${aspectConfig.ratio} aspect ratio. Balanced, narrative framing with Kevin as the clear subject in a dreamlike scene.
 
 STYLE: Dreamlike, ethereal, soft lighting with gentle glow. Dark moody background. Rich atmosphere. No text or labels. High quality, 4K resolution.`;
 
@@ -1286,8 +1180,8 @@ STYLE: Dreamlike, ethereal, soft lighting with gentle glow. Dark moody backgroun
                 ...kevinReferenceImagesRef.current, // Up to 5 reference images of Kevin
             ];
 
-            // Add last generated image for visual echo (if available and not first image)
-            if (lastGeneratedImageRef.current && sceneIndex > 0) {
+            // Add last generated image for visual echo (if available)
+            if (lastGeneratedImageRef.current) {
                 contentsArray.push(lastGeneratedImageRef.current);
             }
 
@@ -1299,7 +1193,6 @@ STYLE: Dreamlike, ethereal, soft lighting with gentle glow. Dark moody backgroun
                     contents: contentsArray,
                     config: {
                         responseModalities: ['TEXT', 'IMAGE'],
-                        // Request specific aspect ratio (Gemini image generation feature)
                     }
                 });
 
@@ -1319,66 +1212,60 @@ STYLE: Dreamlike, ethereal, soft lighting with gentle glow. Dark moody backgroun
                         // Apply vignette mask with correct aspect ratio
                         const vignettedImage = await applyVignetteMask(rawImageData, aspectConfig);
 
-                        // Save to memory constellation (non-blocking) - include panel type in metadata
-                        saveMemoryImage(vignettedImage, `${scene.label} (${scene.panelType})`, scene.prompt, contextText, lastUserInputRef.current);
+                        // Save to memory constellation
+                        saveMemoryImage(vignettedImage, memoryScene.label, memoryScene.prompt, contextText, lastUserInputRef.current);
 
                         // Add to pending images for chat display
-                        pendingImagesRef.current = [...pendingImagesRef.current, vignettedImage];
-                        setPendingImages([...pendingImagesRef.current]);
+                        pendingImagesRef.current = [vignettedImage];
+                        setPendingImages([vignettedImage]);
 
-                        // If all images are loaded, add them as a message
-                        if (pendingImagesRef.current.length === triptychScenes.length) {
-                            setMessages(prev => [...prev, {
-                                id: Date.now().toString() + Math.random(),
-                                role: 'images',
-                                content: '',
-                                images: [...pendingImagesRef.current],
-                                queueStartIndex: batchQueueStartIndexRef.current
-                            }]);
-                            // Stop imagining indicator and navigation mode
-                            setIsImagining(false);
-                            setImaginingLabel('');
-                            setIsNavigatingToImages(false);
-                        }
+                        // Add the single image as a message
+                        setMessages(prev => [...prev, {
+                            id: Date.now().toString() + Math.random(),
+                            role: 'images',
+                            content: '',
+                            images: [vignettedImage],
+                            queueStartIndex: batchQueueStartIndexRef.current
+                        }]);
+
+                        // Stop imagining indicator and navigation mode
+                        setIsImagining(false);
+                        setImaginingLabel('');
+                        setIsNavigatingToImages(false);
 
                         // Store image URL on the node for Thought Portal
-                        if (placeholder && placeholder.node) {
-                            placeholder.node.imageUrl = vignettedImage;
-                        }
+                        node.imageUrl = vignettedImage;
 
                         // Replace placeholder with real image
                         const loader = new THREE.TextureLoader();
                         loader.load(vignettedImage, (texture) => {
-                            if (placeholder && placeholder.sprite.material) {
+                            if (sprite.material) {
                                 // Dispose old texture
-                                if (placeholder.sprite.material.map) {
-                                    placeholder.sprite.material.map.dispose();
+                                if ((sprite.material as THREE.SpriteMaterial).map) {
+                                    (sprite.material as THREE.SpriteMaterial).map!.dispose();
                                 }
                                 // Apply new texture
-                                placeholder.sprite.material.map = texture;
-                                placeholder.sprite.material.needsUpdate = true;
-                                placeholder.node.targetScale = 20 + Math.random() * 6;
+                                (sprite.material as THREE.SpriteMaterial).map = texture;
+                                (sprite.material as THREE.SpriteMaterial).needsUpdate = true;
+                                node.targetScale = 20 + Math.random() * 6;
 
-                                console.log(`TRIPTYCH ${scene.panelType} (${sceneIndex + 1}/${triptychScenes.length}) loaded`);
+                                console.log(`Visual memory loaded: ${memoryScene.label}`);
                             }
                         });
                         break;
                     }
                 }
             } catch (e) {
-                console.warn(`Failed to generate image ${sceneIndex}:`, e);
+                console.warn('Failed to generate visual memory:', e);
                 // Stop imagining on error and reset navigation mode
                 setIsImagining(false);
                 setImaginingLabel('');
                 setIsNavigatingToImages(false);
             }
-
-            // Continue to next image
-            generateImageSequentially(sceneIndex + 1);
         };
 
-        // Start sequential generation (non-blocking) - images load one at a time
-        generateImageSequentially(0);
+        // Start image generation (non-blocking)
+        generateImage();
 
     } catch (error) {
         console.error("Mind's eye visualization failed:", error);
@@ -2474,6 +2361,14 @@ STYLE: Dreamlike, ethereal, soft lighting with gentle glow. Dark moody backgroun
                     <p className="text-white/50 text-xs sm:text-sm line-clamp-2 sm:line-clamp-none">"{thoughtPortal.node.userInput}"</p>
                   </div>
                 )}
+
+                {/* AI's response that spawned this memory */}
+                <div className="pt-3 sm:pt-4 border-t border-white/10 mt-3 sm:mt-4">
+                  <p className="text-white/30 text-[10px] sm:text-xs uppercase tracking-widest mb-1 sm:mb-2">Kevin's Response</p>
+                  <p className="text-white/70 text-xs sm:text-sm leading-relaxed line-clamp-6 sm:line-clamp-none max-w-2xl mx-auto">
+                    {thoughtPortal.node.contextText || '(Response not captured for this memory)'}
+                  </p>
+                </div>
 
                 {/* Zone indicator - responsive */}
                 {thoughtPortal.node.zone && thoughtPortal.node.zone !== 'ambient' && (
