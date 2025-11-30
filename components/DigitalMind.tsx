@@ -2784,15 +2784,15 @@ STYLE: Dreamlike, ethereal, soft lighting with gentle glow. Dark moody backgroun
                         type="text"
                         value={inputText}
                         onChange={(e) => setInputText(e.target.value)}
-                        onClick={() => {
-                          // Expand on click (reset drag state first)
+                        onMouseDown={() => {
+                          // Expand IMMEDIATELY on mouse down (before focus steals click)
                           wasDragRef.current = false;
                           if (isChatCollapsed && (messages.length > 0 || streamingResponse)) {
                             setIsChatCollapsed(false);
                           }
                         }}
-                        onTouchEnd={() => {
-                          // Handle touch tap on input (mobile)
+                        onTouchStart={() => {
+                          // Handle touch tap on input (mobile) - fires before touchEnd
                           wasDragRef.current = false;
                           if (isChatCollapsed && (messages.length > 0 || streamingResponse)) {
                             setIsChatCollapsed(false);
