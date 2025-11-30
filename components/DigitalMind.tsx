@@ -1993,16 +1993,16 @@ Style: Dreamlike, cinematic photography, soft ethereal lighting with gentle glow
                 </div>
               )}
 
-              {/* Collapsed State Header */}
+              {/* Collapsed State - Clean minimal bar */}
               {isChatCollapsed && (messages.length > 0 || streamingResponse) && (
-                <div className="px-4 py-3 flex items-center justify-between select-none">
-                  <div className="flex items-center gap-2 text-white/50">
-                    <div className="w-2 h-2 rounded-full bg-cyan-400/60 animate-pulse" />
+                <div className="px-5 py-4 flex items-center justify-between select-none min-h-[56px] bg-black/60">
+                  <div className="flex items-center gap-3 text-white/70">
+                    <div className="w-2.5 h-2.5 rounded-full bg-cyan-400 animate-pulse" />
                     <span className="text-sm font-medium">{messages.length} messages</span>
                   </div>
-                  <div className="flex items-center gap-2 text-white/40">
-                    <span className="text-xs">Tap to expand • Drag to move</span>
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <div className="flex items-center gap-2 text-white/50">
+                    <span className="text-xs hidden sm:inline">Tap to expand</span>
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                       <path d="M6 9l6 6 6-6"/>
                     </svg>
                   </div>
