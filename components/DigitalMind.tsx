@@ -465,7 +465,7 @@ export default function DigitalMind() {
   // Load Kevin's reference images for character-consistent image generation
   // ROBUST IMPLEMENTATION: Caching, retries, compression, and error handling
   useEffect(() => {
-    const CACHE_KEY = 'kevin_reference_images_v2';
+    const CACHE_KEY = 'kevin_reference_images_v3'; // Bumped version for new optimized images
     const MAX_IMAGE_DIMENSION = 1024; // Resize large images to max 1024px for faster loading
     const MAX_RETRIES = 3;
     const RETRY_DELAY = 1000; // 1 second base delay
@@ -583,12 +583,13 @@ export default function DigitalMind() {
       }
 
       // List of Kevin's reference images (up to 5 for human character consistency per Gemini docs)
+      // Optimized images ~200KB each for fast loading on all devices
       const kevinImageFiles = [
-        '/images/IMG_0204.JPG',
-        '/images/IMG_0411.JPG',
-        '/images/IMG_8639.JPG',
-        '/images/IMG_8770.JPG',
-        '/images/IMG_1944.jpeg'
+        '/images/kev1.jpg',
+        '/images/kev2.jpg',
+        '/images/kev3.jpg',
+        '/images/kev4.jpg',
+        '/images/kev5.jpg'
       ];
 
       // Load all images in parallel for speed
