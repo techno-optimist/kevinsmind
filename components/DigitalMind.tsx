@@ -4106,14 +4106,89 @@ STYLE: Dreamlike, ethereal, soft lighting with gentle glow. Dark moody backgroun
                   {savedMemories.length} memories preserved in the mindscape
                 </p>
               </div>
-              <button
-                onClick={() => { setIsGalleryOpen(false); setSelectedMemory(null); }}
-                className="p-2 rounded-full bg-white/5 hover:bg-white/10 transition-colors"
-              >
-                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-white/50">
-                  <path d="M18 6L6 18M6 6l12 12" />
-                </svg>
-              </button>
+              <div className="flex items-center gap-2">
+                {/* Export Button */}
+                <button
+                  onClick={async () => {
+                    try {
+                      const response = await fetch('/api/memories/export');
+                      if (!response.ok) throw new Error('Export failed');
+                      const blob = await response.blob();
+                      const url = URL.createObjectURL(blob);
+                      const a = document.createElement('a');
+                      a.href = url;
+                      a.download = `kevinsmind-backup-${Date.now()}.json`;
+                      a.click();
+                      URL.revokeObjectURL(url);
+                    } catch (err) {
+                      console.error('Export failed:', err);
+                      alert('Failed to export memories');
+                    }
+                  }}
+                  className="p-2 rounded-full bg-white/5 hover:bg-white/10 transition-colors group"
+                  title="Export all memories (backup)"
+                >
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-white/50 group-hover:text-cyan-400">
+                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                    <polyline points="7 10 12 15 17 10" />
+                    <line x1="12" y1="15" x2="12" y2="3" />
+                  </svg>
+                </button>
+                {/* Import Button */}
+                <label
+                  className="p-2 rounded-full bg-white/5 hover:bg-white/10 transition-colors cursor-pointer group"
+                  title="Import memories from backup"
+                >
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-white/50 group-hover:text-cyan-400">
+                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                    <polyline points="17 8 12 3 7 8" />
+                    <line x1="12" y1="3" x2="12" y2="15" />
+                  </svg>
+                  <input
+                    type="file"
+                    accept=".json"
+                    className="hidden"
+                    onChange={async (e) => {
+                      const file = e.target.files?.[0];
+                      if (!file) return;
+                      try {
+                        const text = await file.text();
+                        const backup = JSON.parse(text);
+                        if (!backup.memories || !Array.isArray(backup.memories)) {
+                          throw new Error('Invalid backup file format');
+                        }
+                        const confirmed = confirm(`Import ${backup.memories.length} memories from backup?\n\nExisting memories with same filenames will be kept.`);
+                        if (!confirmed) return;
+                        const response = await fetch('/api/memories/import', {
+                          method: 'POST',
+                          headers: { 'Content-Type': 'application/json' },
+                          body: JSON.stringify({ memories: backup.memories, skipExisting: true })
+                        });
+                        const result = await response.json();
+                        if (result.success) {
+                          alert(`Imported ${result.imported} memories${result.skipped ? ` (${result.skipped} skipped)` : ''}`);
+                          loadSavedMemories();
+                        } else {
+                          throw new Error(result.error || 'Import failed');
+                        }
+                      } catch (err) {
+                        console.error('Import failed:', err);
+                        alert('Failed to import: ' + (err instanceof Error ? err.message : 'Unknown error'));
+                      }
+                      e.target.value = '';
+                    }}
+                  />
+                </label>
+                {/* Close Button */}
+                <button
+                  onClick={() => { setIsGalleryOpen(false); setSelectedMemory(null); }}
+                  className="p-2 rounded-full bg-white/5 hover:bg-white/10 transition-colors"
+                >
+                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-white/50">
+                    <path d="M18 6L6 18M6 6l12 12" />
+                  </svg>
+                </button>
+              </div>
             </div>
 
             {/* Content Area */}

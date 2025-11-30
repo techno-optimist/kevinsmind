@@ -114,6 +114,117 @@ app.delete('/api/memories/:filename', (req, res) => {
   }
 });
 
+// API: Export all memories as a single JSON bundle (for backup)
+app.get('/api/memories/export', async (req, res) => {
+  try {
+    const files = fs.readdirSync(mindDir);
+    const memoriesBundle = [];
+
+    for (const file of files) {
+      if (file.endsWith('.json')) {
+        const metaPath = path.join(mindDir, file);
+        const meta = JSON.parse(fs.readFileSync(metaPath, 'utf-8'));
+
+        // Read the corresponding image and include as base64
+        const imagePath = path.join(mindDir, meta.filename);
+        if (fs.existsSync(imagePath)) {
+          const imageBuffer = fs.readFileSync(imagePath);
+          const imageBase64 = imageBuffer.toString('base64');
+          memoriesBundle.push({
+            ...meta,
+            imageData: `data:image/png;base64,${imageBase64}`
+          });
+        }
+      }
+    }
+
+    // Sort by timestamp
+    memoriesBundle.sort((a, b) => a.timestamp - b.timestamp);
+
+    console.log(`Exported ${memoriesBundle.length} memories`);
+
+    res.setHeader('Content-Type', 'application/json');
+    res.setHeader('Content-Disposition', `attachment; filename="kevinsmind-backup-${Date.now()}.json"`);
+    res.json({
+      exportedAt: Date.now(),
+      version: 1,
+      count: memoriesBundle.length,
+      memories: memoriesBundle
+    });
+  } catch (error) {
+    console.error('Failed to export memories:', error);
+    res.status(500).json({ error: String(error) });
+  }
+});
+
+// API: Import memories from a backup bundle
+app.post('/api/memories/import', async (req, res) => {
+  try {
+    const { memories, skipExisting } = req.body;
+
+    if (!memories || !Array.isArray(memories)) {
+      return res.status(400).json({ error: 'Invalid backup format: memories array required' });
+    }
+
+    let imported = 0;
+    let skipped = 0;
+    const errors = [];
+
+    for (const memory of memories) {
+      try {
+        const { imageData, label, prompt, comment, userInput, timestamp, filename } = memory;
+
+        if (!imageData || !timestamp) {
+          errors.push(`Skipped invalid memory: missing imageData or timestamp`);
+          continue;
+        }
+
+        // Use original filename or generate new one
+        const sanitizedLabel = (label || 'memory').replace(/[^a-z0-9]/gi, '_').substring(0, 30);
+        const newFilename = filename || `${timestamp}_${sanitizedLabel}.png`;
+        const filepath = path.join(mindDir, newFilename);
+
+        // Skip if file already exists and skipExisting is true
+        if (skipExisting && fs.existsSync(filepath)) {
+          skipped++;
+          continue;
+        }
+
+        // Extract base64 data and save image
+        const base64Data = imageData.replace(/^data:image\/\w+;base64,/, '');
+        const buffer = Buffer.from(base64Data, 'base64');
+        fs.writeFileSync(filepath, buffer);
+
+        // Save metadata
+        const metaPath = filepath.replace('.png', '.json');
+        fs.writeFileSync(metaPath, JSON.stringify({
+          label,
+          prompt,
+          userInput: userInput || '',
+          comment: comment || '',
+          timestamp,
+          filename: newFilename
+        }, null, 2));
+
+        imported++;
+      } catch (memError) {
+        errors.push(`Failed to import memory: ${String(memError)}`);
+      }
+    }
+
+    console.log(`Import complete: ${imported} imported, ${skipped} skipped, ${errors.length} errors`);
+    res.json({
+      success: true,
+      imported,
+      skipped,
+      errors: errors.length > 0 ? errors : undefined
+    });
+  } catch (error) {
+    console.error('Failed to import memories:', error);
+    res.status(500).json({ error: String(error) });
+  }
+});
+
 // Serve static files from the dist folder (production build)
 app.use(express.static(path.join(__dirname, 'dist')));
 
@@ -128,4 +239,31 @@ app.get('*', (req, res) => {
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
   console.log(`Memory storage: ${mindDir}`);
+
+  // Log disk/storage status on startup
+  try {
+    const files = fs.readdirSync(mindDir);
+    const jsonFiles = files.filter(f => f.endsWith('.json'));
+    const pngFiles = files.filter(f => f.endsWith('.png'));
+    console.log(`📦 Storage status: ${jsonFiles.length} memories found (${pngFiles.length} images)`);
+
+    if (jsonFiles.length > 0) {
+      console.log(`📝 Most recent memories:`);
+      const memories = jsonFiles
+        .map(f => {
+          try {
+            const meta = JSON.parse(fs.readFileSync(path.join(mindDir, f), 'utf-8'));
+            return { label: meta.label, timestamp: meta.timestamp };
+          } catch { return null; }
+        })
+        .filter(Boolean)
+        .sort((a, b) => b.timestamp - a.timestamp)
+        .slice(0, 3);
+      memories.forEach(m => console.log(`   - ${m.label} (${new Date(m.timestamp).toISOString()})`));
+    } else {
+      console.log(`⚠️  No memories found in storage directory`);
+    }
+  } catch (err) {
+    console.error(`❌ Error reading storage directory:`, err.message);
+  }
 });
