@@ -2220,7 +2220,8 @@ Style: Dreamlike, cinematic photography, soft ethereal lighting with gentle glow
                 </div>
               )}
 
-              {/* Input Area - Always visible */}
+              {/* Input Area - Hidden when collapsed */}
+              {!isChatCollapsed && (
               <div className={`p-4 ${messages.length > 0 || streamingResponse ? 'border-t border-white/5' : ''}`}>
                 <form onSubmit={handleChatSubmit} className="relative group w-full">
                   {/* Ambient glow behind input */}
@@ -2312,6 +2313,7 @@ Style: Dreamlike, cinematic photography, soft ethereal lighting with gentle glow
                   </div>
                 </form>
               </div>
+              )}
             </div>
           </div>
         </div>
