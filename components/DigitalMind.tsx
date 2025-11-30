@@ -1944,15 +1944,9 @@ Style: Dreamlike, cinematic photography, soft ethereal lighting with gentle glow
           3. Collapsed: Input bar only with expand option
           ============================================ */}
 
-      {/* Main Chat Container - Draggable and collapsible */}
+      {/* Main Chat Container */}
       {(
-        <div
-          className="absolute top-4 sm:top-4 left-1/2 z-30 pointer-events-none px-3 sm:px-4 pt-[env(safe-area-inset-top)] w-full max-w-2xl"
-          style={{
-            transform: `translate(calc(-50% + ${chatPosition.x}px), ${chatPosition.y}px)`,
-            transition: isDragging ? 'none' : 'transform 0.1s ease-out'
-          }}
-        >
+        <div className="absolute top-4 sm:top-4 left-1/2 -translate-x-1/2 z-30 pointer-events-none px-3 sm:px-4 pt-[env(safe-area-inset-top)] w-full max-w-2xl">
           <div
             className={`pointer-events-auto w-full transition-all duration-500 ease-out ${
               messages.length > 0 || streamingResponse
@@ -1960,19 +1954,15 @@ Style: Dreamlike, cinematic photography, soft ethereal lighting with gentle glow
                 : 'max-w-lg mx-auto'
             }`}
           >
-            {/* Chat Panel Container - Draggable when collapsed, tap to expand */}
+            {/* Chat Panel Container */}
             <div
               ref={chatPanelRef}
-              onMouseDown={isChatCollapsed && (messages.length > 0 || streamingResponse) ? handleDragStart : undefined}
-              onMouseUp={handleChatPanelTap}
-              onTouchStart={isChatCollapsed && (messages.length > 0 || streamingResponse) ? handleDragStart : undefined}
-              onTouchEnd={handleChatPanelTap}
               className={`relative bg-black/40 backdrop-blur-sm rounded-3xl border border-white/10 overflow-hidden shadow-2xl transition-all duration-500 ${
                 messages.length > 0 || streamingResponse
                   ? 'shadow-cyan-500/10'
                   : 'shadow-black/50'
-              } ${isChatCollapsed && (messages.length > 0 || streamingResponse) ? 'cursor-grab active:cursor-grabbing hover:bg-black/50 hover:border-white/20' : ''}`}
-              style={{ boxShadow: '0 25px 80px rgba(0, 0, 0, 0.3)', userSelect: isDragging ? 'none' : 'auto' }}
+              }`}
+              style={{ boxShadow: '0 25px 80px rgba(0, 0, 0, 0.3)' }}
             >
               {/* Header - Only shown when there are messages and not collapsed */}
               {(messages.length > 0 || streamingResponse) && !isChatCollapsed && (
@@ -1993,19 +1983,17 @@ Style: Dreamlike, cinematic photography, soft ethereal lighting with gentle glow
                 </div>
               )}
 
-              {/* Collapsed State - Clean minimal bar */}
+              {/* Collapsed State - Show message count indicator */}
               {isChatCollapsed && (messages.length > 0 || streamingResponse) && (
-                <div className="px-5 py-4 flex items-center justify-between select-none min-h-[56px] bg-black/60">
-                  <div className="flex items-center gap-3 text-white/70">
-                    <div className="w-2.5 h-2.5 rounded-full bg-cyan-400 animate-pulse" />
-                    <span className="text-sm font-medium">{messages.length} messages</span>
-                  </div>
-                  <div className="flex items-center gap-2 text-white/50">
-                    <span className="text-xs hidden sm:inline">Tap to expand</span>
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                      <path d="M6 9l6 6 6-6"/>
-                    </svg>
-                  </div>
+                <div
+                  className="px-4 py-2 flex items-center justify-center gap-2 text-white/50 cursor-pointer hover:text-white/70 transition-colors"
+                  onClick={() => setIsChatCollapsed(false)}
+                >
+                  <div className="w-2 h-2 rounded-full bg-cyan-400 animate-pulse" />
+                  <span className="text-xs">{messages.length} messages</span>
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <path d="M6 9l6 6 6-6"/>
+                  </svg>
                 </div>
               )}
 
@@ -2220,9 +2208,8 @@ Style: Dreamlike, cinematic photography, soft ethereal lighting with gentle glow
                 </div>
               )}
 
-              {/* Input Area - Hidden when collapsed */}
-              {!isChatCollapsed && (
-              <div className={`p-4 ${messages.length > 0 || streamingResponse ? 'border-t border-white/5' : ''}`}>
+              {/* Input Area - Always visible */}
+              <div className={`p-4 ${(messages.length > 0 || streamingResponse) && !isChatCollapsed ? 'border-t border-white/5' : ''}`}>
                 <form onSubmit={handleChatSubmit} className="relative group w-full">
                   {/* Ambient glow behind input */}
                   <div
@@ -2313,7 +2300,6 @@ Style: Dreamlike, cinematic photography, soft ethereal lighting with gentle glow
                   </div>
                 </form>
               </div>
-              )}
             </div>
           </div>
         </div>
