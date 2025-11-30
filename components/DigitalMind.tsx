@@ -463,36 +463,77 @@ export default function DigitalMind() {
   }, [messages.length, streamingResponse]);
 
   // Load Kevin's reference images for character-consistent image generation
+  // ROBUST IMPLEMENTATION: Caching, retries, compression, and error handling
   useEffect(() => {
-    const loadKevinImages = async () => {
-      // List of Kevin's reference images (up to 5 for human character consistency)
-      const kevinImageFiles = [
-        '/images/IMG_0204.JPG',
-        '/images/IMG_0411.JPG',
-        '/images/IMG_8639.JPG',
-        '/images/IMG_8770.JPG',
-        '/images/IMG_1944.jpeg'
-      ];
+    const CACHE_KEY = 'kevin_reference_images_v2';
+    const MAX_IMAGE_DIMENSION = 1024; // Resize large images to max 1024px for faster loading
+    const MAX_RETRIES = 3;
+    const RETRY_DELAY = 1000; // 1 second base delay
 
-      const loadedImages: Array<{ inlineData: { mimeType: string; data: string } }> = [];
-
-      for (const imagePath of kevinImageFiles) {
-        try {
-          const response = await fetch(imagePath);
-          if (!response.ok) {
-            console.warn(`Failed to fetch Kevin image: ${imagePath} (${response.status})`);
-            continue;
+    // Helper: Resize image if too large (reduces load time and API payload)
+    const resizeImageIfNeeded = (base64: string, mimeType: string): Promise<string> => {
+      return new Promise((resolve) => {
+        const img = new Image();
+        img.onload = () => {
+          // Only resize if larger than max dimension
+          if (img.width <= MAX_IMAGE_DIMENSION && img.height <= MAX_IMAGE_DIMENSION) {
+            resolve(base64);
+            return;
           }
+
+          // Calculate new dimensions maintaining aspect ratio
+          let newWidth = img.width;
+          let newHeight = img.height;
+          if (img.width > img.height) {
+            newWidth = MAX_IMAGE_DIMENSION;
+            newHeight = Math.round((img.height / img.width) * MAX_IMAGE_DIMENSION);
+          } else {
+            newHeight = MAX_IMAGE_DIMENSION;
+            newWidth = Math.round((img.width / img.height) * MAX_IMAGE_DIMENSION);
+          }
+
+          // Draw resized image to canvas
+          const canvas = document.createElement('canvas');
+          canvas.width = newWidth;
+          canvas.height = newHeight;
+          const ctx = canvas.getContext('2d');
+          if (ctx) {
+            ctx.drawImage(img, 0, 0, newWidth, newHeight);
+            // Convert back to base64 (use JPEG for smaller size)
+            const resizedBase64 = canvas.toDataURL('image/jpeg', 0.85).split(',')[1];
+            console.log(`Resized image from ${img.width}x${img.height} to ${newWidth}x${newHeight}`);
+            resolve(resizedBase64);
+          } else {
+            resolve(base64);
+          }
+        };
+        img.onerror = () => resolve(base64); // Fallback to original on error
+        img.src = `data:${mimeType};base64,${base64}`;
+      });
+    };
+
+    // Helper: Fetch single image with retries
+    const fetchImageWithRetry = async (url: string, retries: number = MAX_RETRIES): Promise<{ mimeType: string; data: string } | null> => {
+      for (let attempt = 1; attempt <= retries; attempt++) {
+        try {
+          const response = await fetch(url, {
+            cache: 'force-cache', // Use browser cache when possible
+            mode: 'cors'
+          });
+
+          if (!response.ok) {
+            throw new Error(`HTTP ${response.status}`);
+          }
+
           const blob = await response.blob();
           if (blob.size === 0) {
-            console.warn(`Empty blob for Kevin image: ${imagePath}`);
-            continue;
+            throw new Error('Empty blob');
           }
+
           const base64 = await new Promise<string>((resolve, reject) => {
             const reader = new FileReader();
             reader.onloadend = () => {
               const result = reader.result as string;
-              // Extract base64 data after the comma
               const base64Data = result.split(',')[1];
               if (base64Data) {
                 resolve(base64Data);
@@ -505,24 +546,82 @@ export default function DigitalMind() {
           });
 
           const mimeType = blob.type || 'image/jpeg';
-          loadedImages.push({
-            inlineData: {
-              mimeType,
-              data: base64
-            }
-          });
-          console.log(`Loaded Kevin reference image: ${imagePath} (${Math.round(base64.length / 1024)}KB)`);
+
+          // Resize if needed for faster API calls
+          const optimizedBase64 = await resizeImageIfNeeded(base64, mimeType);
+
+          return { mimeType: 'image/jpeg', data: optimizedBase64 };
         } catch (e) {
-          console.warn(`Failed to load Kevin image: ${imagePath}`, e);
+          console.warn(`Attempt ${attempt}/${retries} failed for ${url}:`, e);
+          if (attempt < retries) {
+            await new Promise(resolve => setTimeout(resolve, RETRY_DELAY * attempt));
+          }
         }
       }
+      return null;
+    };
 
-      kevinReferenceImagesRef.current = loadedImages;
-      setKevinImagesLoaded(true);
-      console.log(`Loaded ${loadedImages.length} Kevin reference images for character-consistent generation`);
+    const loadKevinImages = async () => {
+      console.log('Loading Kevin reference images for character-consistent generation...');
 
-      if (loadedImages.length === 0) {
-        console.error('WARNING: No Kevin reference images loaded! Images will not feature Kevin.');
+      // Try to load from localStorage cache first
+      try {
+        const cached = localStorage.getItem(CACHE_KEY);
+        if (cached) {
+          const parsedCache = JSON.parse(cached);
+          if (parsedCache.images && parsedCache.images.length >= 3) {
+            console.log(`Loaded ${parsedCache.images.length} Kevin images from cache`);
+            kevinReferenceImagesRef.current = parsedCache.images.map((img: { mimeType: string; data: string }) => ({
+              inlineData: img
+            }));
+            setKevinImagesLoaded(true);
+            return; // Successfully loaded from cache
+          }
+        }
+      } catch (e) {
+        console.warn('Cache read failed, loading fresh:', e);
+      }
+
+      // List of Kevin's reference images (up to 5 for human character consistency per Gemini docs)
+      const kevinImageFiles = [
+        '/images/IMG_0204.JPG',
+        '/images/IMG_0411.JPG',
+        '/images/IMG_8639.JPG',
+        '/images/IMG_8770.JPG',
+        '/images/IMG_1944.jpeg'
+      ];
+
+      // Load all images in parallel for speed
+      const loadPromises = kevinImageFiles.map(path => {
+        // Use absolute URL based on current origin
+        const absoluteUrl = `${window.location.origin}${path}`;
+        return fetchImageWithRetry(absoluteUrl);
+      });
+
+      const results = await Promise.all(loadPromises);
+      const loadedImages = results.filter((img): img is { mimeType: string; data: string } => img !== null);
+
+      if (loadedImages.length > 0) {
+        // Cache for future visits
+        try {
+          localStorage.setItem(CACHE_KEY, JSON.stringify({
+            images: loadedImages,
+            timestamp: Date.now()
+          }));
+          console.log(`Cached ${loadedImages.length} Kevin images for future visits`);
+        } catch (e) {
+          console.warn('Failed to cache images (storage full?):', e);
+        }
+
+        kevinReferenceImagesRef.current = loadedImages.map(img => ({
+          inlineData: img
+        }));
+        setKevinImagesLoaded(true);
+        console.log(`✓ Loaded ${loadedImages.length} Kevin reference images for character-consistent generation`);
+      } else {
+        console.error('CRITICAL: Failed to load ANY Kevin reference images after all retries!');
+        console.error('Image generation will be BLOCKED to prevent random people appearing.');
+        setKevinImagesLoaded(false);
       }
     };
 
