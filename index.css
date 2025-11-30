@@ -57,3 +57,53 @@ button, [role="button"] {
 .animate-blink {
   animation: blink 1s step-end infinite;
 }
+
+/* Floating particles animation for Thought Portal */
+@keyframes float {
+  0%, 100% {
+    transform: translateY(0) translateX(0);
+    opacity: 0.2;
+  }
+  25% {
+    transform: translateY(-20px) translateX(10px);
+    opacity: 0.4;
+  }
+  50% {
+    transform: translateY(-10px) translateX(-5px);
+    opacity: 0.3;
+  }
+  75% {
+    transform: translateY(-30px) translateX(5px);
+    opacity: 0.5;
+  }
+}
+
+.animate-float {
+  animation: float 10s ease-in-out infinite;
+}
+
+/* Scale in animation for Thought Portal */
+@keyframes scale-in {
+  0% {
+    opacity: 0;
+    transform: scale(0.9);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.animate-scale-in {
+  animation: scale-in 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+/* Constellation connection pulse */
+@keyframes connection-pulse {
+  0%, 100% { opacity: 0.3; }
+  50% { opacity: 0.7; }
+}
+
+.animate-connection-pulse {
+  animation: connection-pulse 3s ease-in-out infinite;
+}

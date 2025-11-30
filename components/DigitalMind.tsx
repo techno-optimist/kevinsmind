@@ -190,6 +190,19 @@ interface ConstellationNode {
   panelType?: 'moment' | 'feeling' | 'echo'; // Triptych panel type
   variations?: string[];         // Living memory variations for crossfade
   currentVariation?: number;     // Current variation index
+  imageUrl?: string;             // The generated image URL for portal view
+  contextText?: string;          // The AI response that spawned this memory
+  userInput?: string;            // What the user asked
+  timestamp?: number;            // When this memory was created
+  zone?: string;                 // Topic zone (technology, family, etc.)
+  semanticEmbedding?: number[];  // For constellation connections (semantic similarity)
+}
+
+// Thought Portal state - immersive full-screen memory view
+interface ThoughtPortalState {
+  node: ConstellationNode;
+  imageUrl: string;
+  isOpen: boolean;
 }
 
 // Cinematic aspect ratios based on emotional/topical tone
@@ -352,6 +365,7 @@ export default function DigitalMind() {
   const [isChatCollapsed, setIsChatCollapsed] = useState(false); // Collapsed = just input bar visible
   const [isNavigatingToImages, setIsNavigatingToImages] = useState(false);
   const [expandedPrompt, setExpandedPrompt] = useState<{ label: string; prompt: string } | null>(null);
+  const [thoughtPortal, setThoughtPortal] = useState<ThoughtPortalState | null>(null); // Immersive memory view
   const [streamingResponse, setStreamingResponse] = useState('');
   const streamingResponseRef = useRef('');
   const [pendingImages, setPendingImages] = useState<string[]>([]);
@@ -1165,7 +1179,11 @@ All should feature Kevin visibly in the scene, be dreamlike with soft ethereal l
                 shortLabel: labelText,
                 fullPrompt: scene?.prompt || '',
                 aspectRatio: aspectConfig.ratio,
-                panelType: scene.panelType
+                panelType: scene.panelType,
+                contextText: contextText,          // AI response that spawned this
+                userInput: lastUserInputRef.current, // User's question
+                timestamp: Date.now(),
+                zone: zone
             };
 
             S.constellationNodes.push(node);
@@ -1315,6 +1333,11 @@ STYLE: Dreamlike, ethereal, soft lighting with gentle glow. Dark moody backgroun
                             setIsImagining(false);
                             setImaginingLabel('');
                             setIsNavigatingToImages(false);
+                        }
+
+                        // Store image URL on the node for Thought Portal
+                        if (placeholder && placeholder.node) {
+                            placeholder.node.imageUrl = vignettedImage;
                         }
 
                         // Replace placeholder with real image
@@ -1733,11 +1756,21 @@ STYLE: Dreamlike, ethereal, soft lighting with gentle glow. Dark moody backgroun
             // Find the corresponding node
             const clickedMesh = intersects[0].object;
             const node = S.constellationNodes.find(n => n.mesh === clickedMesh);
-            if (node && node.shortLabel && node.fullPrompt) {
-                setExpandedPrompt({
-                    label: node.shortLabel,
-                    prompt: node.fullPrompt
-                });
+            if (node && node.shortLabel) {
+                // Open Thought Portal if image is available, otherwise show simple prompt
+                if (node.imageUrl) {
+                    setThoughtPortal({
+                        node: node,
+                        imageUrl: node.imageUrl,
+                        isOpen: true
+                    });
+                } else if (node.fullPrompt) {
+                    // Fallback to simple prompt view
+                    setExpandedPrompt({
+                        label: node.shortLabel,
+                        prompt: node.fullPrompt
+                    });
+                }
             }
         }
     };
@@ -2077,34 +2110,95 @@ STYLE: Dreamlike, ethereal, soft lighting with gentle glow. Dark moody backgroun
               return true;
           });
 
-          // Draw lines between nodes
+          // ============ CONSTELLATION CONNECTIONS ============
+          // Neural-network-like connections between related memory orbs
+          // Connections form based on:
+          // 1. Same zone (semantic similarity)
+          // 2. Same triptych panel type
+          // 3. Physical proximity
+          // 4. Temporal proximity (recent memories connect)
           if (S.constellationLines) {
               const positions = (S.constellationLines.geometry.attributes.position.array as Float32Array);
               let idx = 0;
               const nodes = S.constellationNodes;
 
-              // Connect nodes that are close to each other
+              // Calculate connection strength between nodes
+              const getConnectionStrength = (n1: ConstellationNode, n2: ConstellationNode): number => {
+                  let strength = 0;
+
+                  // Same zone = strong semantic connection
+                  if (n1.zone && n2.zone && n1.zone === n2.zone) {
+                      strength += 0.5;
+                  }
+
+                  // Same panel type = thematic connection
+                  if (n1.panelType && n2.panelType && n1.panelType === n2.panelType) {
+                      strength += 0.3;
+                  }
+
+                  // Temporal proximity (memories created close in time)
+                  if (n1.timestamp && n2.timestamp) {
+                      const timeDiff = Math.abs(n1.timestamp - n2.timestamp);
+                      if (timeDiff < 60000) strength += 0.4; // Within 1 minute
+                      else if (timeDiff < 300000) strength += 0.2; // Within 5 minutes
+                  }
+
+                  // Physical proximity bonus
+                  const dist = n1.mesh.position.distanceTo(n2.mesh.position);
+                  if (dist < 20) strength += 0.3;
+                  else if (dist < 40) strength += 0.1;
+
+                  return Math.min(strength, 1.0);
+              };
+
+              // Build connections based on semantic and spatial relationships
+              const maxConnections = 100;
+              const connections: Array<{ n1: ConstellationNode; n2: ConstellationNode; strength: number }> = [];
+
               for (let i = 0; i < nodes.length; i++) {
                   for (let j = i + 1; j < nodes.length; j++) {
                       const n1 = nodes[i];
                       const n2 = nodes[j];
-                      const dist = n1.mesh.position.distanceTo(n2.mesh.position);
 
-                      // Only connect if visible and somewhat close
-                      if (dist < 35 && idx < positions.length - 6 && n1.mesh.material.opacity > 0.2 && n2.mesh.material.opacity > 0.2) {
-                          positions[idx++] = n1.mesh.position.x;
-                          positions[idx++] = n1.mesh.position.y;
-                          positions[idx++] = n1.mesh.position.z;
-                          positions[idx++] = n2.mesh.position.x;
-                          positions[idx++] = n2.mesh.position.y;
-                          positions[idx++] = n2.mesh.position.z;
+                      // Skip if either node is too faded
+                      if (n1.mesh.material.opacity < 0.2 || n2.mesh.material.opacity < 0.2) continue;
+
+                      const dist = n1.mesh.position.distanceTo(n2.mesh.position);
+                      // Maximum distance for any connection
+                      if (dist > 60) continue;
+
+                      const strength = getConnectionStrength(n1, n2);
+
+                      // Only create connection if there's meaningful relationship
+                      if (strength > 0.2) {
+                          connections.push({ n1, n2, strength });
                       }
                   }
+              }
+
+              // Sort by strength and take top connections
+              connections.sort((a, b) => b.strength - a.strength);
+              const topConnections = connections.slice(0, maxConnections);
+
+              // Draw the connections
+              for (const conn of topConnections) {
+                  if (idx >= positions.length - 6) break;
+
+                  positions[idx++] = conn.n1.mesh.position.x;
+                  positions[idx++] = conn.n1.mesh.position.y;
+                  positions[idx++] = conn.n1.mesh.position.z;
+                  positions[idx++] = conn.n2.mesh.position.x;
+                  positions[idx++] = conn.n2.mesh.position.y;
+                  positions[idx++] = conn.n2.mesh.position.z;
               }
 
               // Zero out remaining
               for (let i = idx; i < positions.length; i++) positions[i] = 0;
               S.constellationLines.geometry.attributes.position.needsUpdate = true;
+
+              // Animate connection opacity based on time for "neural pulse" effect
+              const pulseOpacity = 0.1 + Math.sin(t * 0.5) * 0.05;
+              (S.constellationLines.material as THREE.LineBasicMaterial).opacity = pulseOpacity;
           }
       }
 
@@ -2272,6 +2366,147 @@ STYLE: Dreamlike, ethereal, soft lighting with gentle glow. Dark moody backgroun
               </p>
             </div>
           </div>
+        </div>
+      )}
+
+      {/* ============================================
+          THOUGHT PORTAL - Immersive Memory Experience
+          Full-screen view with parallax, blur, cinematic typography
+          ============================================ */}
+      {thoughtPortal && thoughtPortal.isOpen && (
+        <div
+          className="fixed inset-0 z-50 animate-fade-in"
+          onClick={() => setThoughtPortal(null)}
+        >
+          {/* Blurred background - the 3D scene continues behind */}
+          <div className="absolute inset-0 bg-black/80 backdrop-blur-xl" />
+
+          {/* Parallax container with depth effect */}
+          <div className="absolute inset-0 flex items-center justify-center overflow-hidden">
+            {/* Background glow layer - furthest back */}
+            <div
+              className="absolute inset-0 opacity-30"
+              style={{
+                background: `radial-gradient(ellipse at center, ${
+                  thoughtPortal.node.zone === 'family' ? 'rgba(255, 179, 71, 0.3)' :
+                  thoughtPortal.node.zone === 'technology' ? 'rgba(77, 208, 225, 0.3)' :
+                  thoughtPortal.node.zone === 'consciousness' ? 'rgba(107, 76, 154, 0.3)' :
+                  'rgba(100, 100, 150, 0.3)'
+                } 0%, transparent 70%)`
+              }}
+            />
+
+            {/* Floating particles effect */}
+            <div className="absolute inset-0 overflow-hidden pointer-events-none">
+              {[...Array(20)].map((_, i) => (
+                <div
+                  key={i}
+                  className="absolute w-1 h-1 rounded-full bg-white/20 animate-float"
+                  style={{
+                    left: `${Math.random() * 100}%`,
+                    top: `${Math.random() * 100}%`,
+                    animationDelay: `${Math.random() * 5}s`,
+                    animationDuration: `${8 + Math.random() * 4}s`
+                  }}
+                />
+              ))}
+            </div>
+
+            {/* Main image container with parallax hover effect */}
+            <div
+              className="relative z-10 max-w-4xl mx-4 animate-scale-in"
+              onClick={(e) => e.stopPropagation()}
+            >
+              {/* The memory image */}
+              <div className="relative group">
+                {/* Outer glow */}
+                <div className="absolute -inset-4 bg-gradient-to-br from-white/10 via-transparent to-white/5 rounded-3xl blur-xl opacity-50" />
+
+                {/* Image frame */}
+                <div className="relative overflow-hidden rounded-2xl border border-white/20 shadow-2xl shadow-black/50">
+                  <img
+                    src={thoughtPortal.imageUrl}
+                    alt={thoughtPortal.node.shortLabel}
+                    className="w-full max-h-[60vh] object-contain"
+                  />
+
+                  {/* Subtle overlay gradient */}
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-transparent pointer-events-none" />
+                </div>
+
+                {/* Panel type badge */}
+                {thoughtPortal.node.panelType && (
+                  <div className="absolute top-4 left-4 px-3 py-1 rounded-full bg-black/50 backdrop-blur-sm border border-white/20">
+                    <span className="text-xs uppercase tracking-widest text-white/70">
+                      {thoughtPortal.node.panelType === 'moment' ? '◉ The Moment' :
+                       thoughtPortal.node.panelType === 'feeling' ? '♡ The Feeling' :
+                       '∞ The Echo'}
+                    </span>
+                  </div>
+                )}
+              </div>
+
+              {/* Cinematic typography below image */}
+              <div className="mt-8 text-center space-y-4 px-4">
+                {/* Memory label */}
+                <h2 className="text-2xl sm:text-3xl font-light tracking-wide text-white/90 uppercase">
+                  {thoughtPortal.node.shortLabel}
+                </h2>
+
+                {/* The scene description */}
+                <p className="text-white/60 text-sm sm:text-base leading-relaxed max-w-2xl mx-auto italic">
+                  "{thoughtPortal.node.fullPrompt}"
+                </p>
+
+                {/* Context: what the user asked */}
+                {thoughtPortal.node.userInput && (
+                  <div className="pt-4 border-t border-white/10 mt-6">
+                    <p className="text-white/30 text-xs uppercase tracking-widest mb-2">In response to</p>
+                    <p className="text-white/50 text-sm">"{thoughtPortal.node.userInput}"</p>
+                  </div>
+                )}
+
+                {/* Zone indicator */}
+                {thoughtPortal.node.zone && thoughtPortal.node.zone !== 'ambient' && (
+                  <div className="flex justify-center gap-2 mt-4">
+                    <span className={`px-3 py-1 rounded-full text-xs uppercase tracking-wider border ${
+                      thoughtPortal.node.zone === 'family' ? 'text-orange-300/80 border-orange-400/30 bg-orange-500/10' :
+                      thoughtPortal.node.zone === 'technology' ? 'text-cyan-300/80 border-cyan-400/30 bg-cyan-500/10' :
+                      thoughtPortal.node.zone === 'consciousness' ? 'text-purple-300/80 border-purple-400/30 bg-purple-500/10' :
+                      'text-amber-300/80 border-amber-400/30 bg-amber-500/10'
+                    }`}>
+                      {thoughtPortal.node.zone === 'family' ? '♥ Family' :
+                       thoughtPortal.node.zone === 'technology' ? '⚡ Technology' :
+                       thoughtPortal.node.zone === 'consciousness' ? '✧ Consciousness' :
+                       '◆ Projects'}
+                    </span>
+                    {thoughtPortal.node.aspectRatio && (
+                      <span className="px-3 py-1 rounded-full text-xs text-white/40 border border-white/10">
+                        {thoughtPortal.node.aspectRatio}
+                      </span>
+                    )}
+                  </div>
+                )}
+              </div>
+
+              {/* Close hint */}
+              <div className="mt-8 text-center">
+                <p className="text-white/20 text-xs uppercase tracking-widest">
+                  Tap anywhere to close
+                </p>
+              </div>
+            </div>
+          </div>
+
+          {/* Close button */}
+          <button
+            onClick={() => setThoughtPortal(null)}
+            className="absolute top-6 right-6 p-3 rounded-full bg-black/40 backdrop-blur-sm border border-white/20 text-white/60 hover:text-white hover:bg-black/60 transition-all z-20"
+          >
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <path d="M18 6L6 18M6 6l12 12"/>
+            </svg>
+          </button>
         </div>
       )}
 
