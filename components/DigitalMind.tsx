@@ -2897,9 +2897,9 @@ STYLE: Dreamlike, ethereal, soft lighting with gentle glow. Dark moody backgroun
         </div>
       )}
 
-      {/* Floating Navigation Orbs - anchored bottom right, inline */}
+      {/* Floating Navigation Orbs - centered horizontally at bottom */}
       <div
-        className={`absolute z-20 pointer-events-auto right-4 sm:right-8 bottom-28 sm:bottom-8 flex flex-row gap-4 sm:gap-6 transition-all duration-500 ${
+        className={`absolute z-20 pointer-events-auto left-1/2 -translate-x-1/2 bottom-28 sm:bottom-8 flex flex-row gap-4 sm:gap-6 transition-all duration-500 ${
           !isChatCollapsed && (messages.length > 0 || streamingResponse) ? 'opacity-0 pointer-events-none translate-y-4' : 'opacity-100 translate-y-0'
         }`}
       >
