@@ -473,27 +473,40 @@ export default function DigitalMind() {
     };
   }, [isDragging]);
 
-  // Handle tap to expand collapsed chat (only if not dragged)
-  const handleChatPanelTap = useCallback(() => {
-    if (!wasDragRef.current && isChatCollapsed && (messages.length > 0 || streamingResponse)) {
-      setIsChatCollapsed(false);
-    }
-    wasDragRef.current = false;
-  }, [isChatCollapsed, messages.length, streamingResponse]);
-
   // Auto-collapse chat when user takes manual control of constellation
   // But NOT if they're interacting with the chat panel itself
   const isInteractingWithChatRef = useRef(false);
+  const pendingExpandRef = useRef(false); // Track if we're trying to expand
   useEffect(() => {
-    if (manualControl && !isInteractingWithChatRef.current) {
+    // Don't auto-collapse if user is interacting with chat OR if there's a pending expand
+    if (manualControl && !isInteractingWithChatRef.current && !pendingExpandRef.current) {
       setIsChatCollapsed(true);
     }
   }, [manualControl]);
 
+  // Robust expand function that prevents race conditions
+  const expandChat = useCallback(() => {
+    pendingExpandRef.current = true;
+    isInteractingWithChatRef.current = true;
+    setIsChatCollapsed(false);
+    // Reset flags after React has processed the state update
+    setTimeout(() => {
+      pendingExpandRef.current = false;
+      isInteractingWithChatRef.current = false;
+    }, 200);
+  }, []);
+
   // Expand chat when new streaming response starts (but not during image navigation)
   useEffect(() => {
     if (streamingResponse && !isNavigatingToImages) {
+      // Set flags to prevent any race conditions with auto-collapse
+      pendingExpandRef.current = true;
+      isInteractingWithChatRef.current = true;
       setIsChatCollapsed(false);
+      setTimeout(() => {
+        pendingExpandRef.current = false;
+        isInteractingWithChatRef.current = false;
+      }, 200);
     }
   }, [streamingResponse, isNavigatingToImages]);
 
@@ -1533,8 +1546,7 @@ STYLE: Dreamlike, ethereal, soft lighting with gentle glow. Dark moody backgroun
     setActivePanel(null);
 
     // Ensure chat is visible and expanded
-    setIsChatCollapsed(false);
-    isChatCollapsedRef.current = false;
+    expandChat();
 
     const userMessage = topic.twinPrompt;
     setInputText('');
@@ -2452,31 +2464,33 @@ STYLE: Dreamlike, ethereal, soft lighting with gentle glow. Dark moody backgroun
             {/* Chat Panel Container - Click anywhere to expand when collapsed */}
             <div
               ref={chatPanelRef}
-              onMouseDown={() => {
+              onMouseDown={(e) => {
                 // Mark that we're interacting with chat to prevent auto-collapse
                 isInteractingWithChatRef.current = true;
+                pendingExpandRef.current = true;
+                // Stop propagation to prevent OrbitControls from receiving this event
+                e.stopPropagation();
               }}
-              onTouchStart={() => {
+              onTouchStart={(e) => {
                 // Mark that we're interacting with chat to prevent auto-collapse
                 isInteractingWithChatRef.current = true;
+                pendingExpandRef.current = true;
+                // Stop propagation to prevent OrbitControls from receiving this event
+                e.stopPropagation();
               }}
               onClick={() => {
                 // Expand on click if collapsed (and wasn't a drag)
                 if (!wasDragRef.current && isChatCollapsed && (messages.length > 0 || streamingResponse)) {
-                  setIsChatCollapsed(false);
+                  expandChat();
                 }
                 wasDragRef.current = false;
-                // Reset interaction flag after a short delay
-                setTimeout(() => { isInteractingWithChatRef.current = false; }, 100);
               }}
               onTouchEnd={() => {
                 // Handle touch tap to expand (mobile)
                 if (!wasDragRef.current && isChatCollapsed && (messages.length > 0 || streamingResponse)) {
-                  setIsChatCollapsed(false);
+                  expandChat();
                 }
                 wasDragRef.current = false;
-                // Reset interaction flag after a short delay
-                setTimeout(() => { isInteractingWithChatRef.current = false; }, 100);
               }}
               className={`relative bg-black/40 backdrop-blur-sm rounded-3xl border border-white/10 overflow-hidden shadow-2xl transition-all duration-500 ${
                 messages.length > 0 || streamingResponse
@@ -2512,7 +2526,7 @@ STYLE: Dreamlike, ethereal, soft lighting with gentle glow. Dark moody backgroun
                 onClick={() => {
                   // Only expand if it wasn't a drag
                   if (!wasDragRef.current && isChatCollapsed && (messages.length > 0 || streamingResponse)) {
-                    setIsChatCollapsed(false);
+                    expandChat();
                   }
                 }}
               >
@@ -2542,7 +2556,10 @@ STYLE: Dreamlike, ethereal, soft lighting with gentle glow. Dark moody backgroun
               {isChatCollapsed && (messages.length > 0 || streamingResponse) && (
                 <div
                   className="px-4 py-1 flex items-center justify-center gap-2 text-white/50 cursor-pointer hover:text-white/70 transition-colors"
-                  onClick={() => setIsChatCollapsed(false)}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    expandChat();
+                  }}
                 >
                   <div className="w-2 h-2 rounded-full bg-cyan-400 animate-pulse" />
                   <span className="text-xs">{messages.length} messages — tap to expand</span>
@@ -2790,7 +2807,7 @@ STYLE: Dreamlike, ethereal, soft lighting with gentle glow. Dark moody backgroun
                       onClick={() => {
                         // Expand chat when clicking on input area (if collapsed with messages)
                         if (isChatCollapsed && (messages.length > 0 || streamingResponse)) {
-                          setIsChatCollapsed(false);
+                          expandChat();
                         }
                       }}
                     >
@@ -2802,21 +2819,21 @@ STYLE: Dreamlike, ethereal, soft lighting with gentle glow. Dark moody backgroun
                           // Expand IMMEDIATELY on mouse down (before focus steals click)
                           wasDragRef.current = false;
                           if (isChatCollapsed && (messages.length > 0 || streamingResponse)) {
-                            setIsChatCollapsed(false);
+                            expandChat();
                           }
                         }}
                         onTouchStart={() => {
                           // Handle touch tap on input (mobile) - fires before touchEnd
                           wasDragRef.current = false;
                           if (isChatCollapsed && (messages.length > 0 || streamingResponse)) {
-                            setIsChatCollapsed(false);
+                            expandChat();
                           }
                         }}
                         onFocus={() => {
                           // Also expand on focus (keyboard navigation, etc.)
                           wasDragRef.current = false;
                           if (isChatCollapsed && (messages.length > 0 || streamingResponse)) {
-                            setIsChatCollapsed(false);
+                            expandChat();
                           }
                         }}
                         placeholder={isConnected ? "listening..." : "What's on your mind?"}
@@ -2880,9 +2897,9 @@ STYLE: Dreamlike, ethereal, soft lighting with gentle glow. Dark moody backgroun
         </div>
       )}
 
-      {/* Floating Navigation Orbs - anchored bottom right, inline */}
+      {/* Floating Navigation Orbs - centered horizontally at bottom */}
       <div
-        className={`absolute z-20 pointer-events-auto right-4 sm:right-8 bottom-28 sm:bottom-8 flex flex-row gap-4 sm:gap-6 transition-all duration-500 ${
+        className={`absolute z-20 pointer-events-auto left-1/2 -translate-x-1/2 bottom-28 sm:bottom-8 flex flex-row gap-4 sm:gap-6 transition-all duration-500 ${
           !isChatCollapsed && (messages.length > 0 || streamingResponse) ? 'opacity-0 pointer-events-none translate-y-4' : 'opacity-100 translate-y-0'
         }`}
       >
