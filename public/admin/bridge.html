@@ -1,0 +1,354 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Bridge Connections - Admin</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    body { background: #030308; }
+    .custom-scrollbar::-webkit-scrollbar { width: 6px; }
+    .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
+    .custom-scrollbar::-webkit-scrollbar-thumb { background: #333; border-radius: 3px; }
+  </style>
+</head>
+<body class="min-h-screen text-white p-4 md:p-8">
+  <div class="max-w-6xl mx-auto">
+    <!-- Header -->
+    <div class="flex items-center justify-between mb-8">
+      <div>
+        <h1 class="text-2xl md:text-3xl font-light text-cyan-200 tracking-wide">Bridge Connections</h1>
+        <p class="text-white/40 text-sm mt-1">People reaching out through Kevin's Digital Mind</p>
+      </div>
+      <div class="flex items-center gap-4">
+        <button onclick="loadConversations()" class="px-4 py-2 rounded-lg bg-white/5 border border-white/10 text-white/60 hover:text-white hover:border-white/20 transition-all text-sm">
+          Refresh
+        </button>
+        <a href="/" class="px-4 py-2 rounded-lg bg-cyan-500/10 border border-cyan-500/20 text-cyan-300 hover:bg-cyan-500/20 transition-all text-sm">
+          Back to Mind
+        </a>
+      </div>
+    </div>
+
+    <!-- Stats Bar -->
+    <div id="stats" class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
+      <div class="p-4 rounded-xl bg-white/[0.03] border border-white/5">
+        <p class="text-white/40 text-xs uppercase tracking-wider mb-1">Total</p>
+        <p id="stat-total" class="text-2xl font-light text-white">-</p>
+      </div>
+      <div class="p-4 rounded-xl bg-cyan-500/5 border border-cyan-500/10">
+        <p class="text-cyan-400/60 text-xs uppercase tracking-wider mb-1">New</p>
+        <p id="stat-new" class="text-2xl font-light text-cyan-300">-</p>
+      </div>
+      <div class="p-4 rounded-xl bg-amber-500/5 border border-amber-500/10">
+        <p class="text-amber-400/60 text-xs uppercase tracking-wider mb-1">Read</p>
+        <p id="stat-read" class="text-2xl font-light text-amber-300">-</p>
+      </div>
+      <div class="p-4 rounded-xl bg-green-500/5 border border-green-500/10">
+        <p class="text-green-400/60 text-xs uppercase tracking-wider mb-1">Replied</p>
+        <p id="stat-replied" class="text-2xl font-light text-green-300">-</p>
+      </div>
+    </div>
+
+    <!-- Filter Tabs -->
+    <div class="flex gap-2 mb-6 overflow-x-auto pb-2">
+      <button onclick="filterBy('all')" data-filter="all" class="filter-btn active px-4 py-2 rounded-lg bg-white/10 text-white text-sm whitespace-nowrap">All</button>
+      <button onclick="filterBy('new')" data-filter="new" class="filter-btn px-4 py-2 rounded-lg bg-white/5 text-white/50 hover:text-white text-sm whitespace-nowrap">New</button>
+      <button onclick="filterBy('read')" data-filter="read" class="filter-btn px-4 py-2 rounded-lg bg-white/5 text-white/50 hover:text-white text-sm whitespace-nowrap">Read</button>
+      <button onclick="filterBy('replied')" data-filter="replied" class="filter-btn px-4 py-2 rounded-lg bg-white/5 text-white/50 hover:text-white text-sm whitespace-nowrap">Replied</button>
+      <button onclick="filterBy('archived')" data-filter="archived" class="filter-btn px-4 py-2 rounded-lg bg-white/5 text-white/50 hover:text-white text-sm whitespace-nowrap">Archived</button>
+    </div>
+
+    <!-- Conversations List -->
+    <div id="conversations" class="space-y-4">
+      <div class="text-center py-20 text-white/30">Loading...</div>
+    </div>
+
+    <!-- Empty State -->
+    <div id="empty-state" class="hidden text-center py-20">
+      <div class="w-20 h-20 mx-auto mb-6 rounded-full bg-white/5 flex items-center justify-center">
+        <svg class="w-10 h-10 text-white/20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1">
+          <path d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"/>
+        </svg>
+      </div>
+      <h3 class="text-white/50 text-lg mb-2">No connections yet</h3>
+      <p class="text-white/30 text-sm">When visitors reach out through The Bridge, their conversations will appear here.</p>
+    </div>
+  </div>
+
+  <!-- Detail Modal -->
+  <div id="detail-modal" class="fixed inset-0 z-50 hidden items-center justify-center p-4 bg-black/80 backdrop-blur-sm">
+    <div class="relative w-full max-w-2xl max-h-[90vh] bg-gradient-to-br from-slate-900 via-black to-slate-900 rounded-2xl border border-white/10 overflow-hidden flex flex-col">
+      <!-- Modal Header -->
+      <div class="p-6 border-b border-white/5 flex items-start justify-between">
+        <div>
+          <h2 id="modal-name" class="text-xl font-light text-white mb-1">Visitor Name</h2>
+          <p id="modal-email" class="text-cyan-400/70 text-sm">email@example.com</p>
+          <p id="modal-date" class="text-white/30 text-xs mt-2">Date</p>
+        </div>
+        <button onclick="closeModal()" class="p-2 text-white/40 hover:text-white transition-colors">
+          <svg class="w-6 h-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M18 6L6 18M6 6l12 12"/>
+          </svg>
+        </button>
+      </div>
+
+      <!-- Conversation -->
+      <div id="modal-conversation" class="flex-1 p-6 overflow-y-auto custom-scrollbar space-y-4">
+        <!-- Messages will be inserted here -->
+      </div>
+
+      <!-- Twin Summary -->
+      <div id="modal-summary" class="p-4 bg-violet-500/5 border-t border-violet-500/10">
+        <p class="text-violet-400/60 text-xs uppercase tracking-wider mb-2">Twin's Assessment</p>
+        <p id="modal-summary-text" class="text-white/70 text-sm">Summary text</p>
+      </div>
+
+      <!-- Actions -->
+      <div class="p-4 border-t border-white/5 flex items-center justify-between gap-3">
+        <div class="flex items-center gap-2">
+          <select id="modal-status" onchange="updateStatus()" class="px-3 py-2 rounded-lg bg-white/5 border border-white/10 text-white text-sm focus:outline-none focus:border-cyan-500/40">
+            <option value="new">New</option>
+            <option value="read">Read</option>
+            <option value="replied">Replied</option>
+            <option value="archived">Archived</option>
+          </select>
+        </div>
+        <div class="flex items-center gap-2">
+          <a id="modal-email-link" href="#" class="px-4 py-2 rounded-lg bg-cyan-500/10 border border-cyan-500/20 text-cyan-300 text-sm hover:bg-cyan-500/20 transition-all">
+            Reply via Email
+          </a>
+          <button onclick="deleteConversation()" class="px-4 py-2 rounded-lg bg-red-500/10 border border-red-500/20 text-red-400 text-sm hover:bg-red-500/20 transition-all">
+            Delete
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    let conversations = [];
+    let currentFilter = 'all';
+    let currentConversation = null;
+
+    // Load conversations on page load
+    document.addEventListener('DOMContentLoaded', loadConversations);
+
+    async function loadConversations() {
+      try {
+        const res = await fetch('/api/bridge');
+        conversations = await res.json();
+        updateStats();
+        renderConversations();
+      } catch (err) {
+        console.error('Failed to load conversations:', err);
+        document.getElementById('conversations').innerHTML =
+          '<div class="text-center py-20 text-red-400/60">Failed to load conversations</div>';
+      }
+    }
+
+    function updateStats() {
+      const total = conversations.length;
+      const newCount = conversations.filter(c => c.status === 'new').length;
+      const readCount = conversations.filter(c => c.status === 'read').length;
+      const repliedCount = conversations.filter(c => c.status === 'replied').length;
+
+      document.getElementById('stat-total').textContent = total;
+      document.getElementById('stat-new').textContent = newCount;
+      document.getElementById('stat-read').textContent = readCount;
+      document.getElementById('stat-replied').textContent = repliedCount;
+    }
+
+    function filterBy(filter) {
+      currentFilter = filter;
+
+      // Update button styles
+      document.querySelectorAll('.filter-btn').forEach(btn => {
+        if (btn.dataset.filter === filter) {
+          btn.classList.remove('bg-white/5', 'text-white/50');
+          btn.classList.add('bg-white/10', 'text-white', 'active');
+        } else {
+          btn.classList.add('bg-white/5', 'text-white/50');
+          btn.classList.remove('bg-white/10', 'text-white', 'active');
+        }
+      });
+
+      renderConversations();
+    }
+
+    function renderConversations() {
+      const filtered = currentFilter === 'all'
+        ? conversations
+        : conversations.filter(c => c.status === currentFilter);
+
+      const container = document.getElementById('conversations');
+      const emptyState = document.getElementById('empty-state');
+
+      if (filtered.length === 0) {
+        container.innerHTML = '';
+        emptyState.classList.remove('hidden');
+        return;
+      }
+
+      emptyState.classList.add('hidden');
+
+      container.innerHTML = filtered.map(conv => {
+        const date = new Date(conv.timestamp).toLocaleDateString('en-US', {
+          month: 'short', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit'
+        });
+
+        const statusColors = {
+          new: 'bg-cyan-500/20 text-cyan-300 border-cyan-500/30',
+          read: 'bg-amber-500/20 text-amber-300 border-amber-500/30',
+          replied: 'bg-green-500/20 text-green-300 border-green-500/30',
+          archived: 'bg-white/10 text-white/50 border-white/20'
+        };
+
+        const topicColors = {
+          technology: 'text-cyan-400',
+          family: 'text-orange-400',
+          consciousness: 'text-purple-400',
+          projects: 'text-amber-400',
+          speaking: 'text-emerald-400',
+          general: 'text-white/50'
+        };
+
+        // Get first visitor message as preview
+        const firstVisitorMsg = conv.conversation?.find(m => m.role === 'visitor');
+        const preview = firstVisitorMsg?.content?.substring(0, 150) || 'No message';
+
+        return `
+          <div onclick="openDetail('${conv.filename}')" class="p-5 rounded-xl bg-white/[0.02] border border-white/5 hover:border-cyan-500/20 hover:bg-white/[0.04] transition-all cursor-pointer group">
+            <div class="flex items-start justify-between gap-4 mb-3">
+              <div class="flex-1 min-w-0">
+                <div class="flex items-center gap-3 mb-1">
+                  <h3 class="text-white font-medium truncate">${conv.contact?.name || 'Anonymous'}</h3>
+                  <span class="px-2 py-0.5 rounded-full text-xs border ${statusColors[conv.status] || statusColors.new}">${conv.status}</span>
+                  ${conv.topic ? `<span class="text-xs ${topicColors[conv.topic] || topicColors.general}">${conv.topic}</span>` : ''}
+                </div>
+                <p class="text-cyan-400/60 text-sm truncate">${conv.contact?.email || 'No email'}</p>
+              </div>
+              <p class="text-white/30 text-xs whitespace-nowrap">${date}</p>
+            </div>
+            <p class="text-white/50 text-sm line-clamp-2">${preview}${preview.length >= 150 ? '...' : ''}</p>
+            ${conv.twinSummary ? `
+              <div class="mt-3 pt-3 border-t border-white/5">
+                <p class="text-violet-400/50 text-xs">Twin's take: <span class="text-white/40">${conv.twinSummary.substring(0, 100)}${conv.twinSummary.length > 100 ? '...' : ''}</span></p>
+              </div>
+            ` : ''}
+          </div>
+        `;
+      }).join('');
+    }
+
+    function openDetail(filename) {
+      currentConversation = conversations.find(c => c.filename === filename);
+      if (!currentConversation) return;
+
+      const modal = document.getElementById('detail-modal');
+      const date = new Date(currentConversation.timestamp).toLocaleDateString('en-US', {
+        weekday: 'long', month: 'long', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit'
+      });
+
+      document.getElementById('modal-name').textContent = currentConversation.contact?.name || 'Anonymous';
+      document.getElementById('modal-email').textContent = currentConversation.contact?.email || 'No email provided';
+      document.getElementById('modal-date').textContent = date;
+      document.getElementById('modal-status').value = currentConversation.status;
+      document.getElementById('modal-email-link').href = `mailto:${currentConversation.contact?.email || ''}?subject=Re: Your message through Kevin's Digital Mind`;
+
+      // Render conversation
+      const convContainer = document.getElementById('modal-conversation');
+      if (currentConversation.conversation && currentConversation.conversation.length > 0) {
+        convContainer.innerHTML = currentConversation.conversation.map(msg => {
+          const isTwin = msg.role === 'twin';
+          return `
+            <div class="flex ${isTwin ? 'justify-start' : 'justify-end'}">
+              <div class="max-w-[80%] px-4 py-3 rounded-2xl ${isTwin
+                ? 'bg-violet-500/10 border border-violet-500/20 rounded-bl-md'
+                : 'bg-cyan-500/10 border border-cyan-500/20 rounded-br-md'}">
+                <p class="${isTwin ? 'text-violet-300/60' : 'text-cyan-300/60'} text-xs mb-1">${isTwin ? "Kevin's Twin" : 'Visitor'}</p>
+                <p class="text-white/80 text-sm leading-relaxed">${msg.content}</p>
+              </div>
+            </div>
+          `;
+        }).join('');
+      } else {
+        convContainer.innerHTML = '<p class="text-white/30 text-center">No conversation recorded</p>';
+      }
+
+      // Twin summary
+      const summarySection = document.getElementById('modal-summary');
+      const summaryText = document.getElementById('modal-summary-text');
+      if (currentConversation.twinSummary) {
+        summarySection.classList.remove('hidden');
+        summaryText.textContent = currentConversation.twinSummary;
+      } else {
+        summarySection.classList.add('hidden');
+      }
+
+      modal.classList.remove('hidden');
+      modal.classList.add('flex');
+
+      // Mark as read if new
+      if (currentConversation.status === 'new') {
+        updateStatusTo('read');
+      }
+    }
+
+    function closeModal() {
+      const modal = document.getElementById('detail-modal');
+      modal.classList.add('hidden');
+      modal.classList.remove('flex');
+      currentConversation = null;
+    }
+
+    async function updateStatus() {
+      const newStatus = document.getElementById('modal-status').value;
+      await updateStatusTo(newStatus);
+    }
+
+    async function updateStatusTo(status) {
+      if (!currentConversation) return;
+
+      try {
+        await fetch(`/api/bridge/${currentConversation.filename}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ status })
+        });
+
+        currentConversation.status = status;
+        updateStats();
+        renderConversations();
+      } catch (err) {
+        console.error('Failed to update status:', err);
+      }
+    }
+
+    async function deleteConversation() {
+      if (!currentConversation) return;
+      if (!confirm('Delete this conversation permanently?')) return;
+
+      try {
+        await fetch(`/api/bridge/${currentConversation.filename}`, { method: 'DELETE' });
+        conversations = conversations.filter(c => c.filename !== currentConversation.filename);
+        closeModal();
+        updateStats();
+        renderConversations();
+      } catch (err) {
+        console.error('Failed to delete:', err);
+      }
+    }
+
+    // Close modal on escape key
+    document.addEventListener('keydown', e => {
+      if (e.key === 'Escape') closeModal();
+    });
+
+    // Close modal on backdrop click
+    document.getElementById('detail-modal').addEventListener('click', e => {
+      if (e.target === e.currentTarget) closeModal();
+    });
+  </script>
+</body>
+</html>

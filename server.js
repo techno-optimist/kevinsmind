@@ -19,6 +19,12 @@ if (!fs.existsSync(mindDir)) {
   fs.mkdirSync(mindDir, { recursive: true });
 }
 
+// Ensure bridge directory exists (for connection requests)
+const bridgeDir = path.join(__dirname, 'data', 'bridge');
+if (!fs.existsSync(bridgeDir)) {
+  fs.mkdirSync(bridgeDir, { recursive: true });
+}
+
 // API: Save memory image
 app.post('/api/save-memory', async (req, res) => {
   try {
@@ -221,6 +227,117 @@ app.post('/api/memories/import', async (req, res) => {
     });
   } catch (error) {
     console.error('Failed to import memories:', error);
+    res.status(500).json({ error: String(error) });
+  }
+});
+
+// ============================================
+// BRIDGE API - Connection Requests
+// ============================================
+
+// API: Save a bridge conversation
+app.post('/api/bridge', async (req, res) => {
+  try {
+    const { conversation, contact, twinSummary, topic, timestamp } = req.body;
+
+    // Create filename from timestamp
+    const filename = `${timestamp || Date.now()}_bridge.json`;
+    const filepath = path.join(bridgeDir, filename);
+
+    // Save the conversation
+    fs.writeFileSync(filepath, JSON.stringify({
+      conversation,      // Array of { role: 'twin' | 'visitor', content: string }
+      contact,           // { name, email } - collected at end
+      twinSummary,       // Twin's assessment/summary
+      topic,             // Detected topic area
+      timestamp: timestamp || Date.now(),
+      status: 'new',     // new, read, replied, archived
+      filename
+    }, null, 2));
+
+    console.log(`New bridge connection: ${filename}`);
+
+    res.json({ success: true, filename });
+  } catch (error) {
+    console.error('Failed to save bridge conversation:', error);
+    res.status(500).json({ success: false, error: String(error) });
+  }
+});
+
+// API: List all bridge conversations (for admin)
+app.get('/api/bridge', (req, res) => {
+  try {
+    const files = fs.readdirSync(bridgeDir);
+    const conversations = [];
+
+    for (const file of files) {
+      if (file.endsWith('.json')) {
+        const filepath = path.join(bridgeDir, file);
+        const data = JSON.parse(fs.readFileSync(filepath, 'utf-8'));
+        conversations.push(data);
+      }
+    }
+
+    // Sort by timestamp (newest first)
+    conversations.sort((a, b) => b.timestamp - a.timestamp);
+
+    res.json(conversations);
+  } catch (error) {
+    console.error('Failed to list bridge conversations:', error);
+    res.status(500).json({ error: String(error) });
+  }
+});
+
+// API: Update bridge conversation status
+app.patch('/api/bridge/:filename', (req, res) => {
+  try {
+    const { filename } = req.params;
+    const { status } = req.body;
+
+    // Security: prevent directory traversal
+    if (filename.includes('..') || filename.includes('/')) {
+      return res.status(400).json({ error: 'Invalid filename' });
+    }
+
+    const filepath = path.join(bridgeDir, filename);
+
+    if (!fs.existsSync(filepath)) {
+      return res.status(404).json({ error: 'Conversation not found' });
+    }
+
+    const data = JSON.parse(fs.readFileSync(filepath, 'utf-8'));
+    data.status = status;
+    fs.writeFileSync(filepath, JSON.stringify(data, null, 2));
+
+    console.log(`Updated bridge status: ${filename} -> ${status}`);
+    res.json({ success: true });
+  } catch (error) {
+    console.error('Failed to update bridge conversation:', error);
+    res.status(500).json({ error: String(error) });
+  }
+});
+
+// API: Delete bridge conversation
+app.delete('/api/bridge/:filename', (req, res) => {
+  try {
+    const { filename } = req.params;
+
+    // Security: prevent directory traversal
+    if (filename.includes('..') || filename.includes('/')) {
+      return res.status(400).json({ error: 'Invalid filename' });
+    }
+
+    const filepath = path.join(bridgeDir, filename);
+
+    if (fs.existsSync(filepath)) {
+      fs.unlinkSync(filepath);
+      console.log(`Deleted bridge conversation: ${filename}`);
+      res.json({ success: true });
+    } else {
+      res.status(404).json({ error: 'Conversation not found' });
+    }
+  } catch (error) {
+    console.error('Failed to delete bridge conversation:', error);
     res.status(500).json({ error: String(error) });
   }
 });
