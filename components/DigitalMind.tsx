@@ -450,10 +450,25 @@ export default function DigitalMind() {
         wasDragRef.current = true;
       }
 
-      setChatPosition({
-        x: dragStartRef.current.chatX + deltaX,
-        y: dragStartRef.current.chatY + deltaY
-      });
+      // Calculate new position
+      let newX = dragStartRef.current.chatX + deltaX;
+      let newY = dragStartRef.current.chatY + deltaY;
+
+      // Get viewport bounds
+      const viewportWidth = window.innerWidth;
+      const viewportHeight = window.visualViewport?.height ?? window.innerHeight;
+      const safeTop = parseInt(getComputedStyle(document.documentElement).getPropertyValue('--safe-top') || '0', 10) || 0;
+
+      // Constrain Y to keep chat visible (at least 60px from top, not below 70% of viewport)
+      const minY = -safeTop;
+      const maxY = viewportHeight * 0.5;
+      newY = Math.max(minY, Math.min(maxY, newY));
+
+      // Constrain X to keep chat mostly visible (allow some horizontal movement but not off-screen)
+      const maxX = viewportWidth * 0.3;
+      newX = Math.max(-maxX, Math.min(maxX, newX));
+
+      setChatPosition({ x: newX, y: newY });
     };
 
     const handleEnd = () => {
@@ -507,6 +522,15 @@ export default function DigitalMind() {
       document.removeEventListener('touchstart', handleClickOutside, true);
     };
   }, []);
+
+  // Reset chat position when collapsed to ensure it's always visible
+  useEffect(() => {
+    if (isChatCollapsed) {
+      // Reset to default position (centered, at top) when collapsed
+      // This ensures the collapsed input bar is always visible
+      setChatPosition({ x: 0, y: 0 });
+    }
+  }, [isChatCollapsed]);
 
   // Load Kevin's reference images for character-consistent image generation
   // ROBUST IMPLEMENTATION: Caching, retries, compression, and error handling
