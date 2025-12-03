@@ -956,6 +956,68 @@ export default function DigitalMind() {
     return false;
   }, [loadSavedMemories]);
 
+  // Share a memory across platforms using Web Share API with fallbacks
+  const shareMemory = useCallback(async (data: {
+    title: string;
+    text: string;
+    imageUrl: string;
+  }) => {
+    const shareText = `${data.title}\n\n${data.text}\n\nFrom Kevin's Digital Mind`;
+    const shareUrl = window.location.origin;
+
+    // Try Web Share API first (works great on mobile)
+    if (navigator.share) {
+      try {
+        // Try to share with image if possible
+        if (navigator.canShare && data.imageUrl) {
+          const response = await fetch(data.imageUrl);
+          const blob = await response.blob();
+          const file = new File([blob], 'memory.png', { type: 'image/png' });
+
+          if (navigator.canShare({ files: [file] })) {
+            await navigator.share({
+              title: data.title,
+              text: data.text,
+              files: [file]
+            });
+            return;
+          }
+        }
+
+        // Fallback to text-only share
+        await navigator.share({
+          title: data.title,
+          text: shareText,
+          url: shareUrl
+        });
+        return;
+      } catch (err) {
+        // User cancelled or share failed, fall through to fallback
+        if ((err as Error).name === 'AbortError') return;
+      }
+    }
+
+    // Fallback: Show share options modal
+    const encodedText = encodeURIComponent(shareText);
+    const encodedUrl = encodeURIComponent(shareUrl);
+
+    const shareOptions = [
+      { name: 'Twitter / X', url: `https://twitter.com/intent/tweet?text=${encodedText}&url=${encodedUrl}` },
+      { name: 'Facebook', url: `https://www.facebook.com/sharer/sharer.php?quote=${encodedText}&u=${encodedUrl}` },
+      { name: 'LinkedIn', url: `https://www.linkedin.com/sharing/share-offsite/?url=${encodedUrl}` },
+      { name: 'Copy to clipboard', action: 'copy' }
+    ];
+
+    // For now, copy to clipboard as the simplest fallback
+    try {
+      await navigator.clipboard.writeText(shareText + '\n\n' + shareUrl);
+      alert('Copied to clipboard! You can now paste and share.');
+    } catch {
+      // Final fallback: prompt with text
+      prompt('Copy this to share:', shareText + '\n\n' + shareUrl);
+    }
+  }, []);
+
   // Generate mind's eye memory images - the visual constellation of thoughts
   // Generates ONE high-quality image per response, with visual echoes from conversation
   const spawnConstellationImages = useCallback(async (contextText: string, zone: string) => {
@@ -2542,16 +2604,40 @@ STYLE: Dreamlike, ethereal, soft lighting with gentle glow. Dark moody backgroun
             </div>
           </div>
 
-          {/* Close button - responsive positioning for safe area */}
-          <button
-            onClick={() => setThoughtPortal(null)}
-            className="fixed top-3 right-3 sm:top-6 sm:right-6 p-2 sm:p-3 rounded-full bg-black/60 backdrop-blur-sm border border-white/20 text-white/70 hover:text-white hover:bg-black/80 transition-all z-20"
-            style={{ marginTop: 'env(safe-area-inset-top)' }}
-          >
-            <svg className="w-5 h-5 sm:w-6 sm:h-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-              <path d="M18 6L6 18M6 6l12 12"/>
-            </svg>
-          </button>
+          {/* Action buttons - Share and Close */}
+          <div className="fixed top-3 right-3 sm:top-6 sm:right-6 flex items-center gap-2 z-20" style={{ marginTop: 'env(safe-area-inset-top)' }}>
+            {/* Share button */}
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                shareMemory({
+                  title: thoughtPortal.node.shortLabel || 'A Visual Memory',
+                  text: thoughtPortal.node.fullPrompt || thoughtPortal.node.contextText || 'A thought from Kevin\'s Digital Mind',
+                  imageUrl: thoughtPortal.imageUrl
+                });
+              }}
+              className="p-2 sm:p-3 rounded-full bg-black/60 backdrop-blur-sm border border-white/20 text-white/70 hover:text-white hover:bg-black/80 transition-all"
+              title="Share this memory"
+            >
+              <svg className="w-5 h-5 sm:w-6 sm:h-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <circle cx="18" cy="5" r="3"/>
+                <circle cx="6" cy="12" r="3"/>
+                <circle cx="18" cy="19" r="3"/>
+                <line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/>
+                <line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/>
+              </svg>
+            </button>
+
+            {/* Close button */}
+            <button
+              onClick={() => setThoughtPortal(null)}
+              className="p-2 sm:p-3 rounded-full bg-black/60 backdrop-blur-sm border border-white/20 text-white/70 hover:text-white hover:bg-black/80 transition-all"
+            >
+              <svg className="w-5 h-5 sm:w-6 sm:h-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <path d="M18 6L6 18M6 6l12 12"/>
+              </svg>
+            </button>
+          </div>
         </div>
       )}
 
@@ -4486,16 +4572,39 @@ STYLE: Dreamlike, ethereal, soft lighting with gentle glow. Dark moody backgroun
                         <p className="text-white/30 text-xs">
                           Part of Kevin's evolving memory constellation
                         </p>
-                        <button
-                          onClick={() => {
-                            if (confirm('Delete this memory?')) {
-                              deleteMemory(selectedMemory.filename);
-                            }
-                          }}
-                          className="px-3 py-1.5 rounded-lg bg-red-500/10 border border-red-500/20 text-red-400 text-xs hover:bg-red-500/20 transition-colors"
-                        >
-                          Delete
-                        </button>
+                        <div className="flex items-center gap-2">
+                          {/* Share button */}
+                          <button
+                            onClick={() => {
+                              shareMemory({
+                                title: selectedMemory.label,
+                                text: selectedMemory.prompt,
+                                imageUrl: selectedMemory.imagePath
+                              });
+                            }}
+                            className="px-3 py-1.5 rounded-lg bg-cyan-500/10 border border-cyan-500/20 text-cyan-400 text-xs hover:bg-cyan-500/20 transition-colors flex items-center gap-1.5"
+                          >
+                            <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                              <circle cx="18" cy="5" r="3"/>
+                              <circle cx="6" cy="12" r="3"/>
+                              <circle cx="18" cy="19" r="3"/>
+                              <line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/>
+                              <line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/>
+                            </svg>
+                            Share
+                          </button>
+                          {/* Delete button */}
+                          <button
+                            onClick={() => {
+                              if (confirm('Delete this memory?')) {
+                                deleteMemory(selectedMemory.filename);
+                              }
+                            }}
+                            className="px-3 py-1.5 rounded-lg bg-red-500/10 border border-red-500/20 text-red-400 text-xs hover:bg-red-500/20 transition-colors"
+                          >
+                            Delete
+                          </button>
+                        </div>
                       </div>
                     </div>
                   </div>
