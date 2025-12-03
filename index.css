@@ -1,64 +1,310 @@
-/* Reset and full viewport setup */
+/* =============================================================================
+   RESPONSIVE DESIGN SYSTEM
+   A comprehensive, scalable approach to responsive design
+   ============================================================================= */
+
+/* -----------------------------------------------------------------------------
+   1. CSS CUSTOM PROPERTIES (Design Tokens)
+   These create a single source of truth for all responsive values
+   ----------------------------------------------------------------------------- */
+:root {
+  /* === Breakpoint Reference (for documentation) ===
+     --bp-sm: 640px    (small tablets, large phones landscape)
+     --bp-md: 768px    (tablets)
+     --bp-lg: 1024px   (small laptops)
+     --bp-xl: 1280px   (desktops)
+     --bp-2xl: 1536px  (large desktops)
+  */
+
+  /* === Spacing Scale (fluid) ===
+     Uses clamp() for smooth scaling between breakpoints */
+  --space-xs: clamp(0.25rem, 0.5vw, 0.5rem);
+  --space-sm: clamp(0.5rem, 1vw, 0.75rem);
+  --space-md: clamp(0.75rem, 1.5vw, 1rem);
+  --space-lg: clamp(1rem, 2vw, 1.5rem);
+  --space-xl: clamp(1.5rem, 3vw, 2rem);
+  --space-2xl: clamp(2rem, 4vw, 3rem);
+  --space-3xl: clamp(3rem, 6vw, 4rem);
+
+  /* === Typography Scale (fluid) ===
+     Smoothly scales between mobile and desktop sizes */
+  --text-xs: clamp(0.625rem, 0.55rem + 0.25vw, 0.75rem);      /* 10px -> 12px */
+  --text-sm: clamp(0.75rem, 0.7rem + 0.25vw, 0.875rem);       /* 12px -> 14px */
+  --text-base: clamp(0.875rem, 0.8rem + 0.35vw, 1rem);        /* 14px -> 16px */
+  --text-lg: clamp(1rem, 0.9rem + 0.5vw, 1.25rem);            /* 16px -> 20px */
+  --text-xl: clamp(1.25rem, 1rem + 1vw, 1.75rem);             /* 20px -> 28px */
+  --text-2xl: clamp(1.5rem, 1.2rem + 1.5vw, 2.25rem);         /* 24px -> 36px */
+  --text-3xl: clamp(2rem, 1.5rem + 2vw, 3rem);                /* 32px -> 48px */
+
+  /* === Container Widths === */
+  --container-xs: 20rem;     /* 320px */
+  --container-sm: 24rem;     /* 384px */
+  --container-md: 32rem;     /* 512px */
+  --container-lg: 42rem;     /* 672px */
+  --container-xl: 56rem;     /* 896px */
+  --container-2xl: 72rem;    /* 1152px */
+  --container-full: 90rem;   /* 1440px */
+
+  /* === Dynamic Viewport Heights ===
+     Use these instead of vh for mobile-friendly heights */
+  --vh-full: 100dvh;         /* Dynamic viewport height (accounts for mobile browser chrome) */
+  --vh-safe: calc(100dvh - env(safe-area-inset-top) - env(safe-area-inset-bottom));
+
+  /* === Safe Area Insets === */
+  --safe-top: env(safe-area-inset-top, 0px);
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+  --safe-left: env(safe-area-inset-left, 0px);
+  --safe-right: env(safe-area-inset-right, 0px);
+
+  /* === Panel Heights (responsive) === */
+  --panel-height-sm: min(60dvh, 400px);
+  --panel-height-md: min(70dvh, 500px);
+  --panel-height-lg: min(80dvh, 600px);
+  --panel-height-full: calc(100dvh - var(--safe-top) - var(--safe-bottom) - 2rem);
+
+  /* === Modal/Overlay Sizes === */
+  --modal-width-sm: min(90vw, 20rem);
+  --modal-width-md: min(90vw, 28rem);
+  --modal-width-lg: min(90vw, 42rem);
+  --modal-width-xl: min(95vw, 72rem);
+
+  /* === Touch Target Minimum (Apple HIG: 44px) === */
+  --touch-target: 2.75rem;   /* 44px */
+
+  /* === Border Radius Scale === */
+  --radius-sm: 0.25rem;
+  --radius-md: 0.5rem;
+  --radius-lg: 0.75rem;
+  --radius-xl: 1rem;
+  --radius-full: 9999px;
+
+  /* === Z-Index Scale === */
+  --z-base: 0;
+  --z-overlay: 10;
+  --z-dropdown: 20;
+  --z-sticky: 30;
+  --z-modal: 40;
+  --z-popover: 50;
+  --z-tooltip: 60;
+  --z-max: 9999;
+
+  /* === Transitions === */
+  --transition-fast: 150ms ease;
+  --transition-base: 250ms ease;
+  --transition-slow: 400ms ease;
+  --transition-spring: 400ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* -----------------------------------------------------------------------------
+   2. RESET & BASE STYLES
+   ----------------------------------------------------------------------------- */
 html, body, #root {
   margin: 0;
   padding: 0;
   width: 100%;
   height: 100%;
+  height: 100dvh; /* Modern viewport height */
   overflow: hidden;
   background-color: #030308;
-  /* Prevent pull-to-refresh on mobile */
-  overscroll-behavior: none;
+  overscroll-behavior: none; /* Prevent pull-to-refresh */
+}
+
+/* Fallback for browsers without dvh support */
+@supports not (height: 100dvh) {
+  html, body, #root {
+    height: 100vh;
+    height: -webkit-fill-available;
+  }
 }
 
 * {
   box-sizing: border-box;
-  /* Disable tap highlight on mobile */
   -webkit-tap-highlight-color: transparent;
 }
 
-/* Prevent text selection on UI elements for cleaner mobile UX */
-button, [role="button"] {
+/* Prevent text selection on interactive elements */
+button, [role="button"], .interactive {
   -webkit-user-select: none;
   user-select: none;
 }
 
-/* Smooth scrolling for chat messages */
+/* -----------------------------------------------------------------------------
+   3. RESPONSIVE UTILITY CLASSES
+   ----------------------------------------------------------------------------- */
+
+/* === Fluid Typography === */
+.text-fluid-xs { font-size: var(--text-xs); }
+.text-fluid-sm { font-size: var(--text-sm); }
+.text-fluid-base { font-size: var(--text-base); }
+.text-fluid-lg { font-size: var(--text-lg); }
+.text-fluid-xl { font-size: var(--text-xl); }
+.text-fluid-2xl { font-size: var(--text-2xl); }
+.text-fluid-3xl { font-size: var(--text-3xl); }
+
+/* === Fluid Spacing === */
+.gap-fluid-xs { gap: var(--space-xs); }
+.gap-fluid-sm { gap: var(--space-sm); }
+.gap-fluid-md { gap: var(--space-md); }
+.gap-fluid-lg { gap: var(--space-lg); }
+.gap-fluid-xl { gap: var(--space-xl); }
+
+.p-fluid-sm { padding: var(--space-sm); }
+.p-fluid-md { padding: var(--space-md); }
+.p-fluid-lg { padding: var(--space-lg); }
+.p-fluid-xl { padding: var(--space-xl); }
+
+/* === Dynamic Viewport Heights === */
+.h-screen-dynamic { height: 100dvh; }
+.min-h-screen-dynamic { min-height: 100dvh; }
+.max-h-screen-dynamic { max-height: 100dvh; }
+.h-screen-safe { height: var(--vh-safe); }
+
+/* === Safe Area Utilities === */
+.safe-top { padding-top: var(--safe-top); }
+.safe-bottom { padding-bottom: var(--safe-bottom); }
+.safe-left { padding-left: var(--safe-left); }
+.safe-right { padding-right: var(--safe-right); }
+.safe-all {
+  padding-top: var(--safe-top);
+  padding-bottom: var(--safe-bottom);
+  padding-left: var(--safe-left);
+  padding-right: var(--safe-right);
+}
+
+.mt-safe { margin-top: var(--safe-top); }
+.mb-safe { margin-bottom: var(--safe-bottom); }
+
+/* === Touch-Friendly Targets === */
+.touch-target {
+  min-width: var(--touch-target);
+  min-height: var(--touch-target);
+}
+
+/* === Panel Containers === */
+.panel-sm { max-height: var(--panel-height-sm); }
+.panel-md { max-height: var(--panel-height-md); }
+.panel-lg { max-height: var(--panel-height-lg); }
+.panel-full { max-height: var(--panel-height-full); }
+
+/* === Modal Containers === */
+.modal-sm { max-width: var(--modal-width-sm); }
+.modal-md { max-width: var(--modal-width-md); }
+.modal-lg { max-width: var(--modal-width-lg); }
+.modal-xl { max-width: var(--modal-width-xl); }
+
+/* === Responsive Stack ===
+   Stack items vertically on mobile, horizontally on desktop */
+.responsive-stack {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-md);
+}
+
+@media (min-width: 640px) {
+  .responsive-stack {
+    flex-direction: row;
+    align-items: center;
+  }
+}
+
+/* === Mobile-First Panel Pattern ===
+   Full screen on mobile, positioned panel on desktop */
+.responsive-panel {
+  position: fixed;
+  inset: 0;
+  z-index: var(--z-modal);
+  padding: var(--space-md);
+}
+
+@media (min-width: 640px) {
+  .responsive-panel {
+    position: absolute;
+    inset: auto;
+    padding: 0;
+    max-width: var(--modal-width-md);
+  }
+}
+
+/* === Responsive Grid ===
+   Automatic column count based on container width */
+.auto-grid {
+  display: grid;
+  gap: var(--space-md);
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 150px), 1fr));
+}
+
+.auto-grid-lg {
+  display: grid;
+  gap: var(--space-md);
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 250px), 1fr));
+}
+
+/* -----------------------------------------------------------------------------
+   4. SMOOTH SCROLLING
+   ----------------------------------------------------------------------------- */
 .custom-scrollbar {
   -webkit-overflow-scrolling: touch;
   scroll-behavior: smooth;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255,255,255,0.2) transparent;
 }
 
-/* Safe area padding utilities */
-.safe-top { padding-top: env(safe-area-inset-top); }
-.safe-bottom { padding-bottom: env(safe-area-inset-bottom); }
+.custom-scrollbar::-webkit-scrollbar {
+  width: 5px;
+  height: 5px;
+}
 
-/* Shimmer animation for imagining indicator */
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background: rgba(255,255,255,0.2);
+  border-radius: var(--radius-full);
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: rgba(255,255,255,0.3);
+}
+
+/* Hide scrollbar but keep functionality */
+.scrollbar-hidden {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+.scrollbar-hidden::-webkit-scrollbar {
+  display: none;
+}
+
+/* -----------------------------------------------------------------------------
+   5. ANIMATIONS
+   ----------------------------------------------------------------------------- */
 @keyframes shimmer {
   0% { transform: translateX(-100%); }
   100% { transform: translateX(400%); }
 }
 
-/* Fade in animation */
 @keyframes fade-in {
   from { opacity: 0; transform: translateY(4px); }
   to { opacity: 1; transform: translateY(0); }
 }
 
-.animate-fade-in {
-  animation: fade-in 0.3s ease-out forwards;
+@keyframes fade-in-up {
+  from { opacity: 0; transform: translateY(1rem); }
+  to { opacity: 1; transform: translateY(0); }
 }
 
-/* Blink animation for cursor */
+@keyframes fade-in-scale {
+  from { opacity: 0; transform: scale(0.95); }
+  to { opacity: 1; transform: scale(1); }
+}
+
 @keyframes blink {
   0%, 50% { opacity: 1; }
   51%, 100% { opacity: 0; }
 }
 
-.animate-blink {
-  animation: blink 1s step-end infinite;
-}
-
-/* Floating particles animation for Thought Portal */
 @keyframes float {
   0%, 100% {
     transform: translateY(0) translateX(0);
@@ -78,11 +324,6 @@ button, [role="button"] {
   }
 }
 
-.animate-float {
-  animation: float 10s ease-in-out infinite;
-}
-
-/* Scale in animation for Thought Portal */
 @keyframes scale-in {
   0% {
     opacity: 0;
@@ -94,16 +335,90 @@ button, [role="button"] {
   }
 }
 
-.animate-scale-in {
-  animation: scale-in 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
-}
-
-/* Constellation connection pulse */
 @keyframes connection-pulse {
   0%, 100% { opacity: 0.3; }
   50% { opacity: 0.7; }
 }
 
-.animate-connection-pulse {
-  animation: connection-pulse 3s ease-in-out infinite;
+@keyframes slide-up {
+  from { transform: translateY(100%); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+}
+
+@keyframes slide-down {
+  from { transform: translateY(-100%); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+}
+
+.animate-fade-in { animation: fade-in var(--transition-base) forwards; }
+.animate-fade-in-up { animation: fade-in-up var(--transition-spring) forwards; }
+.animate-fade-in-scale { animation: fade-in-scale var(--transition-spring) forwards; }
+.animate-blink { animation: blink 1s step-end infinite; }
+.animate-float { animation: float 10s ease-in-out infinite; }
+.animate-scale-in { animation: scale-in var(--transition-spring) forwards; }
+.animate-connection-pulse { animation: connection-pulse 3s ease-in-out infinite; }
+.animate-slide-up { animation: slide-up var(--transition-spring) forwards; }
+.animate-slide-down { animation: slide-down var(--transition-spring) forwards; }
+
+/* Reduce motion for users who prefer it */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* -----------------------------------------------------------------------------
+   6. CONTAINER QUERY SUPPORT (Modern Browsers)
+   ----------------------------------------------------------------------------- */
+.container-query {
+  container-type: inline-size;
+}
+
+/* Example: Stack to row at container 400px */
+@container (min-width: 400px) {
+  .cq-row {
+    flex-direction: row;
+  }
+}
+
+/* Example: Show/hide based on container size */
+@container (max-width: 300px) {
+  .cq-hide-small {
+    display: none;
+  }
+}
+
+/* -----------------------------------------------------------------------------
+   7. ASPECT RATIO UTILITIES
+   ----------------------------------------------------------------------------- */
+.aspect-square { aspect-ratio: 1; }
+.aspect-video { aspect-ratio: 16/9; }
+.aspect-portrait { aspect-ratio: 3/4; }
+.aspect-wide { aspect-ratio: 21/9; }
+
+/* -----------------------------------------------------------------------------
+   8. FOCUS & ACCESSIBILITY
+   ----------------------------------------------------------------------------- */
+.focus-ring:focus-visible {
+  outline: 2px solid rgba(255, 255, 255, 0.5);
+  outline-offset: 2px;
+}
+
+/* Skip link for keyboard navigation */
+.skip-link {
+  position: absolute;
+  top: -100%;
+  left: 50%;
+  transform: translateX(-50%);
+  padding: var(--space-sm) var(--space-md);
+  background: white;
+  color: black;
+  z-index: var(--z-max);
+  transition: top var(--transition-fast);
+}
+
+.skip-link:focus {
+  top: var(--space-sm);
 }
