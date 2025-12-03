@@ -511,13 +511,6 @@ export default function DigitalMind() {
     }
   }, [streamingResponse, isNavigatingToImages]);
 
-  // Initialize Bridge conversation when panel opens
-  useEffect(() => {
-    if (activePanel === 'bridge' && bridgeMessages.length === 0 && bridgeStep === 'chat') {
-      initBridge();
-    }
-  }, [activePanel, bridgeMessages.length, bridgeStep, initBridge]);
-
   // Click outside to collapse chat - simplified approach
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent | TouchEvent) => {
@@ -1568,6 +1561,13 @@ IMPORTANT: After 2 exchanges from the visitor, your response should signal it's 
       setBridgeIsThinking(false);
     }
   }, [resetBridge]);
+
+  // Initialize Bridge conversation when panel opens
+  useEffect(() => {
+    if (activePanel === 'bridge' && bridgeMessages.length === 0 && bridgeStep === 'chat') {
+      initBridge();
+    }
+  }, [activePanel, bridgeMessages.length, bridgeStep, initBridge]);
 
   // Handle visitor message in bridge
   const handleBridgeSubmit = useCallback(async () => {
