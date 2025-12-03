@@ -288,10 +288,14 @@ interface SavedMemory {
 
 interface Message {
   id: string;
-  role: 'user' | 'assistant' | 'images';
+  role: 'user' | 'assistant' | 'images' | 'visualize_offer';
   content: string;
   images?: string[]; // For image messages
   queueStartIndex?: number; // Index in cameraFocusQueue where this batch starts
+  offerContext?: { // For visualize_offer messages
+    responseText: string;
+    topic: string;
+  };
 }
 
 // --- Text to Points Helper (for main thought visualization) ---
@@ -1302,14 +1306,37 @@ STYLE: Dreamlike, ethereal, soft lighting with gentle glow. Dark moody backgroun
     // Trigger effects
     visualizeThought(text);
 
-    // Start imagining indicator IMMEDIATELY so user sees it in chat
-    // Don't wait for the scene prompt API call
+    // Instead of auto-generating an image, offer the user the option
+    // Add a visualize_offer message that the user can interact with
+    setMessages(prev => [...prev, {
+      id: 'offer-' + Date.now().toString(),
+      role: 'visualize_offer',
+      content: '',
+      offerContext: {
+        responseText: text,
+        topic: topic
+      }
+    }]);
+  }, [addMessage, visualizeThought]);
+
+  // Handler for when user accepts visualization offer
+  const handleAcceptVisualization = useCallback((offerId: string, responseText: string, topic: string) => {
+    // Remove the offer message
+    setMessages(prev => prev.filter(msg => msg.id !== offerId));
+
+    // Start the imagination process
     setIsImagining(true);
     setImaginingLabel('Creating a visual memory...');
 
-    // Trigger mind's eye visualizations based on zone
-    spawnConstellationImages(text, topic);
-  }, [addMessage, visualizeThought, spawnConstellationImages]);
+    // Generate the image
+    spawnConstellationImages(responseText, topic);
+  }, [spawnConstellationImages]);
+
+  // Handler for when user dismisses visualization offer
+  const handleDismissVisualization = useCallback((offerId: string) => {
+    // Simply remove the offer message with a fade out effect handled by CSS
+    setMessages(prev => prev.filter(msg => msg.id !== offerId));
+  }, []);
 
   const disconnect = useCallback(() => {
     if (sessionRef.current) {
@@ -2644,8 +2671,44 @@ STYLE: Dreamlike, ethereal, soft lighting with gentle glow. Dark moody backgroun
                             </div>
                           </div>
                         )}
+                        {/* Visualization offer */}
+                        {msg.role === 'visualize_offer' && msg.offerContext && (
+                          <div className="flex justify-start animate-fade-in">
+                            <div className="max-w-[85%] px-4 py-3 rounded-2xl rounded-bl-md bg-gradient-to-br from-violet-500/8 via-cyan-500/5 to-indigo-500/8 border border-violet-500/15 hover:border-violet-500/25 transition-colors">
+                              <div className="flex items-center gap-3">
+                                {/* Eye icon - subtle and elegant */}
+                                <div className="relative w-9 h-9 flex-shrink-0">
+                                  <div className="absolute inset-0 rounded-full bg-gradient-to-br from-violet-400/15 to-cyan-400/10" />
+                                  <div className="absolute inset-1 rounded-full bg-black/30 flex items-center justify-center">
+                                    <svg className="w-4 h-4 text-violet-300/60" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+                                      <path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z" />
+                                      <circle cx="12" cy="12" r="3" />
+                                    </svg>
+                                  </div>
+                                </div>
+                                <p className="text-violet-200/70 text-sm">Would you like to see what I'm visualizing?</p>
+                              </div>
+
+                              {/* Action buttons */}
+                              <div className="flex gap-2 mt-3">
+                                <button
+                                  onClick={() => handleAcceptVisualization(msg.id, msg.offerContext!.responseText, msg.offerContext!.topic)}
+                                  className="flex-1 px-3 py-1.5 text-xs font-medium text-violet-200 bg-violet-500/15 hover:bg-violet-500/25 border border-violet-500/20 hover:border-violet-500/35 rounded-lg transition-all active:scale-[0.98]"
+                                >
+                                  Show me
+                                </button>
+                                <button
+                                  onClick={() => handleDismissVisualization(msg.id)}
+                                  className="px-3 py-1.5 text-xs text-white/40 hover:text-white/60 border border-white/10 hover:border-white/20 rounded-lg transition-all active:scale-[0.98]"
+                                >
+                                  Skip
+                                </button>
+                              </div>
+                            </div>
+                          </div>
+                        )}
                         {/* Text messages */}
-                        {msg.role !== 'images' && (
+                        {msg.role !== 'images' && msg.role !== 'visualize_offer' && (
                           <div className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
                             <div
                               className={`max-w-[85%] px-4 py-3 rounded-2xl text-sm sm:text-base leading-relaxed
@@ -2665,6 +2728,28 @@ STYLE: Dreamlike, ethereal, soft lighting with gentle glow. Dark moody backgroun
                         )}
                       </div>
                     ))}
+                    {/* Thinking indicator - shows while waiting for AI response */}
+                    {isThinking && !streamingResponse && (
+                      <div className="flex justify-start animate-fade-in">
+                        <div className="max-w-[85%] px-4 py-3 rounded-2xl rounded-bl-md bg-white/[0.06] border border-white/10">
+                          <div className="flex items-center gap-3">
+                            {/* Animated brain/thinking icon */}
+                            <div className="relative w-8 h-8 flex-shrink-0">
+                              {/* Pulsing glow */}
+                              <div className="absolute inset-0 rounded-full bg-cyan-500/20 animate-pulse" />
+                              {/* Inner circle with dots */}
+                              <div className="absolute inset-0 rounded-full bg-black/30 flex items-center justify-center gap-1">
+                                <span className="w-1.5 h-1.5 rounded-full bg-cyan-400/80 animate-bounce" style={{ animationDelay: '0ms', animationDuration: '1s' }} />
+                                <span className="w-1.5 h-1.5 rounded-full bg-cyan-400/80 animate-bounce" style={{ animationDelay: '150ms', animationDuration: '1s' }} />
+                                <span className="w-1.5 h-1.5 rounded-full bg-cyan-400/80 animate-bounce" style={{ animationDelay: '300ms', animationDuration: '1s' }} />
+                              </div>
+                            </div>
+                            <p className="text-white/50 text-sm">Thinking...</p>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
                     {/* Imagining visual memory indicator */}
                     {isImagining && (
                       <div className="flex justify-start animate-fade-in">
