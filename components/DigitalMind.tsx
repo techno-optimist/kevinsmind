@@ -533,127 +533,192 @@ export default function DigitalMind() {
   }, [isChatCollapsed]);
 
   // Load Kevin's reference images for character-consistent image generation
-  // ROBUST IMPLEMENTATION: Caching, retries, compression, and error handling
+  // BULLETPROOF IMPLEMENTATION: Multiple fallbacks, validation, and clear diagnostics
   useEffect(() => {
-    const CACHE_KEY = 'kevin_reference_images_v4'; // Bumped version to force reload
-    const MAX_IMAGE_DIMENSION = 1024; // Resize large images to max 1024px for faster loading
-    const MAX_RETRIES = 3;
-    const RETRY_DELAY = 1000; // 1 second base delay
+    const CACHE_KEY = 'kevin_reference_images_v5'; // Version bump to clear potentially corrupt cache
+    const MAX_IMAGE_DIMENSION = 768; // Smaller for mobile - reduces payload significantly
+    const MAX_RETRIES = 5; // More retries for flaky mobile connections
+    const RETRY_DELAY = 800;
+    const REQUIRED_IMAGES = 3; // Minimum needed for character consistency
 
-    // Helper: Resize image if too large (reduces load time and API payload)
-    const resizeImageIfNeeded = (base64: string, mimeType: string): Promise<string> => {
+    console.log('🔄 Starting Kevin reference image loader...');
+
+    // Clear old cache versions to prevent corruption issues
+    try {
+      ['kevin_reference_images_v1', 'kevin_reference_images_v2', 'kevin_reference_images_v3', 'kevin_reference_images_v4'].forEach(key => {
+        localStorage.removeItem(key);
+      });
+    } catch (e) { /* ignore */ }
+
+    // Helper: Validate that a base64 string is actually valid image data
+    const validateBase64Image = (data: string): boolean => {
+      if (!data || data.length < 100) return false;
+      // Check for valid base64 characters
+      const base64Regex = /^[A-Za-z0-9+/=]+$/;
+      return base64Regex.test(data);
+    };
+
+    // Helper: Compress and resize image for mobile
+    const compressImage = (base64: string, mimeType: string): Promise<string> => {
       return new Promise((resolve) => {
         const img = new Image();
         img.onload = () => {
-          // Only resize if larger than max dimension
-          if (img.width <= MAX_IMAGE_DIMENSION && img.height <= MAX_IMAGE_DIMENSION) {
-            resolve(base64);
-            return;
+          // Calculate target dimensions
+          let { width, height } = img;
+          const maxDim = MAX_IMAGE_DIMENSION;
+
+          if (width > maxDim || height > maxDim) {
+            if (width > height) {
+              height = Math.round((height / width) * maxDim);
+              width = maxDim;
+            } else {
+              width = Math.round((width / height) * maxDim);
+              height = maxDim;
+            }
           }
 
-          // Calculate new dimensions maintaining aspect ratio
-          let newWidth = img.width;
-          let newHeight = img.height;
-          if (img.width > img.height) {
-            newWidth = MAX_IMAGE_DIMENSION;
-            newHeight = Math.round((img.height / img.width) * MAX_IMAGE_DIMENSION);
-          } else {
-            newHeight = MAX_IMAGE_DIMENSION;
-            newWidth = Math.round((img.width / img.height) * MAX_IMAGE_DIMENSION);
-          }
-
-          // Draw resized image to canvas
           const canvas = document.createElement('canvas');
-          canvas.width = newWidth;
-          canvas.height = newHeight;
+          canvas.width = width;
+          canvas.height = height;
           const ctx = canvas.getContext('2d');
+
           if (ctx) {
-            ctx.drawImage(img, 0, 0, newWidth, newHeight);
-            // Convert back to base64 (use JPEG for smaller size)
-            const resizedBase64 = canvas.toDataURL('image/jpeg', 0.85).split(',')[1];
-            console.log(`Resized image from ${img.width}x${img.height} to ${newWidth}x${newHeight}`);
-            resolve(resizedBase64);
+            ctx.drawImage(img, 0, 0, width, height);
+            // Use lower quality JPEG for smaller size (0.7 is good balance)
+            const compressed = canvas.toDataURL('image/jpeg', 0.7).split(',')[1];
+            console.log(`📦 Compressed: ${img.width}x${img.height} → ${width}x${height} (${Math.round(compressed.length / 1024)}KB)`);
+            resolve(compressed);
           } else {
             resolve(base64);
           }
         };
-        img.onerror = () => resolve(base64); // Fallback to original on error
+        img.onerror = () => {
+          console.warn('⚠️ Image compression failed, using original');
+          resolve(base64);
+        };
         img.src = `data:${mimeType};base64,${base64}`;
       });
     };
 
-    // Helper: Fetch single image with retries
-    const fetchImageWithRetry = async (url: string, retries: number = MAX_RETRIES): Promise<{ mimeType: string; data: string } | null> => {
-      for (let attempt = 1; attempt <= retries; attempt++) {
+    // Helper: Fetch with timeout (mobile connections can hang)
+    const fetchWithTimeout = async (url: string, timeoutMs: number = 10000): Promise<Response> => {
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), timeoutMs);
+
+      try {
+        const response = await fetch(url, {
+          signal: controller.signal,
+          cache: 'default', // Let browser decide caching
+        });
+        clearTimeout(timeout);
+        return response;
+      } catch (e) {
+        clearTimeout(timeout);
+        throw e;
+      }
+    };
+
+    // Helper: Fetch single image with retries and validation
+    const fetchImageWithRetry = async (url: string, index: number): Promise<{ mimeType: string; data: string } | null> => {
+      for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
         try {
-          const response = await fetch(url, {
-            cache: 'force-cache', // Use browser cache when possible
-            mode: 'cors'
-          });
+          console.log(`📷 Loading image ${index + 1} (attempt ${attempt}/${MAX_RETRIES})...`);
+
+          const response = await fetchWithTimeout(url, 15000);
 
           if (!response.ok) {
-            throw new Error(`HTTP ${response.status}`);
+            throw new Error(`HTTP ${response.status}: ${response.statusText}`);
           }
 
           const blob = await response.blob();
-          if (blob.size === 0) {
-            throw new Error('Empty blob');
+          console.log(`📷 Image ${index + 1} blob size: ${Math.round(blob.size / 1024)}KB`);
+
+          if (blob.size < 1000) {
+            throw new Error(`Blob too small: ${blob.size} bytes`);
           }
 
+          // Convert to base64
           const base64 = await new Promise<string>((resolve, reject) => {
             const reader = new FileReader();
             reader.onloadend = () => {
               const result = reader.result as string;
-              const base64Data = result.split(',')[1];
-              if (base64Data) {
-                resolve(base64Data);
+              const data = result.split(',')[1];
+              if (data && data.length > 100) {
+                resolve(data);
               } else {
-                reject(new Error('No base64 data'));
+                reject(new Error('Invalid base64 result'));
               }
             };
-            reader.onerror = reject;
+            reader.onerror = () => reject(new Error('FileReader failed'));
             reader.readAsDataURL(blob);
           });
 
-          const mimeType = blob.type || 'image/jpeg';
+          // Validate the base64
+          if (!validateBase64Image(base64)) {
+            throw new Error('Base64 validation failed');
+          }
 
-          // Resize if needed for faster API calls
-          const optimizedBase64 = await resizeImageIfNeeded(base64, mimeType);
+          // Compress for mobile
+          const compressed = await compressImage(base64, blob.type || 'image/jpeg');
 
-          return { mimeType: 'image/jpeg', data: optimizedBase64 };
+          // Final validation
+          if (!validateBase64Image(compressed)) {
+            throw new Error('Compressed image validation failed');
+          }
+
+          console.log(`✅ Image ${index + 1} loaded successfully (${Math.round(compressed.length / 1024)}KB)`);
+          return { mimeType: 'image/jpeg', data: compressed };
+
         } catch (e) {
-          console.warn(`Attempt ${attempt}/${retries} failed for ${url}:`, e);
-          if (attempt < retries) {
-            await new Promise(resolve => setTimeout(resolve, RETRY_DELAY * attempt));
+          const errorMsg = e instanceof Error ? e.message : 'Unknown error';
+          console.warn(`⚠️ Image ${index + 1} attempt ${attempt} failed: ${errorMsg}`);
+
+          if (attempt < MAX_RETRIES) {
+            const delay = RETRY_DELAY * attempt;
+            console.log(`⏳ Retrying in ${delay}ms...`);
+            await new Promise(resolve => setTimeout(resolve, delay));
           }
         }
       }
+
+      console.error(`❌ Failed to load image ${index + 1} after ${MAX_RETRIES} attempts`);
       return null;
     };
 
     const loadKevinImages = async () => {
-      console.log('Loading Kevin reference images for character-consistent generation...');
+      console.log('🎯 Loading Kevin reference images for character-consistent generation...');
 
-      // Try to load from localStorage cache first
+      // Try cache first, but VALIDATE the cached data
       try {
         const cached = localStorage.getItem(CACHE_KEY);
         if (cached) {
           const parsedCache = JSON.parse(cached);
-          if (parsedCache.images && parsedCache.images.length >= 3) {
-            console.log(`Loaded ${parsedCache.images.length} Kevin images from cache`);
-            kevinReferenceImagesRef.current = parsedCache.images.map((img: { mimeType: string; data: string }) => ({
-              inlineData: img
-            }));
-            setKevinImagesLoaded(true);
-            return; // Successfully loaded from cache
+
+          if (parsedCache.images && Array.isArray(parsedCache.images)) {
+            // Validate EACH cached image
+            const validImages = parsedCache.images.filter((img: { mimeType: string; data: string }) =>
+              img && img.data && validateBase64Image(img.data) && img.data.length > 1000
+            );
+
+            if (validImages.length >= REQUIRED_IMAGES) {
+              console.log(`✅ Loaded ${validImages.length} VALIDATED Kevin images from cache`);
+              kevinReferenceImagesRef.current = validImages.map((img: { mimeType: string; data: string }) => ({
+                inlineData: img
+              }));
+              setKevinImagesLoaded(true);
+              return;
+            } else {
+              console.warn(`⚠️ Cache had only ${validImages.length} valid images (need ${REQUIRED_IMAGES}), reloading...`);
+              localStorage.removeItem(CACHE_KEY);
+            }
           }
         }
       } catch (e) {
-        console.warn('Cache read failed, loading fresh:', e);
+        console.warn('⚠️ Cache read/parse failed, loading fresh:', e);
+        try { localStorage.removeItem(CACHE_KEY); } catch { /* ignore */ }
       }
 
-      // List of Kevin's reference images (up to 5 for human character consistency per Gemini docs)
-      // Optimized images ~200KB each for fast loading on all devices
+      // Load fresh images
       const kevinImageFiles = [
         '/images/kev1.jpg',
         '/images/kev2.jpg',
@@ -662,37 +727,56 @@ export default function DigitalMind() {
         '/images/kev5.jpg'
       ];
 
-      // Load all images in parallel for speed
-      const loadPromises = kevinImageFiles.map(path => {
-        // Use absolute URL based on current origin
+      console.log(`📡 Fetching ${kevinImageFiles.length} images from server...`);
+
+      // Load images with index for better logging
+      const loadPromises = kevinImageFiles.map((path, index) => {
         const absoluteUrl = `${window.location.origin}${path}`;
-        return fetchImageWithRetry(absoluteUrl);
+        return fetchImageWithRetry(absoluteUrl, index);
       });
 
       const results = await Promise.all(loadPromises);
-      const loadedImages = results.filter((img): img is { mimeType: string; data: string } => img !== null);
+      const loadedImages = results.filter((img): img is { mimeType: string; data: string } =>
+        img !== null && validateBase64Image(img.data)
+      );
 
-      if (loadedImages.length > 0) {
-        // Cache for future visits
+      console.log(`📊 Successfully loaded ${loadedImages.length}/${kevinImageFiles.length} images`);
+
+      if (loadedImages.length >= REQUIRED_IMAGES) {
+        // Try to cache (but don't fail if storage is full)
         try {
-          localStorage.setItem(CACHE_KEY, JSON.stringify({
+          const cacheData = JSON.stringify({
             images: loadedImages,
-            timestamp: Date.now()
-          }));
-          console.log(`Cached ${loadedImages.length} Kevin images for future visits`);
+            timestamp: Date.now(),
+            count: loadedImages.length
+          });
+          localStorage.setItem(CACHE_KEY, cacheData);
+          console.log(`💾 Cached ${loadedImages.length} images (${Math.round(cacheData.length / 1024)}KB)`);
         } catch (e) {
-          console.warn('Failed to cache images (storage full?):', e);
+          console.warn('⚠️ Cache write failed (storage full?), continuing without cache:', e);
+          // Clear any partial cache
+          try { localStorage.removeItem(CACHE_KEY); } catch { /* ignore */ }
         }
 
         kevinReferenceImagesRef.current = loadedImages.map(img => ({
           inlineData: img
         }));
         setKevinImagesLoaded(true);
-        console.log(`✓ Loaded ${loadedImages.length} Kevin reference images for character-consistent generation`);
+        console.log(`🎉 Kevin reference images ready! ${loadedImages.length} images loaded for character consistency.`);
+
       } else {
-        console.error('CRITICAL: Failed to load ANY Kevin reference images after all retries!');
-        console.error('Image generation will be BLOCKED to prevent random people appearing.');
+        console.error('❌ CRITICAL: Not enough Kevin reference images loaded!');
+        console.error(`❌ Got ${loadedImages.length}, need at least ${REQUIRED_IMAGES}`);
+        console.error('❌ Image generation will show generic person instead of Kevin.');
         setKevinImagesLoaded(false);
+
+        // Even with partial images, try to use what we have
+        if (loadedImages.length > 0) {
+          console.warn(`⚠️ Using ${loadedImages.length} partial images as fallback`);
+          kevinReferenceImagesRef.current = loadedImages.map(img => ({
+            inlineData: img
+          }));
+        }
       }
     };
 
@@ -1136,39 +1220,61 @@ SCENE: [your scene description]`
         // Generate the single image
         const generateImage = async () => {
             // CRITICAL: Ensure Kevin's reference images are loaded before generating
-            const kevinImages = kevinReferenceImagesRef.current;
+            const REQUIRED_REFS = 3;
+            const MAX_WAIT_MS = 15000; // 15 seconds max wait for mobile
+            const CHECK_INTERVAL = 500;
 
-            if (kevinImages.length === 0) {
-                console.error('CRITICAL: No Kevin reference images available!');
+            let kevinImages = kevinReferenceImagesRef.current;
 
-                // Try to wait for images to load (max 5 seconds)
-                let waitAttempts = 0;
-                while (kevinReferenceImagesRef.current.length === 0 && waitAttempts < 10) {
-                    await new Promise(resolve => setTimeout(resolve, 500));
-                    waitAttempts++;
-                    console.log(`Waiting for Kevin reference images... attempt ${waitAttempts}/10`);
+            if (kevinImages.length < REQUIRED_REFS) {
+                console.warn(`⚠️ Only ${kevinImages.length} Kevin reference images available, need ${REQUIRED_REFS}`);
+                console.log('⏳ Waiting for reference images to load...');
+
+                const startTime = Date.now();
+                let waitCount = 0;
+
+                while (kevinReferenceImagesRef.current.length < REQUIRED_REFS) {
+                    const elapsed = Date.now() - startTime;
+
+                    if (elapsed >= MAX_WAIT_MS) {
+                        console.error(`❌ Timeout: Only got ${kevinReferenceImagesRef.current.length} images after ${MAX_WAIT_MS}ms`);
+                        break;
+                    }
+
+                    waitCount++;
+                    console.log(`⏳ Waiting for Kevin images... ${waitCount} (${Math.round(elapsed / 1000)}s elapsed, have ${kevinReferenceImagesRef.current.length}/${REQUIRED_REFS})`);
+                    await new Promise(resolve => setTimeout(resolve, CHECK_INTERVAL));
                 }
 
-                if (kevinReferenceImagesRef.current.length === 0) {
-                    console.error('ABORTING: Kevin reference images failed to load.');
-                    setIsImagining(false);
-                    setImaginingLabel('');
-                    setIsNavigatingToImages(false);
-                    return;
-                }
+                // Re-check after waiting
+                kevinImages = kevinReferenceImagesRef.current;
             }
 
-            console.log(`Generating single visual memory - Aspect: ${aspectConfig.ratio}`);
-            console.log(`Reference images available: ${kevinReferenceImagesRef.current.length}`);
+            // Final check - proceed with whatever we have, but warn if insufficient
+            if (kevinImages.length === 0) {
+                console.error('❌ ABORTING: Zero Kevin reference images available!');
+                console.error('❌ Cannot generate character-consistent image without references.');
+                setIsImagining(false);
+                setImaginingLabel('');
+                setIsNavigatingToImages(false);
+                return;
+            }
+
+            if (kevinImages.length < REQUIRED_REFS) {
+                console.warn(`⚠️ Proceeding with only ${kevinImages.length} reference images (less than ideal)`);
+            }
+
+            console.log(`🎨 Generating visual memory - Aspect: ${aspectConfig.ratio}`);
+            console.log(`📷 Reference images available: ${kevinImages.length}`);
 
             // Include previous image reference for VISUAL ECHOES (conversation threading)
             const echoContext = lastGeneratedImageRef.current
                 ? `\n\nVISUAL CONTINUITY: This image should echo visual elements from the conversation's previous imagery - similar color palette, lighting mood, or symbolic motifs to create a visual thread.`
                 : '';
 
-            const fullPrompt = `I am providing ${kevinReferenceImagesRef.current.length} reference photos of Kevin Russell. Generate an image featuring THIS EXACT PERSON from the reference photos.
+            const fullPrompt = `I am providing ${kevinImages.length} reference photos of Kevin Russell. Generate an image featuring THIS EXACT PERSON from the reference photos.
 
-REFERENCE PHOTOS: The ${kevinReferenceImagesRef.current.length} images above show Kevin Russell - a man in his 40s with short dark hair. Study his face, features, and build carefully.
+REFERENCE PHOTOS: The ${kevinImages.length} images above show Kevin Russell - a man in his 40s with short dark hair. Study his face, features, and build carefully.
 
 SCENE TO GENERATE: ${memoryScene.prompt}
 
@@ -1182,7 +1288,7 @@ STYLE: Dreamlike, ethereal, soft lighting with gentle glow. Dark moody backgroun
 
             // Build contents array: reference images FIRST, then prompt
             const contentsArray: Array<{ inlineData: { mimeType: string; data: string } } | { text: string }> = [
-                ...kevinReferenceImagesRef.current, // Kevin's reference photos MUST come first
+                ...kevinImages, // Kevin's reference photos MUST come first
             ];
 
             // Add last generated image for visual echo (if available) - but AFTER Kevin's references
@@ -1193,7 +1299,7 @@ STYLE: Dreamlike, ethereal, soft lighting with gentle glow. Dark moody backgroun
             // Add the text prompt LAST
             contentsArray.push({ text: fullPrompt });
 
-            console.log(`Sending ${contentsArray.length} items to image generation (${kevinReferenceImagesRef.current.length} ref images + ${lastGeneratedImageRef.current ? '1 echo + ' : ''}1 prompt)`);
+            console.log(`🚀 Sending ${contentsArray.length} items to Gemini (${kevinImages.length} ref images + ${lastGeneratedImageRef.current ? '1 echo + ' : ''}1 prompt)`);
 
             try {
                 const imgResponse = await ai.models.generateContent({
