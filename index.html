@@ -5,16 +5,123 @@
     <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="theme-color" content="#030308" />
     <title>Digital Mind</title>
+
+    <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+      tailwind.config = {
+        theme: {
+          extend: {
+            // Custom spacing that uses CSS variables for fluid scaling
+            spacing: {
+              'fluid-xs': 'var(--space-xs)',
+              'fluid-sm': 'var(--space-sm)',
+              'fluid-md': 'var(--space-md)',
+              'fluid-lg': 'var(--space-lg)',
+              'fluid-xl': 'var(--space-xl)',
+              'fluid-2xl': 'var(--space-2xl)',
+              'fluid-3xl': 'var(--space-3xl)',
+              'safe-t': 'var(--safe-top)',
+              'safe-b': 'var(--safe-bottom)',
+              'touch': 'var(--touch-target)',
+            },
+            // Custom font sizes using fluid typography
+            fontSize: {
+              'fluid-xs': 'var(--text-xs)',
+              'fluid-sm': 'var(--text-sm)',
+              'fluid-base': 'var(--text-base)',
+              'fluid-lg': 'var(--text-lg)',
+              'fluid-xl': 'var(--text-xl)',
+              'fluid-2xl': 'var(--text-2xl)',
+              'fluid-3xl': 'var(--text-3xl)',
+            },
+            // Custom max-widths for containers/modals
+            maxWidth: {
+              'modal-sm': 'var(--modal-width-sm)',
+              'modal-md': 'var(--modal-width-md)',
+              'modal-lg': 'var(--modal-width-lg)',
+              'modal-xl': 'var(--modal-width-xl)',
+              'container-xs': 'var(--container-xs)',
+              'container-sm': 'var(--container-sm)',
+              'container-md': 'var(--container-md)',
+              'container-lg': 'var(--container-lg)',
+              'container-xl': 'var(--container-xl)',
+              'container-2xl': 'var(--container-2xl)',
+            },
+            // Custom max-heights for panels
+            maxHeight: {
+              'panel-sm': 'var(--panel-height-sm)',
+              'panel-md': 'var(--panel-height-md)',
+              'panel-lg': 'var(--panel-height-lg)',
+              'panel-full': 'var(--panel-height-full)',
+              'screen-safe': 'var(--vh-safe)',
+            },
+            // Custom heights
+            height: {
+              'screen-dynamic': '100dvh',
+              'screen-safe': 'var(--vh-safe)',
+            },
+            minHeight: {
+              'screen-dynamic': '100dvh',
+              'touch': 'var(--touch-target)',
+            },
+            minWidth: {
+              'touch': 'var(--touch-target)',
+            },
+            // Custom border radius
+            borderRadius: {
+              'fluid-sm': 'var(--radius-sm)',
+              'fluid-md': 'var(--radius-md)',
+              'fluid-lg': 'var(--radius-lg)',
+              'fluid-xl': 'var(--radius-xl)',
+            },
+            // Custom z-index scale
+            zIndex: {
+              'overlay': 'var(--z-overlay)',
+              'dropdown': 'var(--z-dropdown)',
+              'sticky': 'var(--z-sticky)',
+              'modal': 'var(--z-modal)',
+              'popover': 'var(--z-popover)',
+              'tooltip': 'var(--z-tooltip)',
+              'max': 'var(--z-max)',
+            },
+            // Custom transitions
+            transitionDuration: {
+              'fast': '150ms',
+              'base': '250ms',
+              'slow': '400ms',
+            },
+            transitionTimingFunction: {
+              'spring': 'cubic-bezier(0.16, 1, 0.3, 1)',
+            },
+            // Animation extensions
+            animation: {
+              'fade-in': 'fade-in 0.25s ease forwards',
+              'fade-in-up': 'fade-in-up 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards',
+              'scale-in': 'scale-in 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards',
+              'slide-up': 'slide-up 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards',
+              'slide-down': 'slide-down 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards',
+              'float': 'float 10s ease-in-out infinite',
+              'pulse-slow': 'pulse 3s ease-in-out infinite',
+              'blink': 'blink 1s step-end infinite',
+            },
+          },
+        },
+      }
+    </script>
+
+    <!-- Custom scrollbar styles -->
     <style>
-      body { margin: 0; overflow: hidden; background-color: #030308; }
-      /* Custom scrollbar for chat logs */
       ::-webkit-scrollbar { width: 5px; }
-      ::-webkit-scrollbar-track { background: #000; }
-      ::-webkit-scrollbar-thumb { background: #333; border-radius: 2px; }
+      ::-webkit-scrollbar-track { background: transparent; }
+      ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.2); border-radius: 9999px; }
+      ::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.3); }
     </style>
-  <script type="importmap">
+
+    <!-- Import maps for ES modules -->
+    <script type="importmap">
 {
   "imports": {
     "react": "https://aistudiocdn.com/react@^19.2.0",
@@ -27,10 +134,10 @@
   }
 }
 </script>
-<link rel="stylesheet" href="/index.css">
-</head>
+    <link rel="stylesheet" href="/index.css">
+  </head>
   <body>
     <div id="root"></div>
-  <script type="module" src="/index.tsx"></script>
-</body>
+    <script type="module" src="/index.tsx"></script>
+  </body>
 </html>
