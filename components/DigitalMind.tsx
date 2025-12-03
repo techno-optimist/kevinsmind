@@ -473,71 +473,32 @@ export default function DigitalMind() {
     };
   }, [isDragging]);
 
-  // Auto-collapse chat when user takes manual control of constellation
-  // But NOT if they're interacting with the chat panel itself
-  const isInteractingWithChatRef = useRef(false);
-  const pendingExpandRef = useRef(false); // Track if we're trying to expand
-  useEffect(() => {
-    // Don't auto-collapse if user is interacting with chat OR if there's a pending expand
-    if (manualControl && !isInteractingWithChatRef.current && !pendingExpandRef.current) {
-      setIsChatCollapsed(true);
-    }
-  }, [manualControl]);
-
-  // Robust expand function that prevents race conditions
+  // Simple expand function
   const expandChat = useCallback(() => {
-    pendingExpandRef.current = true;
-    isInteractingWithChatRef.current = true;
     setIsChatCollapsed(false);
-    // Reset flags after React has processed the state update
-    setTimeout(() => {
-      pendingExpandRef.current = false;
-      isInteractingWithChatRef.current = false;
-    }, 200);
   }, []);
 
   // Expand chat when new streaming response starts (but not during image navigation)
   useEffect(() => {
     if (streamingResponse && !isNavigatingToImages) {
-      // Set flags to prevent any race conditions with auto-collapse
-      pendingExpandRef.current = true;
-      isInteractingWithChatRef.current = true;
       setIsChatCollapsed(false);
-      setTimeout(() => {
-        pendingExpandRef.current = false;
-        isInteractingWithChatRef.current = false;
-      }, 200);
     }
   }, [streamingResponse, isNavigatingToImages]);
 
-  // Track collapsed state in ref for event handlers (avoids stale closures)
-  const isChatCollapsedRef = useRef(isChatCollapsed);
-  useEffect(() => {
-    isChatCollapsedRef.current = isChatCollapsed;
-  }, [isChatCollapsed]);
-
-  // Click outside to collapse chat
+  // Click outside to collapse chat - simplified approach
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent | TouchEvent) => {
-      // Use ref to get current collapsed state (avoids stale closure)
-      if (isChatCollapsedRef.current) return;
-
-      // Don't collapse if there are no messages
-      if (messages.length === 0 && !streamingResponse) return;
-
-      // Check if click is outside the chat panel
       const target = event.target as Node;
-      if (chatPanelRef.current && !chatPanelRef.current.contains(target)) {
-        // Small delay to ensure expand button click is processed first
-        requestAnimationFrame(() => {
-          if (!isChatCollapsedRef.current) {
-            setIsChatCollapsed(true);
-          }
-        });
+
+      // If clicking inside chat panel, do nothing
+      if (chatPanelRef.current && chatPanelRef.current.contains(target)) {
+        return;
       }
+
+      // Clicking outside - collapse the chat
+      setIsChatCollapsed(true);
     };
 
-    // Use mousedown/touchstart for immediate response
     document.addEventListener('mousedown', handleClickOutside, true);
     document.addEventListener('touchstart', handleClickOutside, true);
 
@@ -545,7 +506,7 @@ export default function DigitalMind() {
       document.removeEventListener('mousedown', handleClickOutside, true);
       document.removeEventListener('touchstart', handleClickOutside, true);
     };
-  }, [messages.length, streamingResponse]);
+  }, []);
 
   // Load Kevin's reference images for character-consistent image generation
   // ROBUST IMPLEMENTATION: Caching, retries, compression, and error handling
@@ -2465,16 +2426,10 @@ STYLE: Dreamlike, ethereal, soft lighting with gentle glow. Dark moody backgroun
             <div
               ref={chatPanelRef}
               onMouseDown={(e) => {
-                // Mark that we're interacting with chat to prevent auto-collapse
-                isInteractingWithChatRef.current = true;
-                pendingExpandRef.current = true;
                 // Stop propagation to prevent OrbitControls from receiving this event
                 e.stopPropagation();
               }}
               onTouchStart={(e) => {
-                // Mark that we're interacting with chat to prevent auto-collapse
-                isInteractingWithChatRef.current = true;
-                pendingExpandRef.current = true;
                 // Stop propagation to prevent OrbitControls from receiving this event
                 e.stopPropagation();
               }}
