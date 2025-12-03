@@ -506,12 +506,6 @@ export default function DigitalMind() {
     }
   }, [streamingResponse, isNavigatingToImages]);
 
-  // Track collapsed state in ref for event handlers (avoids stale closures)
-  const isChatCollapsedRef = useRef(isChatCollapsed);
-  useEffect(() => {
-    isChatCollapsedRef.current = isChatCollapsed;
-  }, [isChatCollapsed]);
-
   // Initialize Bridge conversation when panel opens
   useEffect(() => {
     if (activePanel === 'bridge' && bridgeMessages.length === 0 && bridgeStep === 'chat') {
@@ -519,28 +513,20 @@ export default function DigitalMind() {
     }
   }, [activePanel, bridgeMessages.length, bridgeStep, initBridge]);
 
-  // Click outside to collapse chat
+  // Click outside to collapse chat - simplified approach
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent | TouchEvent) => {
-      // Use ref to get current collapsed state (avoids stale closure)
-      if (isChatCollapsedRef.current) return;
-
-      // Don't collapse if there are no messages
-      if (messages.length === 0 && !streamingResponse) return;
-
-      // Check if click is outside the chat panel
       const target = event.target as Node;
-      if (chatPanelRef.current && !chatPanelRef.current.contains(target)) {
-        // Small delay to ensure expand button click is processed first
-        requestAnimationFrame(() => {
-          if (!isChatCollapsedRef.current) {
-            setIsChatCollapsed(true);
-          }
-        });
+
+      // If clicking inside chat panel, do nothing
+      if (chatPanelRef.current && chatPanelRef.current.contains(target)) {
+        return;
       }
+
+      // Clicking outside - collapse the chat
+      setIsChatCollapsed(true);
     };
 
-    // Use mousedown/touchstart for immediate response
     document.addEventListener('mousedown', handleClickOutside, true);
     document.addEventListener('touchstart', handleClickOutside, true);
 
@@ -548,7 +534,14 @@ export default function DigitalMind() {
       document.removeEventListener('mousedown', handleClickOutside, true);
       document.removeEventListener('touchstart', handleClickOutside, true);
     };
-  }, [messages.length, streamingResponse]);
+  }, []);
+
+  // Reset chat position when collapsed to ensure it's always visible
+  useEffect(() => {
+    if (isChatCollapsed) {
+      setChatPosition({ x: 0, y: 0 });
+    }
+  }, [isChatCollapsed]);
 
   // Load Kevin's reference images for character-consistent image generation
   // ROBUST IMPLEMENTATION: Caching, retries, compression, and error handling
@@ -1779,7 +1772,6 @@ IMPORTANT: After 2 exchanges from the visitor, your response should signal it's 
 
     // Ensure chat is visible and expanded
     setIsChatCollapsed(false);
-    isChatCollapsedRef.current = false;
 
     const userMessage = topic.twinPrompt;
     setInputText('');
