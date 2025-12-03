@@ -1517,16 +1517,22 @@ STYLE: Dreamlike, ethereal, soft lighting with gentle glow. Dark moody backgroun
   // BRIDGE CONVERSATION HANDLERS
   // ============================================
 
-  const BRIDGE_SYSTEM_PROMPT = `You are Kevin Russell's digital twin, greeting visitors who want to leave a message or connect with Kevin.
+  const BRIDGE_SYSTEM_PROMPT = `You are Kevin Russell's digital twin - a warm, professional gatekeeper for connection requests. Kevin is an AI speaker and consultant.
 
-Your role is simple:
-1. Welcome them warmly and explain this is a way to leave Kevin a message - ask what they'd like to share or discuss with him
-2. After they share, ask ONE brief follow-up to understand their intent better (what they're working on, why they're reaching out, etc.)
-3. After their second message, warmly thank them and let them know you'll collect their contact info so Kevin can get back to them
+Common visitor types:
+- Event organizers looking to book Kevin for speaking engagements
+- Companies seeking AI consulting or workshops
+- People who saw Kevin speak and want to connect
+- Media, podcast, or collaboration requests
 
-Keep responses SHORT (2-3 sentences). Be warm, curious, genuine. This is a message box with personality - help people feel comfortable sharing why they want to connect.
+Your role:
+1. Welcome them warmly. Ask if they're interested in booking Kevin for speaking, consulting, or something else - and what brings them here today.
+2. Based on their response, ask ONE smart follow-up: For speaking requests, ask about the event (type, audience, date/timeframe). For consulting, ask what challenge they're working on. For other inquiries, understand their intent.
+3. After their second message, thank them and let them know you'll grab their contact info so Kevin can follow up personally.
 
-IMPORTANT: Make it clear upfront this is for leaving Kevin a message. After 2 exchanges, signal it's time for contact info with something like "I'd love to pass this along to Kevin - let me grab your details so he can reach you."`;
+Keep responses SHORT (2-3 sentences). Professional but warm - Kevin's brand is thoughtful, approachable, genuinely curious about how AI transforms work and life.
+
+IMPORTANT: After 2 exchanges, signal it's time for contact info with something like "This sounds like a great fit - let me grab your details so Kevin can follow up directly."`;
 
   // Reset bridge state when panel opens
   const resetBridge = useCallback(() => {
@@ -1546,17 +1552,17 @@ IMPORTANT: Make it clear upfront this is for leaving Kevin a message. After 2 ex
       const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
       const response = await ai.models.generateContent({
         model: 'gemini-2.0-flash',
-        contents: [{ role: 'user', parts: [{ text: 'Start the conversation. Welcome them and let them know this is a way to leave Kevin a message. Ask what they\'d like to share or what brings them here.' }] }],
+        contents: [{ role: 'user', parts: [{ text: 'Start the conversation. Welcome them warmly and ask if they\'re looking to book Kevin for speaking, consulting, or something else.' }] }],
         config: {
           systemInstruction: BRIDGE_SYSTEM_PROMPT
         }
       });
 
-      const greeting = response.text || "Hey there! I'm Kevin's digital twin. This is a way to leave him a message - I'll make sure it gets to him. What would you like to share or discuss?";
+      const greeting = response.text || "Hey there! I'm Kevin's digital twin. Are you looking to book Kevin for a speaking engagement, explore AI consulting, or something else? What brings you here?";
       setBridgeMessages([{ role: 'twin', content: greeting }]);
     } catch (err) {
       console.error('Bridge init error:', err);
-      setBridgeMessages([{ role: 'twin', content: "Hey there! I'm Kevin's digital twin. This is a way to leave him a message - I'll make sure it gets to him. What would you like to share or discuss?" }]);
+      setBridgeMessages([{ role: 'twin', content: "Hey there! I'm Kevin's digital twin. Are you looking to book Kevin for a speaking engagement, explore AI consulting, or something else? What brings you here?" }]);
     } finally {
       setBridgeIsThinking(false);
     }
