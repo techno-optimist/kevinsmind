@@ -2480,14 +2480,14 @@ STYLE: Dreamlike, ethereal, soft lighting with gentle glow. Dark moody backgroun
               }}
               onClick={() => {
                 // Expand on click if collapsed (and wasn't a drag)
-                if (!wasDragRef.current && isChatCollapsed && (messages.length > 0 || streamingResponse)) {
+                if (!wasDragRef.current && isChatCollapsed) {
                   expandChat();
                 }
                 wasDragRef.current = false;
               }}
               onTouchEnd={() => {
                 // Handle touch tap to expand (mobile)
-                if (!wasDragRef.current && isChatCollapsed && (messages.length > 0 || streamingResponse)) {
+                if (!wasDragRef.current && isChatCollapsed) {
                   expandChat();
                 }
                 wasDragRef.current = false;
@@ -2496,7 +2496,7 @@ STYLE: Dreamlike, ethereal, soft lighting with gentle glow. Dark moody backgroun
                 messages.length > 0 || streamingResponse
                   ? 'shadow-cyan-500/10'
                   : 'shadow-black/50'
-              } ${isChatCollapsed && (messages.length > 0 || streamingResponse) ? 'cursor-pointer' : ''}`}
+              } ${isChatCollapsed ? 'cursor-pointer' : ''}`}
               style={{ boxShadow: '0 25px 80px rgba(0, 0, 0, 0.3)' }}
             >
               {/* Drag Handle - Always visible, drag to move, click to expand if collapsed */}
@@ -2525,7 +2525,7 @@ STYLE: Dreamlike, ethereal, soft lighting with gentle glow. Dark moody backgroun
                 }}
                 onClick={() => {
                   // Only expand if it wasn't a drag
-                  if (!wasDragRef.current && isChatCollapsed && (messages.length > 0 || streamingResponse)) {
+                  if (!wasDragRef.current && isChatCollapsed) {
                     expandChat();
                   }
                 }}
@@ -2805,8 +2805,8 @@ STYLE: Dreamlike, ethereal, soft lighting with gentle glow. Dark moody backgroun
                     <div
                       className="relative flex-1"
                       onClick={() => {
-                        // Expand chat when clicking on input area (if collapsed with messages)
-                        if (isChatCollapsed && (messages.length > 0 || streamingResponse)) {
+                        // Expand chat when clicking on input area (if collapsed)
+                        if (isChatCollapsed) {
                           expandChat();
                         }
                       }}
@@ -2818,21 +2818,21 @@ STYLE: Dreamlike, ethereal, soft lighting with gentle glow. Dark moody backgroun
                         onMouseDown={() => {
                           // Expand IMMEDIATELY on mouse down (before focus steals click)
                           wasDragRef.current = false;
-                          if (isChatCollapsed && (messages.length > 0 || streamingResponse)) {
+                          if (isChatCollapsed) {
                             expandChat();
                           }
                         }}
                         onTouchStart={() => {
                           // Handle touch tap on input (mobile) - fires before touchEnd
                           wasDragRef.current = false;
-                          if (isChatCollapsed && (messages.length > 0 || streamingResponse)) {
+                          if (isChatCollapsed) {
                             expandChat();
                           }
                         }}
                         onFocus={() => {
                           // Also expand on focus (keyboard navigation, etc.)
                           wasDragRef.current = false;
-                          if (isChatCollapsed && (messages.length > 0 || streamingResponse)) {
+                          if (isChatCollapsed) {
                             expandChat();
                           }
                         }}
