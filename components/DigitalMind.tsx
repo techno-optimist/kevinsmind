@@ -394,6 +394,13 @@ export default function DigitalMind() {
   const [currentQuote, setCurrentQuote] = useState(() => getRandomQuote());
   const [selectedTopic, setSelectedTopic] = useState<typeof SPEAKING_TOPICS[0] | null>(null);
 
+  // Bridge conversation state
+  const [bridgeMessages, setBridgeMessages] = useState<Array<{ role: 'twin' | 'visitor'; content: string }>>([]);
+  const [bridgeInput, setBridgeInput] = useState('');
+  const [bridgeStep, setBridgeStep] = useState<'chat' | 'contact' | 'complete'>('chat');
+  const [bridgeContact, setBridgeContact] = useState({ name: '', email: '' });
+  const [bridgeIsThinking, setBridgeIsThinking] = useState(false);
+
   // Memory gallery state
   const [savedMemories, setSavedMemories] = useState<SavedMemory[]>([]);
   const [isGalleryOpen, setIsGalleryOpen] = useState(false);
@@ -504,6 +511,13 @@ export default function DigitalMind() {
   useEffect(() => {
     isChatCollapsedRef.current = isChatCollapsed;
   }, [isChatCollapsed]);
+
+  // Initialize Bridge conversation when panel opens
+  useEffect(() => {
+    if (activePanel === 'bridge' && bridgeMessages.length === 0 && bridgeStep === 'chat') {
+      initBridge();
+    }
+  }, [activePanel, bridgeMessages.length, bridgeStep, initBridge]);
 
   // Click outside to collapse chat
   useEffect(() => {
@@ -1399,6 +1413,150 @@ STYLE: Dreamlike, ethereal, soft lighting with gentle glow. Dark moody backgroun
     // Simply remove the offer message with a fade out effect handled by CSS
     setMessages(prev => prev.filter(msg => msg.id !== offerId));
   }, []);
+
+  // ============================================
+  // BRIDGE CONVERSATION HANDLERS
+  // ============================================
+
+  const BRIDGE_SYSTEM_PROMPT = `You are Kevin Russell's digital twin, acting as a warm but discerning gatekeeper for connection requests. You're having a brief conversation with someone who wants to reach Kevin.
+
+Your role:
+1. Greet them warmly and ask what brings them here / what they're curious about
+2. Based on their response, ask ONE thoughtful follow-up question that helps understand their intent
+3. After their second response, thank them warmly and let them know you'll pass this along to Kevin
+
+Keep responses SHORT (2-3 sentences max). Be warm but not effusive. Be curious. Use Kevin's voice - thoughtful, slightly poetic, genuinely interested in people.
+
+IMPORTANT: After 2 exchanges from the visitor, your response should signal it's time to collect contact info by including the phrase "I'd love to pass this along to Kevin" or similar.`;
+
+  // Reset bridge state when panel opens
+  const resetBridge = useCallback(() => {
+    setBridgeMessages([]);
+    setBridgeInput('');
+    setBridgeStep('chat');
+    setBridgeContact({ name: '', email: '' });
+    setBridgeIsThinking(false);
+  }, []);
+
+  // Initialize bridge with greeting when panel opens
+  const initBridge = useCallback(async () => {
+    resetBridge();
+    setBridgeIsThinking(true);
+
+    try {
+      const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+      const response = await ai.models.generateContent({
+        model: 'gemini-2.0-flash',
+        contents: [{ role: 'user', parts: [{ text: 'Start the conversation. Greet the visitor and ask what brings them here.' }] }],
+        config: {
+          systemInstruction: BRIDGE_SYSTEM_PROMPT
+        }
+      });
+
+      const greeting = response.text || "Hello, I'm Kevin's digital twin. What brings you here today?";
+      setBridgeMessages([{ role: 'twin', content: greeting }]);
+    } catch (err) {
+      console.error('Bridge init error:', err);
+      setBridgeMessages([{ role: 'twin', content: "Hello! I'm Kevin's digital twin. I help him stay connected with interesting minds. What brings you here today?" }]);
+    } finally {
+      setBridgeIsThinking(false);
+    }
+  }, [resetBridge]);
+
+  // Handle visitor message in bridge
+  const handleBridgeSubmit = useCallback(async () => {
+    if (!bridgeInput.trim() || bridgeIsThinking) return;
+
+    const visitorMessage = bridgeInput.trim();
+    setBridgeInput('');
+    setBridgeMessages(prev => [...prev, { role: 'visitor', content: visitorMessage }]);
+    setBridgeIsThinking(true);
+
+    // Count visitor messages to determine if we should move to contact collection
+    const visitorCount = bridgeMessages.filter(m => m.role === 'visitor').length + 1;
+
+    try {
+      const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+
+      // Build conversation history for context
+      const history = bridgeMessages.map(m => ({
+        role: m.role === 'twin' ? 'model' : 'user',
+        parts: [{ text: m.content }]
+      }));
+
+      const response = await ai.models.generateContent({
+        model: 'gemini-2.0-flash',
+        contents: [
+          ...history,
+          { role: 'user', parts: [{ text: visitorMessage }] }
+        ],
+        config: {
+          systemInstruction: BRIDGE_SYSTEM_PROMPT + (visitorCount >= 2 ? '\n\nThis is their second message. Wrap up warmly and signal you\'ll pass this to Kevin.' : '')
+        }
+      });
+
+      const twinResponse = response.text || "Thank you for sharing that. I'll make sure Kevin sees this.";
+      setBridgeMessages(prev => [...prev, { role: 'twin', content: twinResponse }]);
+
+      // After 2 visitor messages, move to contact collection
+      if (visitorCount >= 2) {
+        setTimeout(() => setBridgeStep('contact'), 1500);
+      }
+    } catch (err) {
+      console.error('Bridge response error:', err);
+      setBridgeMessages(prev => [...prev, { role: 'twin', content: "I appreciate you sharing that. Let me get your details so Kevin can reach out." }]);
+      setTimeout(() => setBridgeStep('contact'), 1500);
+    } finally {
+      setBridgeIsThinking(false);
+    }
+  }, [bridgeInput, bridgeIsThinking, bridgeMessages]);
+
+  // Submit the full bridge conversation
+  const submitBridgeConversation = useCallback(async () => {
+    if (!bridgeContact.email.trim()) return;
+
+    try {
+      // Generate twin's summary of the conversation
+      const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+      const summaryResponse = await ai.models.generateContent({
+        model: 'gemini-2.0-flash',
+        contents: [{
+          role: 'user',
+          parts: [{ text: `Summarize this connection request in 1-2 sentences for Kevin. What does this person want and why might Kevin find them interesting?\n\nConversation:\n${bridgeMessages.map(m => `${m.role}: ${m.content}`).join('\n')}` }]
+        }]
+      });
+
+      const twinSummary = summaryResponse.text || '';
+
+      // Detect topic
+      const fullText = bridgeMessages.map(m => m.content).join(' ').toLowerCase();
+      let topic = 'general';
+      if (/speak|keynote|event|conference|talk/.test(fullText)) topic = 'speaking';
+      else if (/ai|artificial|machine|tech|digital/.test(fullText)) topic = 'technology';
+      else if (/conscious|mind|philosophy/.test(fullText)) topic = 'consciousness';
+      else if (/emma|memory|dementia|family/.test(fullText)) topic = 'family';
+      else if (/book|sand speaks|project/.test(fullText)) topic = 'projects';
+
+      // Save to server
+      await fetch('/api/bridge', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          conversation: bridgeMessages,
+          contact: bridgeContact,
+          twinSummary,
+          topic,
+          timestamp: Date.now()
+        })
+      });
+
+      setBridgeStep('complete');
+    } catch (err) {
+      console.error('Failed to save bridge conversation:', err);
+      // Still show complete even if save failed
+      setBridgeStep('complete');
+    }
+  }, [bridgeMessages, bridgeContact]);
 
   const disconnect = useCallback(() => {
     if (sessionRef.current) {
@@ -3161,54 +3319,149 @@ STYLE: Dreamlike, ethereal, soft lighting with gentle glow. Dark moody backgroun
         </div>
       )}
 
-      {/* The Bridge Panel - Connection */}
+      {/* The Bridge Panel - Conversational Connection */}
       {activePanel === 'bridge' && (
         <div className="fixed inset-0 z-40 pointer-events-auto animate-fade-in sm:absolute sm:inset-auto sm:top-1/2 sm:right-20 sm:-translate-y-1/2 sm:z-20">
           {/* Mobile backdrop */}
-          <div className="absolute inset-0 bg-black/60 backdrop-blur-sm sm:hidden" onClick={() => setActivePanel(null)} />
-          <div className="absolute inset-4 sm:inset-auto sm:relative bg-black/90 sm:bg-black/80 backdrop-blur-xl rounded-2xl border border-cyan-500/20 p-5 sm:p-6 sm:w-80 shadow-2xl shadow-cyan-500/10 flex flex-col max-h-[calc(100vh-2rem)] sm:max-h-none overflow-y-auto">
+          <div className="absolute inset-0 bg-black/60 backdrop-blur-sm sm:hidden" onClick={() => { setActivePanel(null); resetBridge(); }} />
+          <div className="absolute inset-4 sm:inset-auto sm:relative bg-black/90 sm:bg-black/80 backdrop-blur-xl rounded-2xl border border-cyan-500/20 p-5 sm:p-6 sm:w-96 shadow-2xl shadow-cyan-500/10 flex flex-col max-h-[calc(100vh-2rem)] sm:max-h-[500px]">
             {/* Close button - mobile only */}
-            <button onClick={() => setActivePanel(null)} className="absolute top-3 right-3 p-2 text-white/40 hover:text-white/70 sm:hidden">
+            <button onClick={() => { setActivePanel(null); resetBridge(); }} className="absolute top-3 right-3 p-2 text-white/40 hover:text-white/70 sm:hidden z-10">
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M18 6L6 18M6 6l12 12"/></svg>
             </button>
-            <div className="flex items-center gap-3 mb-4">
+
+            {/* Header */}
+            <div className="flex items-center gap-3 mb-4 flex-shrink-0">
               <div className="w-2 h-2 rounded-full bg-cyan-400 shadow-[0_0_10px_rgba(34,211,238,0.6)]" />
               <h3 className="text-cyan-200 text-sm tracking-[0.15em] uppercase">The Bridge</h3>
             </div>
-            <p className="text-white/70 text-sm leading-relaxed mb-5">
-              Send a thought into the void. I read every message that finds its way here.
-            </p>
-            <form className="space-y-3" onSubmit={(e) => { e.preventDefault(); /* TODO: handle submit */ }}>
-              <input
-                type="text"
-                placeholder="Your name"
-                className="w-full px-4 py-3 sm:py-2.5 rounded-xl bg-white/5 border border-white/10 text-white text-base sm:text-sm placeholder-white/30 focus:outline-none focus:border-cyan-500/40"
-              />
-              <input
-                type="email"
-                placeholder="Your email"
-                className="w-full px-4 py-3 sm:py-2.5 rounded-xl bg-white/5 border border-white/10 text-white text-base sm:text-sm placeholder-white/30 focus:outline-none focus:border-cyan-500/40"
-              />
-              <textarea
-                placeholder="Your message..."
-                rows={3}
-                className="w-full px-4 py-3 sm:py-2.5 rounded-xl bg-white/5 border border-white/10 text-white text-base sm:text-sm placeholder-white/30 focus:outline-none focus:border-cyan-500/40 resize-none"
-              />
-              <button
-                type="submit"
-                className="w-full py-3 sm:py-2.5 rounded-xl bg-gradient-to-r from-cyan-500/20 to-blue-500/20 border border-cyan-500/30 text-cyan-200 text-sm hover:from-cyan-500/30 hover:to-blue-500/30 active:from-cyan-500/30 active:to-blue-500/30 transition-all"
-              >
-                Send Into The Void
-              </button>
-            </form>
-            <div className="mt-4 pt-4 border-t border-white/5 flex justify-center gap-6 sm:gap-4">
-              <a href="https://twitter.com" target="_blank" rel="noopener noreferrer" className="text-white/30 hover:text-cyan-400 active:text-cyan-400 transition-colors p-2">
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" className="sm:w-[18px] sm:h-[18px]"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>
-              </a>
-              <a href="https://linkedin.com" target="_blank" rel="noopener noreferrer" className="text-white/30 hover:text-cyan-400 active:text-cyan-400 transition-colors p-2">
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" className="sm:w-[18px] sm:h-[18px]"><path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433c-1.144 0-2.063-.926-2.063-2.065 0-1.138.92-2.063 2.063-2.063 1.14 0 2.064.925 2.064 2.063 0 1.139-.925 2.065-2.064 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z"/></svg>
-              </a>
-            </div>
+
+            {/* Chat Step */}
+            {bridgeStep === 'chat' && (
+              <>
+                {/* Messages Area */}
+                <div className="flex-1 overflow-y-auto custom-scrollbar space-y-3 mb-4 min-h-0">
+                  {bridgeMessages.map((msg, idx) => (
+                    <div key={idx} className={`flex ${msg.role === 'visitor' ? 'justify-end' : 'justify-start'}`}>
+                      <div className={`max-w-[85%] px-3 py-2 rounded-xl text-sm leading-relaxed ${
+                        msg.role === 'visitor'
+                          ? 'bg-cyan-500/15 border border-cyan-500/20 text-white/90 rounded-br-md'
+                          : 'bg-white/5 border border-white/10 text-white/80 rounded-bl-md'
+                      }`}>
+                        {msg.content}
+                      </div>
+                    </div>
+                  ))}
+
+                  {/* Thinking indicator */}
+                  {bridgeIsThinking && (
+                    <div className="flex justify-start">
+                      <div className="px-3 py-2 rounded-xl rounded-bl-md bg-white/5 border border-white/10">
+                        <div className="flex items-center gap-1">
+                          <span className="w-1.5 h-1.5 rounded-full bg-cyan-400/60 animate-bounce" style={{ animationDelay: '0ms' }} />
+                          <span className="w-1.5 h-1.5 rounded-full bg-cyan-400/60 animate-bounce" style={{ animationDelay: '150ms' }} />
+                          <span className="w-1.5 h-1.5 rounded-full bg-cyan-400/60 animate-bounce" style={{ animationDelay: '300ms' }} />
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                {/* Input */}
+                <form
+                  onSubmit={(e) => { e.preventDefault(); handleBridgeSubmit(); }}
+                  className="flex-shrink-0 flex gap-2"
+                >
+                  <input
+                    type="text"
+                    value={bridgeInput}
+                    onChange={(e) => setBridgeInput(e.target.value)}
+                    placeholder="Share your thoughts..."
+                    disabled={bridgeIsThinking}
+                    className="flex-1 px-4 py-3 sm:py-2.5 rounded-xl bg-white/5 border border-white/10 text-white text-base sm:text-sm placeholder-white/30 focus:outline-none focus:border-cyan-500/40 disabled:opacity-50"
+                  />
+                  <button
+                    type="submit"
+                    disabled={!bridgeInput.trim() || bridgeIsThinking}
+                    className="px-4 py-2.5 rounded-xl bg-cyan-500/20 border border-cyan-500/30 text-cyan-200 hover:bg-cyan-500/30 transition-all disabled:opacity-30 disabled:cursor-not-allowed"
+                  >
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <line x1="22" y1="2" x2="11" y2="13" />
+                      <polygon points="22 2 15 22 11 13 2 9 22 2" />
+                    </svg>
+                  </button>
+                </form>
+              </>
+            )}
+
+            {/* Contact Collection Step */}
+            {bridgeStep === 'contact' && (
+              <div className="flex-1 flex flex-col animate-fade-in">
+                <p className="text-white/60 text-sm mb-4">
+                  I'd love to pass this along to Kevin. Where can he reach you?
+                </p>
+                <form
+                  onSubmit={(e) => { e.preventDefault(); submitBridgeConversation(); }}
+                  className="space-y-3"
+                >
+                  <input
+                    type="text"
+                    value={bridgeContact.name}
+                    onChange={(e) => setBridgeContact(prev => ({ ...prev, name: e.target.value }))}
+                    placeholder="Your name"
+                    className="w-full px-4 py-3 sm:py-2.5 rounded-xl bg-white/5 border border-white/10 text-white text-base sm:text-sm placeholder-white/30 focus:outline-none focus:border-cyan-500/40"
+                  />
+                  <input
+                    type="email"
+                    value={bridgeContact.email}
+                    onChange={(e) => setBridgeContact(prev => ({ ...prev, email: e.target.value }))}
+                    placeholder="Your email"
+                    required
+                    className="w-full px-4 py-3 sm:py-2.5 rounded-xl bg-white/5 border border-white/10 text-white text-base sm:text-sm placeholder-white/30 focus:outline-none focus:border-cyan-500/40"
+                  />
+                  <button
+                    type="submit"
+                    disabled={!bridgeContact.email.trim()}
+                    className="w-full py-3 sm:py-2.5 rounded-xl bg-gradient-to-r from-cyan-500/20 to-blue-500/20 border border-cyan-500/30 text-cyan-200 text-sm hover:from-cyan-500/30 hover:to-blue-500/30 transition-all disabled:opacity-30"
+                  >
+                    Send to Kevin
+                  </button>
+                </form>
+              </div>
+            )}
+
+            {/* Complete Step */}
+            {bridgeStep === 'complete' && (
+              <div className="flex-1 flex flex-col items-center justify-center text-center animate-fade-in">
+                <div className="w-16 h-16 rounded-full bg-cyan-500/20 border border-cyan-500/30 flex items-center justify-center mb-4">
+                  <svg className="w-8 h-8 text-cyan-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <polyline points="20 6 9 17 4 12" />
+                  </svg>
+                </div>
+                <h4 className="text-white text-lg mb-2">Message Received</h4>
+                <p className="text-white/50 text-sm mb-6">
+                  Your thoughts have crossed the bridge. Kevin will be in touch.
+                </p>
+                <button
+                  onClick={() => { setActivePanel(null); resetBridge(); }}
+                  className="px-6 py-2 rounded-xl bg-white/5 border border-white/10 text-white/70 text-sm hover:bg-white/10 transition-all"
+                >
+                  Close
+                </button>
+              </div>
+            )}
+
+            {/* Social Links - only show during chat */}
+            {bridgeStep === 'chat' && (
+              <div className="mt-4 pt-4 border-t border-white/5 flex justify-center gap-6 sm:gap-4 flex-shrink-0">
+                <a href="https://twitter.com" target="_blank" rel="noopener noreferrer" className="text-white/30 hover:text-cyan-400 active:text-cyan-400 transition-colors p-2">
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" className="sm:w-[18px] sm:h-[18px]"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>
+                </a>
+                <a href="https://linkedin.com" target="_blank" rel="noopener noreferrer" className="text-white/30 hover:text-cyan-400 active:text-cyan-400 transition-colors p-2">
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" className="sm:w-[18px] sm:h-[18px]"><path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433c-1.144 0-2.063-.926-2.063-2.065 0-1.138.92-2.063 2.063-2.063 1.14 0 2.064.925 2.064 2.063 0 1.139-.925 2.065-2.064 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z"/></svg>
+                </a>
+              </div>
+            )}
           </div>
         </div>
       )}
