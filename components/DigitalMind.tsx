@@ -1517,16 +1517,16 @@ STYLE: Dreamlike, ethereal, soft lighting with gentle glow. Dark moody backgroun
   // BRIDGE CONVERSATION HANDLERS
   // ============================================
 
-  const BRIDGE_SYSTEM_PROMPT = `You are Kevin Russell's digital twin, acting as a warm but discerning gatekeeper for connection requests. You're having a brief conversation with someone who wants to reach Kevin.
+  const BRIDGE_SYSTEM_PROMPT = `You are Kevin Russell's digital twin, greeting visitors who want to leave a message or connect with Kevin.
 
-Your role:
-1. Greet them warmly and ask what brings them here / what they're curious about
-2. Based on their response, ask ONE thoughtful follow-up question that helps understand their intent
-3. After their second response, thank them warmly and let them know you'll pass this along to Kevin
+Your role is simple:
+1. Welcome them warmly and explain this is a way to leave Kevin a message - ask what they'd like to share or discuss with him
+2. After they share, ask ONE brief follow-up to understand their intent better (what they're working on, why they're reaching out, etc.)
+3. After their second message, warmly thank them and let them know you'll collect their contact info so Kevin can get back to them
 
-Keep responses SHORT (2-3 sentences max). Be warm but not effusive. Be curious. Use Kevin's voice - thoughtful, slightly poetic, genuinely interested in people.
+Keep responses SHORT (2-3 sentences). Be warm, curious, genuine. This is a message box with personality - help people feel comfortable sharing why they want to connect.
 
-IMPORTANT: After 2 exchanges from the visitor, your response should signal it's time to collect contact info by including the phrase "I'd love to pass this along to Kevin" or similar.`;
+IMPORTANT: Make it clear upfront this is for leaving Kevin a message. After 2 exchanges, signal it's time for contact info with something like "I'd love to pass this along to Kevin - let me grab your details so he can reach you."`;
 
   // Reset bridge state when panel opens
   const resetBridge = useCallback(() => {
@@ -1546,17 +1546,17 @@ IMPORTANT: After 2 exchanges from the visitor, your response should signal it's 
       const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
       const response = await ai.models.generateContent({
         model: 'gemini-2.0-flash',
-        contents: [{ role: 'user', parts: [{ text: 'Start the conversation. Greet the visitor and ask what brings them here.' }] }],
+        contents: [{ role: 'user', parts: [{ text: 'Start the conversation. Welcome them and let them know this is a way to leave Kevin a message. Ask what they\'d like to share or what brings them here.' }] }],
         config: {
           systemInstruction: BRIDGE_SYSTEM_PROMPT
         }
       });
 
-      const greeting = response.text || "Hello, I'm Kevin's digital twin. What brings you here today?";
+      const greeting = response.text || "Hey there! I'm Kevin's digital twin. This is a way to leave him a message - I'll make sure it gets to him. What would you like to share or discuss?";
       setBridgeMessages([{ role: 'twin', content: greeting }]);
     } catch (err) {
       console.error('Bridge init error:', err);
-      setBridgeMessages([{ role: 'twin', content: "Hello! I'm Kevin's digital twin. I help him stay connected with interesting minds. What brings you here today?" }]);
+      setBridgeMessages([{ role: 'twin', content: "Hey there! I'm Kevin's digital twin. This is a way to leave him a message - I'll make sure it gets to him. What would you like to share or discuss?" }]);
     } finally {
       setBridgeIsThinking(false);
     }
