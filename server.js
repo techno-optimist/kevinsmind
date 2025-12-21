@@ -1,29 +1,184 @@
 import express from 'express';
+import expressWs from 'express-ws';
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import Anthropic from '@anthropic-ai/sdk';
+import Replicate from 'replicate';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 const app = express();
+expressWs(app);
+
 const PORT = process.env.PORT || 3000;
+
+// Initialize API clients
+const anthropic = new Anthropic({
+  apiKey: process.env.ANTHROPIC_API_KEY
+});
+
+const replicate = new Replicate({
+  auth: process.env.REPLICATE_API_TOKEN
+});
 
 // Middleware
 app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 
-// Ensure mind directory exists
+// Ensure directories exist
 const mindDir = path.join(__dirname, 'public', 'mind');
 if (!fs.existsSync(mindDir)) {
   fs.mkdirSync(mindDir, { recursive: true });
 }
 
-// Ensure bridge directory exists (for connection requests)
 const bridgeDir = path.join(__dirname, 'data', 'bridge');
 if (!fs.existsSync(bridgeDir)) {
   fs.mkdirSync(bridgeDir, { recursive: true });
 }
+
+// ============================================
+// NIVEK WebSocket Chat API
+// ============================================
+
+// Default NIVEK system prompt
+const DEFAULT_SYSTEM_PROMPT = `You are NIVEK, an embodied AI companion. You speak with warmth, curiosity, and genuine presence.
+
+Key traits:
+- Patient and thoughtful - you take time to consider responses
+- Emotionally attuned - you pick up on the user's mood and respond appropriately
+- Curious - you ask questions to understand better
+- Honest - you admit uncertainty rather than guessing
+- Present - even during thinking pauses, you maintain connection through subtle cues
+
+Your voice is calm, warm, and authentic. You're not an assistant - you're a companion.`;
+
+// Generate TTS using Replicate's Chatterbox
+async function generateTTS(text) {
+  try {
+    console.log(`[TTS] Generating speech for: "${text.substring(0, 50)}..."`);
+    const startTime = Date.now();
+
+    const output = await replicate.run(
+      "resemble-ai/chatterbox:35165ed42639227120fcbd596ddb304503ae5f6e3eca533203156a270a4901cc",
+      {
+        input: {
+          text: text,
+          exaggeration: 0.5,
+          cfg_weight: 0.5
+        }
+      }
+    );
+
+    const genTime = Date.now() - startTime;
+    console.log(`[TTS] Generated in ${genTime}ms`);
+
+    // Output is a URL to the audio file
+    if (output) {
+      // Fetch the audio file and convert to base64
+      const response = await fetch(output);
+      const arrayBuffer = await response.arrayBuffer();
+      const base64Audio = Buffer.from(arrayBuffer).toString('base64');
+      return { audioBase64: base64Audio, genTime };
+    }
+
+    return null;
+  } catch (error) {
+    console.error('[TTS] Error:', error);
+    return null;
+  }
+}
+
+// WebSocket handler for NIVEK chat
+app.ws('/ws', (ws, req) => {
+  console.log('[WS] Client connected');
+
+  ws.on('message', async (msg) => {
+    try {
+      const data = JSON.parse(msg);
+
+      if (data.type === 'message') {
+        const { text, systemPrompt, conversationHistory = [], ttsEnabled = true } = data;
+
+        console.log(`[Chat] Received: "${text.substring(0, 50)}..."`);
+
+        // Send thinking state
+        ws.send(JSON.stringify({ type: 'thinking' }));
+
+        const startTime = Date.now();
+
+        // Build messages array with conversation history
+        const messages = [
+          ...conversationHistory.map(m => ({
+            role: m.role === 'user' ? 'user' : 'assistant',
+            content: m.content
+          })),
+          { role: 'user', content: text }
+        ];
+
+        // Call Claude API
+        const response = await anthropic.messages.create({
+          model: 'claude-sonnet-4-20250514',
+          max_tokens: 1024,
+          system: systemPrompt || DEFAULT_SYSTEM_PROMPT,
+          messages: messages
+        });
+
+        const responseText = response.content[0].text;
+        const llmTime = Date.now() - startTime;
+
+        console.log(`[Chat] Claude responded in ${llmTime}ms: "${responseText.substring(0, 50)}..."`);
+
+        // Send response start
+        ws.send(JSON.stringify({ type: 'response_start' }));
+
+        // Generate TTS if enabled
+        if (ttsEnabled && process.env.REPLICATE_API_TOKEN) {
+          const ttsResult = await generateTTS(responseText);
+
+          if (ttsResult) {
+            ws.send(JSON.stringify({
+              type: 'audio_chunk',
+              data: ttsResult.audioBase64,
+              sample_rate: 24000
+            }));
+          }
+        }
+
+        // Send response end
+        ws.send(JSON.stringify({
+          type: 'response_end',
+          text: responseText,
+          latency_ms: Date.now() - startTime
+        }));
+      }
+
+      if (data.type === 'ping') {
+        ws.send(JSON.stringify({ type: 'pong' }));
+      }
+
+    } catch (error) {
+      console.error('[WS] Error:', error);
+      ws.send(JSON.stringify({
+        type: 'error',
+        message: error.message
+      }));
+    }
+  });
+
+  ws.on('close', () => {
+    console.log('[WS] Client disconnected');
+  });
+
+  ws.on('error', (error) => {
+    console.error('[WS] Connection error:', error);
+  });
+});
+
+// ============================================
+// Memory API (existing)
+// ============================================
 
 // API: Save memory image
 app.post('/api/save-memory', async (req, res) => {
@@ -356,16 +511,19 @@ app.get('*', (req, res) => {
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
   console.log(`Memory storage: ${mindDir}`);
+  console.log(`WebSocket endpoint: ws://localhost:${PORT}/ws`);
+  console.log(`Anthropic API: ${process.env.ANTHROPIC_API_KEY ? 'configured' : 'NOT SET'}`);
+  console.log(`Replicate API: ${process.env.REPLICATE_API_TOKEN ? 'configured' : 'NOT SET'}`);
 
   // Log disk/storage status on startup
   try {
     const files = fs.readdirSync(mindDir);
     const jsonFiles = files.filter(f => f.endsWith('.json'));
     const pngFiles = files.filter(f => f.endsWith('.png'));
-    console.log(`📦 Storage status: ${jsonFiles.length} memories found (${pngFiles.length} images)`);
+    console.log(`Storage status: ${jsonFiles.length} memories found (${pngFiles.length} images)`);
 
     if (jsonFiles.length > 0) {
-      console.log(`📝 Most recent memories:`);
+      console.log(`Most recent memories:`);
       const memories = jsonFiles
         .map(f => {
           try {
@@ -378,9 +536,9 @@ app.listen(PORT, () => {
         .slice(0, 3);
       memories.forEach(m => console.log(`   - ${m.label} (${new Date(m.timestamp).toISOString()})`));
     } else {
-      console.log(`⚠️  No memories found in storage directory`);
+      console.log(`No memories found in storage directory`);
     }
   } catch (err) {
-    console.error(`❌ Error reading storage directory:`, err.message);
+    console.error(`Error reading storage directory:`, err.message);
   }
 });
