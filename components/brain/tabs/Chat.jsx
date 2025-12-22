@@ -4,6 +4,29 @@ import '../Chat.css';
 
 const FILLER_TYPES = ['breath', 'pulse', 'text', 'sway', 'none'];
 
+// Robot expression mapping based on response sentiment/content
+const EXPRESSION_KEYWORDS = {
+  happy: ['happy', 'glad', 'great', 'wonderful', 'excited', 'love', 'enjoy', '!'],
+  curious: ['interesting', 'wonder', 'curious', 'tell me', 'how', 'why', '?'],
+  thinking: ['hmm', 'let me think', 'considering', 'perhaps', 'maybe'],
+  surprise: ['wow', 'amazing', 'incredible', 'unexpected', 'surprising'],
+  sad: ['sorry', 'unfortunately', 'sad', 'difficult', 'hard'],
+  nod: ['yes', 'agree', 'right', 'exactly', 'correct', 'indeed'],
+  shake: ['no', 'don\'t', 'won\'t', 'can\'t', 'disagree'],
+};
+
+function detectExpressionFromText(text) {
+  const lowerText = text.toLowerCase();
+  for (const [expression, keywords] of Object.entries(EXPRESSION_KEYWORDS)) {
+    for (const keyword of keywords) {
+      if (lowerText.includes(keyword)) {
+        return expression;
+      }
+    }
+  }
+  return 'neutral';
+}
+
 export default function Chat() {
   const {
     wsRef,
@@ -29,6 +52,7 @@ export default function Chat() {
   const [fillerType, setFillerType] = useState(settings?.fillerType || 'breath');
   const [transcript, setTranscript] = useState('');
   const [thinkingStartTime, setThinkingStartTime] = useState(null);
+  const [robotWsRef, setRobotWsRef] = useState(null);
   const [metrics, setMetrics] = useState({
     lastLatency: 0,
     avgLatency: 0,
@@ -94,6 +118,54 @@ export default function Chat() {
     }
   }, []);
 
+  // Robot WebSocket connection (for expression sync)
+  useEffect(() => {
+    const robotSettings = settings?.robot || {};
+    if (!robotSettings.syncWithChat) return;
+
+    const host = robotSettings.host || 'localhost';
+    const port = robotSettings.port || 8001;
+
+    let ws = null;
+    let reconnectTimeout = null;
+
+    const connect = () => {
+      ws = new WebSocket(`ws://${host}:${port}/robot`);
+
+      ws.onopen = () => {
+        console.log('[Robot] Connected for expression sync');
+        setRobotWsRef(ws);
+      };
+
+      ws.onclose = () => {
+        setRobotWsRef(null);
+        // Try to reconnect in 5s
+        reconnectTimeout = setTimeout(connect, 5000);
+      };
+
+      ws.onerror = () => {
+        // Silent fail - robot connection is optional
+      };
+    };
+
+    connect();
+
+    return () => {
+      if (reconnectTimeout) clearTimeout(reconnectTimeout);
+      if (ws) ws.close();
+    };
+  }, [settings?.robot?.syncWithChat, settings?.robot?.host, settings?.robot?.port]);
+
+  // Function to trigger robot expression
+  const triggerRobotExpression = useCallback((expression) => {
+    if (robotWsRef?.readyState === WebSocket.OPEN) {
+      robotWsRef.send(JSON.stringify({
+        type: 'play_expression',
+        expression: expression
+      }));
+    }
+  }, [robotWsRef]);
+
   // WebSocket message handler
   useEffect(() => {
     if (!wsRef) return;
@@ -103,6 +175,10 @@ export default function Chat() {
 
       switch (data.type) {
         case 'thinking':
+          // Trigger thinking expression on robot
+          if (settings?.robot?.syncWithChat) {
+            triggerRobotExpression('thinking');
+          }
           break;
 
         case 'response_start':
@@ -124,6 +200,12 @@ export default function Chat() {
           setIsThinking(false);
           setThinkingStartTime(null);
 
+          // Detect and trigger appropriate robot expression
+          if (settings?.robot?.syncWithChat && data.text) {
+            const expression = detectExpressionFromText(data.text);
+            triggerRobotExpression(expression);
+          }
+
           addMessageToSession({
             role: 'assistant',
             content: data.text,
@@ -141,7 +223,7 @@ export default function Chat() {
 
     wsRef.addEventListener('message', handleMessage);
     return () => wsRef.removeEventListener('message', handleMessage);
-  }, [wsRef, thinkingStartTime, addMessageToSession]);
+  }, [wsRef, thinkingStartTime, addMessageToSession, settings?.robot?.syncWithChat, triggerRobotExpression]);
 
   const playAudio = async (base64Data, sampleRate) => {
     try {

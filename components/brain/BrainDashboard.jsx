@@ -4,6 +4,7 @@ import Chat from './tabs/Chat.jsx';
 import Identity from './tabs/Identity.jsx';
 import Memory from './tabs/Memory.jsx';
 import Voice from './tabs/Voice.jsx';
+import Robot from './tabs/Robot.jsx';
 import Settings from './tabs/Settings.jsx';
 import './BrainDashboard.css';
 
@@ -120,10 +121,7 @@ export default function BrainDashboard() {
       if (isCleaningUp) return;
 
       setConnectionStatus('connecting');
-      // Use relative WebSocket URL for production
-      const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-      const wsUrl = `${protocol}//${window.location.host}/ws`;
-      ws = new WebSocket(wsUrl);
+      ws = new WebSocket('ws://localhost:8000/ws');
 
       ws.onopen = () => {
         if (isCleaningUp) {
@@ -306,6 +304,9 @@ export default function BrainDashboard() {
           <NavLink to="/brain/voice" className={({ isActive }) => isActive ? 'nav-tab active' : 'nav-tab'}>
             <VoiceIcon /> Voice
           </NavLink>
+          <NavLink to="/brain/robot" className={({ isActive }) => isActive ? 'nav-tab active' : 'nav-tab'}>
+            <RobotIcon /> Robot
+          </NavLink>
           <NavLink to="/brain/settings" className={({ isActive }) => isActive ? 'nav-tab active' : 'nav-tab'}>
             <SettingsIcon /> Settings
           </NavLink>
@@ -317,6 +318,7 @@ export default function BrainDashboard() {
             <Route path="identity" element={<Identity />} />
             <Route path="memory" element={<Memory />} />
             <Route path="voice" element={<Voice />} />
+            <Route path="robot" element={<Robot />} />
             <Route path="settings" element={<Settings />} />
             <Route path="*" element={<Navigate to="/brain/chat" replace />} />
           </Routes>
@@ -388,6 +390,18 @@ function VoiceIcon() {
       <path d="M19 10v2a7 7 0 0 1-14 0v-2"/>
       <line x1="12" y1="19" x2="12" y2="23"/>
       <line x1="8" y1="23" x2="16" y2="23"/>
+    </svg>
+  );
+}
+
+function RobotIcon() {
+  return (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+      <rect x="3" y="11" width="18" height="10" rx="2"/>
+      <circle cx="12" cy="5" r="3"/>
+      <line x1="12" y1="8" x2="12" y2="11"/>
+      <circle cx="8" cy="16" r="1"/>
+      <circle cx="16" cy="16" r="1"/>
     </svg>
   );
 }
