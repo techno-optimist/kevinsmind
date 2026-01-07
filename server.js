@@ -503,6 +503,9 @@ app.use(express.static(path.join(__dirname, 'dist')));
 // Serve files from public folder (for mind images and other assets)
 app.use(express.static(path.join(__dirname, 'public')));
 
+// Serve PDF books from the books folder
+app.use('/books', express.static(path.join(__dirname, 'books')));
+
 // SPA fallback - serve index.html for all other routes
 app.get('*', (req, res) => {
   res.sendFile(path.join(__dirname, 'dist', 'index.html'));

@@ -3,11 +3,34 @@ import fs from 'fs';
 import { defineConfig, loadEnv } from 'vite';
 import react from '@vitejs/plugin-react';
 
-// Custom plugin to handle saving memory images
+// Custom plugin to handle saving memory images and serve books
 function memoryStoragePlugin() {
   return {
     name: 'memory-storage',
     configureServer(server: any) {
+      // Serve PDF books from the books folder
+      server.middlewares.use('/books', (req: any, res: any, next: any) => {
+        const booksDir = path.join(process.cwd(), 'books');
+        const requestedFile = decodeURIComponent(req.url.replace(/^\//, ''));
+        const filePath = path.join(booksDir, requestedFile);
+
+        // Security: prevent directory traversal
+        if (!filePath.startsWith(booksDir)) {
+          res.writeHead(403);
+          res.end('Forbidden');
+          return;
+        }
+
+        if (fs.existsSync(filePath) && fs.statSync(filePath).isFile()) {
+          const ext = path.extname(filePath).toLowerCase();
+          const contentType = ext === '.pdf' ? 'application/pdf' : 'application/octet-stream';
+          res.writeHead(200, { 'Content-Type': contentType });
+          fs.createReadStream(filePath).pipe(res);
+        } else {
+          next();
+        }
+      });
+
       // POST /api/save-memory - Save a generated image to the mind folder
       server.middlewares.use('/api/save-memory', async (req: any, res: any, next: any) => {
         if (req.method !== 'POST') {
