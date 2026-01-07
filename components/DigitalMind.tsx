@@ -391,6 +391,7 @@ export default function DigitalMind() {
   const [activePanel, setActivePanel] = useState<'horizon' | 'bridge' | 'echoes' | null>(null);
   const [activeHorizonModal, setActiveHorizonModal] = useState<'keynote' | 'workshops' | 'advisory' | null>(null);
   const [activeEchoesModal, setActiveEchoesModal] = useState<'sand-speaks' | 'emma-project' | 'essays' | 'books' | null>(null);
+  const [activePdfReader, setActivePdfReader] = useState<{ url: string; title: string } | null>(null);
   const [currentQuote, setCurrentQuote] = useState(() => getRandomQuote());
   const [selectedTopic, setSelectedTopic] = useState<typeof SPEAKING_TOPICS[0] | null>(null);
 
@@ -4615,7 +4616,7 @@ IMPORTANT: After 2 exchanges, signal it's time for contact info with something l
                     </p>
                     <div className="flex gap-3 mt-4">
                       <button
-                        onClick={(e) => { e.preventDefault(); e.stopPropagation(); window.open('/books/Gem.pdf', '_blank'); }}
+                        onClick={(e) => { e.preventDefault(); e.stopPropagation(); setActivePdfReader({ url: '/books/Gem.pdf', title: 'Gem' }); }}
                         className="px-4 py-2 rounded-xl bg-amber-500/20 border border-amber-500/30 text-amber-200 text-sm font-medium hover:bg-amber-500/30 transition-colors flex items-center gap-2"
                       >
                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -4659,7 +4660,7 @@ IMPORTANT: After 2 exchanges, signal it's time for contact info with something l
                     </p>
                     <div className="flex gap-3 mt-4">
                       <button
-                        onClick={(e) => { e.preventDefault(); e.stopPropagation(); window.open('/books/Parenting%20the%20Future_%20Raising%20Resilient%2C%20Creative%2C%20and%20Ethical%20Humans%20in%20an%20AI-Driven%20World.pdf', '_blank'); }}
+                        onClick={(e) => { e.preventDefault(); e.stopPropagation(); setActivePdfReader({ url: '/books/Parenting%20the%20Future_%20Raising%20Resilient%2C%20Creative%2C%20and%20Ethical%20Humans%20in%20an%20AI-Driven%20World.pdf', title: 'Parenting the Future' }); }}
                         className="px-4 py-2 rounded-xl bg-amber-500/20 border border-amber-500/30 text-amber-200 text-sm font-medium hover:bg-amber-500/30 transition-colors flex items-center gap-2"
                       >
                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -4685,6 +4686,65 @@ IMPORTANT: After 2 exchanges, signal it's time for contact info with something l
                   </div>
                 </div>
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* PDF Reader Modal */}
+      {activePdfReader && (
+        <div
+          className="fixed inset-0 z-[100] flex items-center justify-center animate-fade-in"
+          onClick={() => setActivePdfReader(null)}
+        >
+          <div className="absolute inset-0 bg-black/90 backdrop-blur-md" />
+
+          <div
+            className="relative w-full h-full max-w-6xl max-h-[95vh] m-4 bg-black/95 rounded-2xl border border-white/10 shadow-2xl flex flex-col overflow-hidden"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Header */}
+            <div className="flex items-center justify-between px-6 py-4 border-b border-white/10 bg-black/50">
+              <div className="flex items-center gap-3">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="text-amber-300/80">
+                  <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/>
+                  <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/>
+                </svg>
+                <h3 className="text-white/90 font-medium">{activePdfReader.title}</h3>
+              </div>
+              <div className="flex items-center gap-2">
+                <a
+                  href={activePdfReader.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="px-3 py-1.5 rounded-lg bg-white/5 border border-white/10 text-white/60 text-sm hover:bg-white/10 hover:text-white/80 transition-colors flex items-center gap-2"
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/>
+                    <polyline points="15 3 21 3 21 9"/>
+                    <line x1="10" y1="14" x2="21" y2="3"/>
+                  </svg>
+                  Open in new tab
+                </a>
+                <button
+                  onClick={() => setActivePdfReader(null)}
+                  className="p-2 text-white/40 hover:text-white/80 transition-colors rounded-lg hover:bg-white/5"
+                >
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <path d="M18 6L6 18M6 6l12 12"/>
+                  </svg>
+                </button>
+              </div>
+            </div>
+
+            {/* PDF Embed */}
+            <div className="flex-1 bg-white">
+              <iframe
+                src={activePdfReader.url}
+                className="w-full h-full"
+                title={activePdfReader.title}
+              />
             </div>
           </div>
         </div>
