@@ -4614,10 +4614,8 @@ IMPORTANT: After 2 exchanges, signal it's time for contact info with something l
                       A personal story of discovery and transformation.
                     </p>
                     <div className="flex gap-3 mt-4">
-                      <a
-                        href="/books/Gem.pdf"
-                        target="_blank"
-                        rel="noopener noreferrer"
+                      <button
+                        onClick={(e) => { e.preventDefault(); e.stopPropagation(); window.open('/books/Gem.pdf', '_blank'); }}
                         className="px-4 py-2 rounded-xl bg-amber-500/20 border border-amber-500/30 text-amber-200 text-sm font-medium hover:bg-amber-500/30 transition-colors flex items-center gap-2"
                       >
                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -4625,10 +4623,11 @@ IMPORTANT: After 2 exchanges, signal it's time for contact info with something l
                           <path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/>
                         </svg>
                         Read
-                      </a>
+                      </button>
                       <a
                         href="/books/Gem.pdf"
                         download
+                        onClick={(e) => e.stopPropagation()}
                         className="px-4 py-2 rounded-xl bg-white/5 border border-white/10 text-white/60 text-sm font-medium hover:bg-white/10 hover:text-white/80 transition-colors flex items-center gap-2"
                       >
                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -4659,10 +4658,8 @@ IMPORTANT: After 2 exchanges, signal it's time for contact info with something l
                       A guide to raising children who can thrive alongside artificial intelligence, focusing on resilience, creativity, and ethics.
                     </p>
                     <div className="flex gap-3 mt-4">
-                      <a
-                        href="/books/Parenting%20the%20Future_%20Raising%20Resilient%2C%20Creative%2C%20and%20Ethical%20Humans%20in%20an%20AI-Driven%20World.pdf"
-                        target="_blank"
-                        rel="noopener noreferrer"
+                      <button
+                        onClick={(e) => { e.preventDefault(); e.stopPropagation(); window.open('/books/Parenting%20the%20Future_%20Raising%20Resilient%2C%20Creative%2C%20and%20Ethical%20Humans%20in%20an%20AI-Driven%20World.pdf', '_blank'); }}
                         className="px-4 py-2 rounded-xl bg-amber-500/20 border border-amber-500/30 text-amber-200 text-sm font-medium hover:bg-amber-500/30 transition-colors flex items-center gap-2"
                       >
                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -4670,10 +4667,11 @@ IMPORTANT: After 2 exchanges, signal it's time for contact info with something l
                           <path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/>
                         </svg>
                         Read
-                      </a>
+                      </button>
                       <a
                         href="/books/Parenting%20the%20Future_%20Raising%20Resilient%2C%20Creative%2C%20and%20Ethical%20Humans%20in%20an%20AI-Driven%20World.pdf"
                         download
+                        onClick={(e) => e.stopPropagation()}
                         className="px-4 py-2 rounded-xl bg-white/5 border border-white/10 text-white/60 text-sm font-medium hover:bg-white/10 hover:text-white/80 transition-colors flex items-center gap-2"
                       >
                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
