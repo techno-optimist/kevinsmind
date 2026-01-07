@@ -390,7 +390,7 @@ export default function DigitalMind() {
   // Navigation panels state
   const [activePanel, setActivePanel] = useState<'horizon' | 'bridge' | 'echoes' | null>(null);
   const [activeHorizonModal, setActiveHorizonModal] = useState<'keynote' | 'workshops' | 'advisory' | null>(null);
-  const [activeEchoesModal, setActiveEchoesModal] = useState<'sand-speaks' | 'emma-project' | 'essays' | null>(null);
+  const [activeEchoesModal, setActiveEchoesModal] = useState<'sand-speaks' | 'emma-project' | 'essays' | 'books' | null>(null);
   const [currentQuote, setCurrentQuote] = useState(() => getRandomQuote());
   const [selectedTopic, setSelectedTopic] = useState<typeof SPEAKING_TOPICS[0] | null>(null);
 
@@ -3636,6 +3636,16 @@ IMPORTANT: After 2 exchanges, signal it's time for contact info with something l
                 <span className="block text-white/90 text-sm font-medium group-hover:text-violet-200 group-active:text-violet-200 transition-colors pointer-events-none">Essays & Reflections</span>
                 <span className="block text-white/40 text-xs mt-1 pointer-events-none">On technology, family, and meaning</span>
               </div>
+              <div
+                onClick={(e) => { e.preventDefault(); e.stopPropagation(); setActiveEchoesModal('books'); }}
+                onTouchEnd={(e) => { e.preventDefault(); e.stopPropagation(); setActiveEchoesModal('books'); }}
+                className="block p-3 rounded-xl bg-white/5 border border-white/5 hover:border-violet-500/30 active:border-violet-500/30 transition-colors group cursor-pointer select-none"
+                role="button"
+                tabIndex={0}
+              >
+                <span className="block text-white/90 text-sm font-medium group-hover:text-violet-200 group-active:text-violet-200 transition-colors pointer-events-none">Books</span>
+                <span className="block text-white/40 text-xs mt-1 pointer-events-none">Written works by Kevin Russell</span>
+              </div>
             </div>
             <div className="mt-5 p-3 sm:p-3 rounded-xl bg-gradient-to-r from-violet-500/10 to-purple-500/10 border border-violet-500/20">
               <p className="text-violet-200/80 text-xs italic leading-relaxed">
@@ -4541,6 +4551,140 @@ IMPORTANT: After 2 exchanges, signal it's time for contact info with something l
                   <button className="px-6 py-3 rounded-xl bg-violet-500/20 border border-violet-500/30 text-violet-200 text-sm font-medium hover:bg-violet-500/30 transition-colors">
                     Subscribe
                   </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Books Modal */}
+      {activeEchoesModal === 'books' && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 animate-fade-in"
+          onClick={() => setActiveEchoesModal(null)}
+        >
+          <div className="absolute inset-0 bg-black/80 backdrop-blur-md" />
+          <div className="absolute inset-0 bg-gradient-to-br from-amber-900/20 via-transparent to-orange-900/20" />
+
+          <div
+            className="relative w-full max-w-2xl max-h-[90vh] overflow-y-auto bg-gradient-to-br from-black/95 via-black/90 to-amber-950/30 backdrop-blur-xl rounded-3xl border border-white/10 shadow-2xl"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Header */}
+            <div className="relative p-8 pb-6 border-b border-amber-500/10 overflow-hidden">
+              <div className="absolute inset-0 bg-gradient-to-r from-amber-500/5 via-orange-500/5 to-amber-500/5 animate-pulse" style={{ animationDuration: '4s' }} />
+              <button
+                onClick={() => setActiveEchoesModal(null)}
+                className="absolute top-4 right-4 p-2 text-white/40 hover:text-white/80 transition-colors rounded-full hover:bg-white/5"
+              >
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <path d="M18 6L6 18M6 6l12 12"/>
+                </svg>
+              </button>
+
+              <div className="relative flex items-center gap-4">
+                <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-amber-500/20 to-orange-500/10 border border-amber-500/20 flex items-center justify-center">
+                  <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="text-amber-300/80">
+                    <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/>
+                    <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/>
+                  </svg>
+                </div>
+                <div>
+                  <h2 className="text-2xl font-light text-white tracking-wide">Books</h2>
+                  <p className="text-white/40 text-sm mt-1 tracking-wide">Written works by Kevin Russell</p>
+                </div>
+              </div>
+            </div>
+
+            {/* Content */}
+            <div className="p-8 space-y-6">
+              {/* Book: Gem */}
+              <div className="p-6 rounded-2xl bg-white/[0.02] border border-white/5 hover:border-amber-500/20 transition-all duration-300 group">
+                <div className="flex flex-col sm:flex-row gap-6">
+                  <div className="w-full sm:w-32 h-44 rounded-xl bg-gradient-to-br from-amber-500/10 to-orange-500/5 border border-amber-500/20 flex items-center justify-center flex-shrink-0">
+                    <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1" className="text-amber-300/40">
+                      <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/>
+                      <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/>
+                    </svg>
+                  </div>
+                  <div className="flex-1">
+                    <h3 className="text-xl text-white/90 font-medium group-hover:text-amber-200 transition-colors">Gem</h3>
+                    <p className="text-white/50 text-sm mt-2 leading-relaxed">
+                      A personal story of discovery and transformation.
+                    </p>
+                    <div className="flex gap-3 mt-4">
+                      <a
+                        href="/books/Gem.pdf"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="px-4 py-2 rounded-xl bg-amber-500/20 border border-amber-500/30 text-amber-200 text-sm font-medium hover:bg-amber-500/30 transition-colors flex items-center gap-2"
+                      >
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                          <path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/>
+                          <path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/>
+                        </svg>
+                        Read
+                      </a>
+                      <a
+                        href="/books/Gem.pdf"
+                        download
+                        className="px-4 py-2 rounded-xl bg-white/5 border border-white/10 text-white/60 text-sm font-medium hover:bg-white/10 hover:text-white/80 transition-colors flex items-center gap-2"
+                      >
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                          <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                          <polyline points="7 10 12 15 17 10"/>
+                          <line x1="12" y1="15" x2="12" y2="3"/>
+                        </svg>
+                        Download
+                      </a>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Book: Parenting the Future */}
+              <div className="p-6 rounded-2xl bg-white/[0.02] border border-white/5 hover:border-amber-500/20 transition-all duration-300 group">
+                <div className="flex flex-col sm:flex-row gap-6">
+                  <div className="w-full sm:w-32 h-44 rounded-xl bg-gradient-to-br from-amber-500/10 to-orange-500/5 border border-amber-500/20 flex items-center justify-center flex-shrink-0">
+                    <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1" className="text-amber-300/40">
+                      <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/>
+                      <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/>
+                    </svg>
+                  </div>
+                  <div className="flex-1">
+                    <h3 className="text-xl text-white/90 font-medium group-hover:text-amber-200 transition-colors">Parenting the Future</h3>
+                    <p className="text-amber-200/60 text-sm mt-1">Raising Resilient, Creative, and Ethical Humans in an AI-Driven World</p>
+                    <p className="text-white/50 text-sm mt-2 leading-relaxed">
+                      A guide to raising children who can thrive alongside artificial intelligence, focusing on resilience, creativity, and ethics.
+                    </p>
+                    <div className="flex gap-3 mt-4">
+                      <a
+                        href="/books/Parenting%20the%20Future_%20Raising%20Resilient%2C%20Creative%2C%20and%20Ethical%20Humans%20in%20an%20AI-Driven%20World.pdf"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="px-4 py-2 rounded-xl bg-amber-500/20 border border-amber-500/30 text-amber-200 text-sm font-medium hover:bg-amber-500/30 transition-colors flex items-center gap-2"
+                      >
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                          <path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/>
+                          <path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/>
+                        </svg>
+                        Read
+                      </a>
+                      <a
+                        href="/books/Parenting%20the%20Future_%20Raising%20Resilient%2C%20Creative%2C%20and%20Ethical%20Humans%20in%20an%20AI-Driven%20World.pdf"
+                        download
+                        className="px-4 py-2 rounded-xl bg-white/5 border border-white/10 text-white/60 text-sm font-medium hover:bg-white/10 hover:text-white/80 transition-colors flex items-center gap-2"
+                      >
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                          <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                          <polyline points="7 10 12 15 17 10"/>
+                          <line x1="12" y1="15" x2="12" y2="3"/>
+                        </svg>
+                        Download
+                      </a>
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>
